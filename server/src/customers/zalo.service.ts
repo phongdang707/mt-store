@@ -4,20 +4,18 @@ import { ConfigService } from '@nestjs/config';
 
 export interface ZaloUser {
   id: string;
-  name: string;
-  avatar: string;
 }
 
 interface ZaloMe {
   id?: string;
-  name?: string;
-  picture?: { data?: { url?: string } };
   error?: number;
   message?: string;
 }
 
 /**
  * Xác minh access token của Zalo Mini App (`getAccessToken()` phía client) qua Graph API.
+ * Token mặc định chỉ xuất được user ID — chuỗi này luôn có, không cần khách cấp quyền.
+ * Không xin `name`/`picture`: đó là dữ liệu cá nhân, Zalo từ chối (mã -501) khi server ở ngoài Việt Nam.
  * https://miniapp.zaloplatforms.com/documents/user-info/
  */
 @Injectable()
@@ -38,7 +36,7 @@ export class ZaloService {
     const secret = this.config.get<string>('ZALO_APP_SECRET');
     if (!secret) throw new UnauthorizedException('Server chưa cấu hình ZALO_APP_SECRET');
     const proof = createHmac('sha256', secret).update(token).digest('hex');
-    const res = await fetch('https://graph.zalo.me/v2.0/me?fields=id,name,picture', {
+    const res = await fetch('https://graph.zalo.me/v2.0/me?fields=id', {
       headers: { access_token: token, appsecret_proof: proof },
     });
     const me = (await res.json()) as ZaloMe;
@@ -46,7 +44,7 @@ export class ZaloService {
       this.log.warn(`Zalo từ chối token: ${me.error} ${me.message}`);
       throw new UnauthorizedException('Phiên Zalo không hợp lệ');
     }
-    const user = { id: me.id, name: me.name ?? '', avatar: me.picture?.data?.url ?? '' };
+    const user = { id: me.id };
     this.cache.set(token, { user, exp: Date.now() + 10 * 60_000 });
     if (this.cache.size > 5000) this.cache.clear();
     return user;

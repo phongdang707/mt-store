@@ -72,6 +72,15 @@ function useStoreState() {
       .me()
       .then((m) => setInfoState((i) => ({ ...i, phone: i.phone || m.phone, addr: i.addr || m.addr, name: i.name || m.name })))
       .catch(() => {});
+    api.zaloName().then((name) => {
+      if (!name) return;
+      setInfoState((i) => {
+        if (i.name) return i;
+        const next = { ...i, name };
+        if (storage.get("mt_remember", true)) storage.set("mt_info", next);
+        return next;
+      });
+    });
     const onVis = () => document.visibilityState === "visible" && refreshMine();
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
@@ -195,7 +204,8 @@ function useStoreState() {
     setSending(true);
     setMsg("");
     try {
-      const order = await api.createOrder({ name: i.name.trim() || undefined, phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim() || undefined, items });
+      const name = i.name.trim() || (await api.zaloName(true));
+      const order = await api.createOrder({ name: name || undefined, phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim() || undefined, items });
       setMY((l) => [order, ...l]);
       saveCart({});
       if (!remember) setInfoState(EMPTY_INFO);
@@ -229,8 +239,9 @@ function useStoreState() {
     try {
       const photos: string[] = [];
       for (const f of phFiles) photos.push((await api.upload(await shrink(f.file))).url);
+      const name = info.name.trim() || (await api.zaloName(true));
       const r = await api.createRequest({
-        name: info.name.trim() || undefined,
+        name: name || undefined,
         phone: info.phone.trim() || undefined,
         addr: info.addr.trim() || undefined,
         product: phName.trim(),

@@ -8,18 +8,21 @@ import type { ZaloUser } from './zalo.service.js';
 export class CustomersService {
   constructor(@InjectModel(Customer.name) private readonly customers: Model<Customer>) {}
 
-  /** Tạo hoặc cập nhật tên/ảnh Zalo của khách. */
+  /** Tạo khách theo Zalo user ID nếu chưa có. Tên và ảnh không lấy từ Zalo. */
   upsert(u: ZaloUser) {
-    const set: Partial<Customer> = {};
-    if (u.name) set.name = u.name;
-    if (u.avatar) set.avatar = u.avatar;
     return this.customers
-      .findOneAndUpdate({ zaloId: u.id }, { $set: set, $setOnInsert: { zaloId: u.id } }, { new: true, upsert: true })
+      .findOneAndUpdate({ zaloId: u.id }, { $setOnInsert: { zaloId: u.id } }, { new: true, upsert: true })
       .exec();
   }
 
-  /** Lưu SĐT/địa chỉ khách nhập lần gần nhất. */
-  remember(id: unknown, info: { phone?: string; addr?: string }) {
-    return this.customers.updateOne({ _id: id }, { $set: info }).exec();
+  /** Lưu tên, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */
+  remember(id: unknown, info: { name?: string; phone?: string; addr?: string }) {
+    const set: Record<string, string> = {};
+    for (const key of ['name', 'phone', 'addr'] as const) {
+      const value = info[key]?.trim();
+      if (value) set[key] = value;
+    }
+    if (!Object.keys(set).length) return Promise.resolve();
+    return this.customers.updateOne({ _id: id }, { $set: set }).exec();
   }
 }

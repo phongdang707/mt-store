@@ -37,13 +37,13 @@ export class OrdersService {
       note: dto.note?.trim() ?? '',
       items,
     });
-    await this.customers.remember(c._id, { phone: doc.phone, addr: doc.addr });
+    await this.customers.remember(c._id, { name: doc.name, phone: doc.phone, addr: doc.addr });
     return doc;
   }
 
   async createRequest(c: CustomerDocument, dto: CreateRequestDto, allowedPhoto: (url: string) => boolean) {
     if (!dto.photos.every(allowedPhoto)) throw new BadRequestException('Ảnh không hợp lệ');
-    return this.insert('request', c, {
+    const doc = await this.insert('request', c, {
       name: dto.name?.trim() || c.name,
       phone: dto.phone?.trim() || c.phone,
       addr: dto.addr?.trim() || c.addr,
@@ -51,6 +51,8 @@ export class OrdersService {
       product: dto.product.trim(),
       photos: dto.photos,
     });
+    await this.customers.remember(c._id, { name: doc.name, phone: doc.phone, addr: doc.addr });
+    return doc;
   }
 
   mine(c: CustomerDocument) {

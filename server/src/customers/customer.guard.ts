@@ -20,7 +20,7 @@ export class CustomerGuard implements CanActivate {
     const dev = req.header('x-dev-user');
     let user: ZaloUser;
     if (token) user = await this.zalo.verify(token);
-    else if (dev && this.zalo.devMode && /^[\w-]{6,64}$/.test(dev)) user = { id: 'dev:' + dev, name: '', avatar: '' };
+    else if (dev && this.zalo.devMode && /^[\w-]{6,64}$/.test(dev)) user = { id: 'dev:' + dev };
     else throw new UnauthorizedException('Cần đăng nhập Zalo');
     req.customer = await this.customers.upsert(user);
     return true;

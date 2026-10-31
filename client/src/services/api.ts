@@ -1,4 +1,4 @@
-import { getAccessToken } from "zmp-sdk/apis";
+import { getAccessToken, getUserInfo } from "zmp-sdk/apis";
 import type { Catalog, Order } from "@/types";
 import { storage } from "@/utils/storage";
 
@@ -24,6 +24,25 @@ async function authHeaders(fresh = false): Promise<Record<string, string>> {
   let id = storage.get<string>("mt_dev_user", "");
   if (!id) storage.set("mt_dev_user", (id = "u" + Math.random().toString(36).slice(2, 14)));
   return { "x-dev-user": id };
+}
+
+let cachedZaloName = "";
+let zaloNameDenied = false;
+
+/**
+ * Tên Zalo lấy trên máy khách. Server ở ngoài Việt Nam không xin được tên.
+ * `ask` hiện hộp thoại quyền một lần. Khách từ chối thì để trống, không hỏi lại.
+ */
+export async function zaloName(ask = false): Promise<string> {
+  if (!inZalo || cachedZaloName || zaloNameDenied) return cachedZaloName;
+  try {
+    const { userInfo } = await getUserInfo(ask ? { autoRequestPermission: true } : {});
+    cachedZaloName = userInfo?.name?.trim() || "";
+  } catch (e) {
+    console.warn("getUserInfo", e);
+    if ((e as { code?: number }).code === -201) zaloNameDenied = true;
+  }
+  return cachedZaloName;
 }
 
 export class ApiError extends Error {
@@ -63,6 +82,7 @@ export interface CartLineInput {
 }
 
 export const api = {
+  zaloName,
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
   me: () => call<{ name: string; phone: string; addr: string }>("GET", "/me"),
   mine: () => call<Order[]>("GET", "/orders/mine"),
