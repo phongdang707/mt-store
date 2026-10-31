@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { orderImage, zText, itemName } from "@/services/order-image";
-import { sendToShop } from "@/services/share";
+import { itemName } from "@/services/order-image";
 import { useStore } from "@/state/store";
 import type { Catalog, Order } from "@/types";
 import { fmt, memoOf, nf } from "@/utils/format";
@@ -82,17 +81,6 @@ function usePetals(on: boolean) {
     };
   }, [on]);
   return ref;
-}
-
-/** Ảnh hoá đơn được vẽ sẵn khi mở để nút gửi Zalo phản hồi ngay. */
-function usePreImage(o: Order, D: Catalog) {
-  const [f, setF] = useState<File | null>(null);
-  useEffect(() => {
-    orderImage(o, D)
-      .then((b) => b && setF(new File([b], (o.items.length ? "hoa-don-" : "don-") + o.code + ".png", { type: "image/png" })))
-      .catch(() => {});
-  }, [o.code]);
-  return f;
 }
 
 const PayRow = ({ k, v, cp }: { k: string; v: string; cp?: string }) => (
@@ -253,7 +241,6 @@ function Celebrate({ code, ord }: { code: string; ord: Order }) {
   const { D, setOverlay, setOpen } = useStore();
   const canvas = usePetals(true);
   const [out, setOut] = useState(false);
-  const pre = usePreImage(ord, D!);
   const first = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const t = setTimeout(() => first.current?.focus(), 60);
@@ -267,7 +254,6 @@ function Celebrate({ code, ord }: { code: string; ord: Order }) {
       if (go) setOpen("orders");
     }, 250);
   };
-  const zalo = () => sendToShop(zText(ord, D.store), pre, String(D.zalo || "").replace(/\D/g, ""));
   const isInv = ord.items.length > 0;
   return (
     <div
@@ -282,12 +268,17 @@ function Celebrate({ code, ord }: { code: string; ord: Order }) {
       <canvas ref={canvas} aria-hidden="true"></canvas>
       {isInv ? (
         <div className="inv-wrap">
+          <div className="ok-hd">
+            <div className="cel-ic">🌸</div>
+            <h2>{D.store} đã nhận được đơn hàng!</h2>
+            <p>
+              Cảm ơn bạn đã tin tưởng {D.store} ♡<br />
+              Đơn #{code} đã gửi tới shop.
+            </p>
+          </div>
           <Invoice o={ord} D={D} />
           <div className="inv-acts">
-            <button ref={first} className="btn zl" onClick={zalo}>
-              📲 Gửi hóa đơn qua Zalo cho shop
-            </button>
-            <button className="btn ghost" style={{ marginTop: 8 }} onClick={() => close(true)}>
+            <button ref={first} className="btn" onClick={() => close(true)}>
               Xem đơn của bạn
             </button>
             <button className="cel-x" onClick={() => close(false)}>
@@ -298,16 +289,13 @@ function Celebrate({ code, ord }: { code: string; ord: Order }) {
       ) : (
         <div className="cel-card">
           <div className="cel-ic">🌸</div>
-          <h2>Đặt hàng thành công!</h2>
+          <h2>{D.store} đã nhận yêu cầu!</h2>
           <div className="cel-code">Đơn #{code}</div>
           <p>
             Cảm ơn bạn đã tin tưởng <b>{D.store}</b> ♡<br />
-            Bấm gửi đơn qua Zalo để shop nhận và xác nhận nhanh nhất.
+            Shop đã nhận yêu cầu và sẽ báo giá cho bạn.
           </p>
-          <button ref={first} className="btn zl" onClick={zalo}>
-            📲 Gửi đơn qua Zalo cho shop
-          </button>
-          <button className="btn ghost" style={{ marginTop: 8 }} onClick={() => close(true)}>
+          <button ref={first} className="btn" onClick={() => close(true)}>
             Xem đơn của bạn
           </button>
           <button className="cel-x" onClick={() => close(false)}>

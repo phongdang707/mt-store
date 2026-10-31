@@ -212,7 +212,6 @@ function useStoreState() {
   const sendPhoto = async () => {
     if (!phFiles.length) return toast("Bạn chọn ít nhất 1 ảnh nhé");
     if (!phName.trim()) return toast("Bạn nhập tên sản phẩm nhé");
-    const shots = phFiles.map((f) => f.file);
     setPhSending(true);
     setPhMsg("");
     try {
@@ -230,7 +229,7 @@ function useStoreState() {
       setPhFiles([]);
       setPhName("");
       setOpenState(null);
-      setOverlay({ type: "cel", code: r.code, ord: { ...r, shots } });
+      setOverlay({ type: "cel", code: r.code, ord: r });
     } catch (e) {
       const m = (e as Error).message;
       setPhMsg(/too large|quá lớn|File too large/i.test(m) ? "Ảnh quá lớn, bạn chọn ảnh khác nhé." : `Chưa gửi được ảnh. Bạn thử lại hoặc gửi qua Zalo/Messenger cho ${D?.store} nhé.`);

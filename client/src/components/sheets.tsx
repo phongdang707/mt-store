@@ -164,7 +164,7 @@ export function CartSheet() {
                 Xoá đơn
               </button>
             </div>
-            <p className="note">Đơn gửi xong {D.store} sẽ nhắn bạn để chốt và báo cách thanh toán.</p>
+            <p className="note">Đơn gửi xong {D.store} nhận ngay. Bạn xem hóa đơn và quét mã QR để thanh toán.</p>
           </div>
         ) : null}
       </aside>

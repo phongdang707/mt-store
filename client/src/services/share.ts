@@ -1,10 +1,7 @@
-import { openChat, openPhone, openWebview, saveImageToGallery } from "zmp-sdk/apis";
+import { openPhone, openWebview, saveImageToGallery } from "zmp-sdk/apis";
 import { inZalo } from "./api";
 import { blobToBase64 } from "@/utils/image";
 import { toast } from "@/utils/toast";
-
-/** OA nhận đơn (nếu shop có Official Account). */
-const OA_ID = String(import.meta.env.VITE_ZALO_OA_ID || "").trim();
 
 /** Trong Zalo, link `target=_blank` và `tel:` mở bằng SDK; ngoài Zalo để trình duyệt xử lý. */
 export function installLinkHandler() {
@@ -43,39 +40,4 @@ export async function saveImage(file: Blob) {
     if ((err as Error)?.name === "AbortError") return true;
   }
   return false;
-}
-
-/**
- * Gửi đơn/hoá đơn cho shop: chia sẻ ảnh + nội dung nếu máy hỗ trợ,
- * không thì sao chép nội dung rồi mở chat Zalo của shop.
- */
-export async function sendToShop(text: string, file: File | null, zalo: string) {
-  if (inZalo) {
-    if (file) await saveImageToGallery({ imageBase64Data: await blobToBase64(file) }).catch(() => {});
-    if (OA_ID) {
-      await openChat({ type: "oa", id: OA_ID, message: text }).catch(() => {});
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {}
-    if (zalo) await openWebview({ url: "https://zalo.me/" + zalo }).catch(() => {});
-    toast(file ? "Đã lưu ảnh đơn và sao chép nội dung, dán vào Zalo gửi shop nhé" : "Đã sao chép đơn, dán vào Zalo gửi shop nhé");
-    return;
-  }
-  try {
-    if (file && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], text, title: text.split("\n")[0] });
-      return;
-    }
-  } catch (e) {
-    if ((e as Error)?.name === "AbortError") return;
-  }
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {}
-  if (zalo) {
-    window.open("https://zalo.me/" + zalo, "_blank", "noopener");
-    toast("Đã sao chép đơn, dán vào Zalo để gửi shop");
-  } else toast("Đã sao chép đơn, bạn dán vào Zalo gửi shop nhé");
 }

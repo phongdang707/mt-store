@@ -68,8 +68,6 @@ export interface Order {
   status: "pending" | "confirmed";
   paid: boolean;
   createdAt: string;
-  /** Ảnh khách vừa chọn (chỉ có ở máy khách, để vẽ ảnh yêu cầu gửi Zalo). */
-  shots?: File[];
 }
 
 export interface CustomerInfo {
