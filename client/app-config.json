@@ -1,0 +1,12 @@
+{
+  "app": {
+    "title": "MT store",
+    "actionBarHidden": true,
+    "statusBar": "transparent",
+    "textColor": "black"
+  },
+  "debug": false,
+  "listCSS": [],
+  "listSyncJS": [],
+  "listAsyncJS": []
+}

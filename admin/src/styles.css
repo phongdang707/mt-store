@@ -1,0 +1,36 @@
+/* Nền và quy ước chung của thiết kế (helmet của từng artboard). */
+body{margin:0;background:#f8efe8}
+a{color:#a3546a}a:hover{color:#7f3d52}
+button{font:inherit;cursor:pointer}
+button:disabled{cursor:default}
+input::placeholder,textarea::placeholder{color:#a08c86}
+input:focus,select:focus,textarea:focus{outline:2px solid #b3566f;outline-offset:1px}
+*{-webkit-tap-highlight-color:transparent}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100;background:#3d3530;color:#fff;border-radius:999px;padding:11px 20px;font:600 14px 'Be Vietnam Pro',system-ui,sans-serif;box-shadow:0 10px 26px rgba(60,30,40,.3);max-width:92vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;animation:tin .2s ease}
+@keyframes tin{from{opacity:0;transform:translate(-50%,8px)}}
+.menu-opt:hover{background:#fdf3f5!important}
+.nav-a:hover{background:rgba(246,225,220,.55)}
+.nav-a.on:hover{background:#b3566f}
+.row-btn:hover{background:#fdf3f5}
+.tone-x{opacity:0;transition:opacity .15s}.tone:hover .tone-x,.tone:focus-within .tone-x{opacity:1}
+.drop-on{outline:2px dashed #b3566f;outline-offset:4px}
+/* Điện thoại: thanh điều hướng dưới, sidebar ẩn (bản "Điện thoại – Đơn hàng"). */
+@media (min-width:761px){.only-mobile{display:none!important}}
+@media (max-width:760px){
+  .only-desktop{display:none!important}
+  .only-mobile{display:flex}
+  .bottom-nav{display:grid!important}
+  .tabs-row{flex-wrap:nowrap!important;overflow-x:auto;margin:0 -16px;padding:0 16px}
+  .tabs-row button{flex:0 0 auto;min-height:40px;white-space:nowrap}
+  .main-pad{padding:18px 16px 110px!important}
+  .detail-sheet{position:fixed!important;inset:0;z-index:40;max-width:none!important;border-radius:0!important;overflow-y:auto}
+  .cty-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .inv-table-head{display:none!important}
+  .inv-row{grid-template-columns:minmax(0,1fr) auto auto!important}
+  .inv-row .inv-unit{display:none}
+  .paper{padding:22px 18px!important}
+  .prod-frame{height:auto!important;overflow:visible!important}
+  .prod-body{flex-direction:column}
+  .prod-grid{overflow:visible!important}
+  .prod-editor{flex:1 1 auto!important;max-height:none!important}
+}
