@@ -1,0 +1,8 @@
+/* Trang Đơn hàng: phần thêm ngoài thiết kế (báo giá) giữ thật nhẹ. */
+.price-edit{cursor:pointer;text-underline-offset:3px}
+.price-edit:hover{text-decoration:underline dotted}
+.orders-mtabs::-webkit-scrollbar{display:none}
+@media (max-width:760px){
+  .orders-main{gap:12px!important}
+  .orders-mtabs{margin:0 -16px;padding:0 16px}
+}

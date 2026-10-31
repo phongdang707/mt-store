@@ -133,7 +133,7 @@ export function Invoice({ o, D }: { o: Order; D: Catalog }) {
   return (
     <div className="inv">
       <div className="inv-logo">
-        <Logo />
+        <Logo src={D.logo} />
       </div>
       <h2 className="inv-t">HÓA ĐƠN</h2>
       <div className="inv-meta">
@@ -163,10 +163,10 @@ export function Invoice({ o, D }: { o: Order; D: Catalog }) {
           </div>
         ))}
       </div>
-      {o.shippingFee && o.subtotal ? (
+      {o.subtotal && (o.shippingFee || (o.shipBase ?? 0) > 0) ? (
         <div className="inv-tot inv-ship">
           <span>Phí giao hàng</span>
-          <b>{fmt(o.shippingFee)}</b>
+          <b>{o.shippingFee ? fmt(o.shippingFee) : "Miễn phí"}</b>
         </div>
       ) : null}
       <div className="inv-tot">

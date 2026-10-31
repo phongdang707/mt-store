@@ -1,34 +1,44 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import LOGO from "@/logo.svg";
-import { memoOf } from "@/invoice-image";
+import { freeShip, memoOf } from "@/invoice-image";
 import { fmt, itemLabel } from "@/format";
 import { sx } from "@/sx";
 import type { Order, OrderItem, Settings } from "@/types";
+import { qrDataURL, vietqr } from "@/vietqr";
 
+/* Lưới bảng sản phẩm của thiết kế (HoaDon.dc.html); bản chỉ xem bỏ cột nút xoá. */
 const GRID = "display: grid; grid-template-columns: minmax(0, 1fr) 128px 104px 112px 32px; gap: 10px";
 const GRID_RO = "display: grid; grid-template-columns: minmax(0, 1fr) 96px 104px 112px; gap: 10px";
 const STEP = "width: 32px; height: 32px; border-radius: 50%; border: 1px solid #efd9d3; background: #fffaf7; color: #a3546a; font-weight: 700; font-size: 16px; padding: 0";
 
-export type Shop = Pick<Settings, "store" | "tagline" | "zalo" | "bank">;
+export type Shop = Pick<Settings, "store" | "tagline" | "zalo" | "bank"> & { logo?: string; qr?: string };
 
-/** Tờ hoá đơn (màn Hoá đơn và trang xem hoá đơn công khai). Có `edit` thì hiện nút sửa số lượng. */
+/**
+ * Tờ hoá đơn (màn Hoá đơn và trang xem hoá đơn công khai).
+ * `edit`: hiện nút −/+ và bỏ món. `showQr`: VietQR (số tiền + nội dung điền sẵn) trong ô Chuyển khoản.
+ */
 export function Paper({
   o,
   shop,
   edit,
   addSlot,
+  showQr,
 }: {
   o: Order;
   shop: Shop;
   edit?: { dec: (k: number) => void; inc: (k: number) => void; remove: (k: number) => void; busy: boolean };
   addSlot?: ReactNode;
+  showQr?: boolean;
 }) {
   const d = new Date(o.createdAt);
   const date = d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
   const count = o.items.reduce((n, i) => n + i.qty, 0);
   const bankLine = [shop.bank?.bank, shop.bank?.acc].filter(Boolean).join(" · ");
+  const memo = memoOf(o);
+  const qr = useMemo(() => (showQr && o.total ? qrDataURL(vietqr(shop.bank, o.total, memo)) || shop.qr || "" : ""), [showQr, o.total, memo, shop.bank, shop.qr]);
+  const free = freeShip(o);
   const row = (it: OrderItem, k: number) => (
-    <div key={k} className="inv-row" style={sx((edit ? GRID : GRID_RO) + "; align-items: center; padding: 12px 0; border-bottom: 1px dashed #efd9d3")}>
+    <div key={k} className={"inv-row" + (edit ? " inv-edit" : "")} style={sx((edit ? GRID : GRID_RO) + "; align-items: center; padding: 12px 0; border-bottom: 1px dashed #efd9d3")}>
       <span style={sx("display: flex; align-items: center; gap: 10px; min-width: 0")}>
         <img src={it.img} alt="" style={sx("width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; object-fit: contain; border: 1px solid #efd9d3")} />
         <span style={sx("display: flex; flex-direction: column; min-width: 0")}>
@@ -64,7 +74,7 @@ export function Paper({
     <article className="paper" style={sx("background: #ffffff; border: 1px solid #efd9d3; border-radius: 22px; box-shadow: 0 14px 34px rgba(150, 90, 100, 0.14); padding: 32px 36px; display: flex; flex-direction: column; gap: 22px")}>
       <div style={sx("display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 16px")}>
         <div style={sx("display: flex; align-items: center; gap: 14px")}>
-          <img src={LOGO} alt={shop.store} style={sx("width: 96px; height: auto")} />
+          <img src={shop.logo || LOGO} alt={shop.store} style={sx("width: 96px; height: auto")} />
           <div style={sx("display: flex; flex-direction: column")}>
             <span style={sx("font-family: Quicksand, sans-serif; font-weight: 700; font-size: 18px; color: #a3546a")}>{shop.store}</span>
             {shop.tagline ? <span style={sx("font-size: 13px; color: #7d6862")}>{shop.tagline}</span> : null}
@@ -104,21 +114,24 @@ export function Paper({
       </div>
 
       <div style={sx("display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; align-items: flex-end")}>
-        <div style={sx("flex: 1 1 240px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #6f5a55; background: #fdf6f3; border-radius: 14px; padding: 12px 14px")}>
-          <b style={sx("color: #3d3530")}>Chuyển khoản</b>
-          <span>{bankLine || "Shop gửi thông tin chuyển khoản qua Zalo"}</span>
-          {shop.bank?.name ? <span>Chủ tài khoản: {shop.bank.name}</span> : null}
-          <span>Nội dung: {memoOf(o)}</span>
+        <div className="inv-pay" style={sx("flex: 1 1 240px; display: flex; flex-direction: " + (qr ? "row; align-items: center; gap: 12px" : "column; gap: 4px") + "; font-size: 13px; color: #6f5a55; background: #fdf6f3; border-radius: 14px; padding: 12px 14px")}>
+          <div style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px")}>
+            <b style={sx("color: #3d3530")}>Chuyển khoản</b>
+            <span>{bankLine || "Shop gửi thông tin chuyển khoản qua Zalo"}</span>
+            {shop.bank?.name ? <span>{shop.bank.name}</span> : null}
+            <span>Nội dung: {memo}</span>
+          </div>
+          {qr ? <img src={qr} alt="Mã VietQR chuyển khoản" style={sx("width: 96px; height: 96px; flex: 0 0 96px; border-radius: 10px; background: #ffffff; border: 1px solid #efd9d3; padding: 4px; box-sizing: border-box")} /> : null}
         </div>
         <div style={sx("flex: 0 1 300px; display: flex; flex-direction: column; gap: 6px")}>
           <div style={sx("display: flex; justify-content: space-between; font-size: 14px")}>
             <span style={sx("color: #6f5a55")}>Tạm tính ({count} sản phẩm)</span>
             <span>{fmt(o.subtotal)}</span>
           </div>
-          {o.shippingFee && o.subtotal ? (
+          {(o.shippingFee || free) && o.subtotal ? (
             <div style={sx("display: flex; justify-content: space-between; font-size: 14px")}>
               <span style={sx("color: #6f5a55")}>Phí giao hàng</span>
-              <span>{fmt(o.shippingFee)}</span>
+              <span style={free ? sx("color: #2f6b45; font-weight: 600") : undefined}>{o.shippingFee ? fmt(o.shippingFee) : "Miễn phí"}</span>
             </div>
           ) : null}
           <div style={sx("display: flex; justify-content: space-between; align-items: baseline; border-top: 1.5px solid #3d3530; padding-top: 8px; margin-top: 4px")}>

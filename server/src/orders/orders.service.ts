@@ -27,6 +27,9 @@ export class OrdersService {
 
   async createOrder(c: CustomerDocument, dto: CreateOrderDto) {
     const items = await this.buildItems(dto.items, false);
+    const { markets } = await this.settings.get();
+    const closed = items.find((i) => markets.some((m) => m.key === i.country && !m.open));
+    if (closed) throw new BadRequestException(`Hàng ${closed.country} đang tạm khoá đặt, bạn bỏ ${closed.name} khỏi giỏ nhé`);
     const doc = await this.insert('order', c, {
       name: dto.name?.trim() || c.name,
       phone: dto.phone.trim(),
@@ -72,7 +75,7 @@ export class OrdersService {
     if (!o) throw new NotFoundException('Không tìm thấy hoá đơn');
     const s = await this.settings.get();
     const { customer: _c, invoice: _i, token: _t, ...order } = o.toJSON() as unknown as Record<string, unknown>;
-    return { order, shop: { store: s.store, tagline: s.tagline, zalo: s.zalo, bank: s.bank, qr: s.qr } };
+    return { order, shop: { store: s.store, tagline: s.tagline, logo: s.logo, zalo: s.zalo, bank: s.bank, qr: s.qr } };
   }
 
   /* ---------- Quản lý ---------- */
@@ -133,7 +136,7 @@ export class OrdersService {
       o.quoteTotal = dto.quoteTotal;
       o.quotedAt = new Date();
     }
-    if (dto.shippingFee !== undefined) o.shippingFee = dto.shippingFee;
+    if (dto.shippingFee !== undefined) o.shippingFee = o.shipBase = dto.shippingFee;
     this.touchInvoice(o);
     return this.commit(o);
   }
@@ -196,7 +199,7 @@ export class OrdersService {
 
   private async insert(kind: OrderKind, c: CustomerDocument, data: Partial<Order>) {
     const s = await this.settings.get();
-    const doc = new this.orders({ ...data, kind, customer: c._id, avatar: c.avatar, shippingFee: s.shippingFee });
+    const doc = new this.orders({ ...data, kind, customer: c._id, avatar: c.avatar, shippingFee: s.shippingFee, shipBase: s.shippingFee, freeShipFrom: s.freeShipFrom });
     recompute(doc);
     for (let tries = 0; ; tries++) {
       doc.code = kind === 'order' ? 'MT' + randomInt(100000, 1000000) : 'TH' + randomInt(1000, 10000);

@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "@/api";
 import { toast, useApp } from "@/app-state";
 import { CloseX, Search } from "@/components/ui";
-import { MobileHead, Shell } from "@/components/shell";
+import { MAIN, MobileHead, Shell } from "@/components/shell";
 import { CN, dots, dotsInput, norm, parseMoney, relUpdated } from "@/format";
 import { sx } from "@/sx";
 import type { Product } from "@/types";
+import "@/css/products.css";
 
 /** Ảnh tự căn vuông, nền trắng (giống app gốc), JPEG để tải lên. */
 function squareBlob(file: Blob, S = 640): Promise<Blob> {
@@ -47,7 +48,12 @@ interface Draft extends Product {
   priceInput: string;
   marketInput: string;
 }
-const toDraft = (p: Product): Draft => ({ ...p, variants: p.variants.map((v) => ({ ...v })), priceInput: p.price ? dots(p.price) : "", marketInput: p.market ? dots(p.market) : "" });
+const toDraft = (p: Product): Draft => ({
+  ...p,
+  variants: p.variants.map((v) => ({ ...v })),
+  priceInput: p.price ? dots(p.price) : "",
+  marketInput: p.market ? dots(p.market) : "",
+});
 
 export default function Products() {
   const { settings, tick, refresh } = useApp();
@@ -76,7 +82,11 @@ export default function Products() {
   const dirty = (() => {
     const p = products?.find((x) => x.id === draft?.id);
     if (!p || !draft) return false;
-    const n = { ...draft, price: parseMoney(draft.priceInput), market: parseMoney(draft.marketInput) };
+    const n = {
+      ...draft,
+      price: parseMoney(draft.priceInput),
+      market: parseMoney(draft.marketInput),
+    };
     return (["name", "price", "market", "country", "cat", "img", "link", "hot", "best", "soldout"] as const).some((k) => n[k] !== p[k]) || JSON.stringify(n.variants) !== JSON.stringify(p.variants);
   })();
 
@@ -91,8 +101,19 @@ export default function Products() {
   };
 
   /** Lưới hiển thị theo bản đang sửa (giá, cờ đổi ngay khi gõ). */
-  const live = (products ?? []).map((p) => (draft && p.id === draft.id ? { ...draft, price: parseMoney(draft.priceInput), market: parseMoney(draft.marketInput) } : p));
-  const countries = settings?.countries?.length ? settings.countries : [...new Set(live.map((p) => p.country))];
+  const live = (products ?? []).map((p) =>
+    draft && p.id === draft.id
+      ? {
+          ...draft,
+          price: parseMoney(draft.priceInput),
+          market: parseMoney(draft.marketInput),
+        }
+      : p,
+  );
+  /** Chip lọc theo nước: các nước trong Cài đặt có hàng (giống `countries` của thiết kế). */
+  const allCountries = settings?.markets?.length ? settings.markets.map((m) => m.key) : ["Nhật", "Hàn", "Úc", "Trung"];
+  const countries = allCountries.filter((c) => live.some((p) => p.country === c));
+  const openCountry = settings?.markets?.find((m) => m.open)?.key || countries[0] || "Nhật";
   const F: [string, string, (p: Product) => boolean][] = [
     ["all", "Tất cả", () => true],
     ...countries.map((c) => [c, CN[c] || c, (p: Product) => p.country === c] as [string, string, (p: Product) => boolean]),
@@ -156,7 +177,20 @@ export default function Products() {
     setSaving(true);
     try {
       const { id, name, cat, country, img, variants, vlabel, link, hot, best, soldout } = draft;
-      const u = await api.updateProduct(id, { name: name.trim(), cat, country, img, variants, vlabel, link: link.trim(), hot, best, soldout, price: parseMoney(draft.priceInput), market: parseMoney(draft.marketInput) });
+      const u = await api.updateProduct(id, {
+        name: name.trim(),
+        cat,
+        country,
+        img,
+        variants,
+        vlabel,
+        link: link.trim(),
+        hot,
+        best,
+        soldout,
+        price: parseMoney(draft.priceInput),
+        market: parseMoney(draft.marketInput),
+      });
       setProducts((l) => l && l.map((p) => (p.id === u.id ? u : p)));
       setDraft(toDraft(u));
       toast("Đã lưu · khách thấy ngay trên trang bán hàng");
@@ -186,7 +220,10 @@ export default function Products() {
   const add = async () => {
     if (dirty && !confirm("Sản phẩm đang sửa chưa lưu. Bỏ thay đổi?")) return;
     try {
-      const p = await api.createProduct({ name: "Món mới", country: ["all", "noprice", "soldout"].includes(filter) ? countries[0] || "Nhật" : filter });
+      const p = await api.createProduct({
+        name: "Món mới",
+        country: ["all", "noprice", "soldout"].includes(filter) ? openCountry : filter,
+      });
       setProducts((l) => [p, ...(l ?? [])]);
       setFilter("all");
       setQ("");
@@ -203,17 +240,15 @@ export default function Products() {
   const cats = [...new Set([...(settings?.cats ?? []), ...(d ? [d.cat] : [])])];
 
   return (
-    <Shell fixed>
-      <main className="main-pad" style={sx("flex: 1 1 auto; min-width: 0; height: 100%; box-sizing: border-box; padding: 28px 32px 24px; display: flex; flex-direction: column; gap: 20px")}>
-        <MobileHead title="Sản phẩm" sub={live.length + " món"} />
+    <Shell variant="fixed">
+      <main className="main-pad" style={sx(MAIN.fixed)}>
+        <MobileHead title="Sản phẩm" sub={live.length + " món · " + noPrice + " món chưa có giá"} />
         <div style={sx("display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; justify-content: space-between")}>
-          <div style={sx("display: flex; flex-direction: column; gap: 2px")}>
-            <h1 className="only-desktop" style={sx("margin: 0; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 30px; color: #a3546a; letter-spacing: 0.3px")}>
+          <div className="only-desktop" style={sx("display: flex; flex-direction: column; gap: 2px")}>
+            <h1 style={sx("margin: 0; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 30px; color: #a3546a; letter-spacing: 0.3px")}>
               Sản phẩm
             </h1>
-            <span style={sx("color: #7d6862; font-size: 14px")}>
-              {live.length} món · {noPrice} món chưa có giá (khách thấy “Đang cập nhật”)
-            </span>
+            <span style={sx("color: #7d6862; font-size: 14px")}>{live.length + " món · " + noPrice + " món chưa có giá"}</span>
           </div>
           <button onClick={add} style={sx("display: inline-flex; align-items: center; gap: 8px; border: 0; background: #b3566f; color: #ffffff; border-radius: 999px; padding: 12px 20px; font-weight: 700; box-shadow: 0 8px 20px rgba(150, 90, 100, 0.22)")}>
             <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
@@ -225,18 +260,20 @@ export default function Products() {
 
         <div style={sx("display: flex; flex-wrap: wrap; gap: 10px; align-items: center")}>
           <Search label="Tìm sản phẩm" placeholder="Tìm sản phẩm…" value={q} onChange={setQ} flex="1 1 260px" minWidth="200px" />
-          {F.map(([id, l, f]) => (
-            <button
-              key={id}
-              onClick={() => setFilter(id)}
-              style={sx(
-                "box-sizing: border-box; border-radius: 999px; padding: 10px 16px; font-weight: 600; font-size: 14px; white-space: nowrap; " +
-                  (id === filter ? "border: 1.5px solid #b3566f; background: #b3566f; color: #ffffff" : "border: 1px solid #efd9d3; background: #fffaf7; color: #6f5a55"),
-              )}
-            >
-              {l + " · " + searched.filter(f).length}
-            </button>
-          ))}
+          <div className="prod-chips">
+            {F.map(([id, l, f]) => (
+              <button
+                key={id}
+                onClick={() => setFilter(id)}
+                style={sx(
+                  "box-sizing: border-box; border-radius: 999px; padding: 10px 16px; font-weight: 600; font-size: 14px; white-space: nowrap; " +
+                    (id === filter ? "border: 1.5px solid #b3566f; background: #b3566f; color: #ffffff" : "border: 1px solid #efd9d3; background: #fffaf7; color: #6f5a55"),
+                )}
+              >
+                {l + " · " + live.filter(f).length}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="prod-body" style={sx("flex: 1 1 auto; min-height: 0; display: flex; gap: 20px; align-items: stretch")}>
@@ -303,7 +340,9 @@ export default function Products() {
                 setDrop(false);
                 upMain(e.dataTransfer.files?.[0]);
               }}
-              style={sx("flex: 0 0 420px; min-width: 0; max-height: 100%; overflow-y: auto; box-sizing: border-box; background: #fffaf7; border: 1px solid #efd9d3; border-radius: 22px; box-shadow: 0 10px 26px rgba(150, 90, 100, 0.14); display: flex; flex-direction: column")}
+              style={sx(
+                "flex: 0 0 420px; min-width: 0; max-height: 100%; overflow-y: auto; box-sizing: border-box; background: #fffaf7; border: 1px solid #efd9d3; border-radius: 22px; box-shadow: 0 10px 26px rgba(150, 90, 100, 0.14); display: flex; flex-direction: column",
+              )}
             >
               <div style={sx("padding: 16px 20px; border-bottom: 1px solid #efd9d3; display: flex; align-items: center; gap: 10px")}>
                 <span style={sx("flex: 1; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 18px; color: #a3546a; letter-spacing: 0.3px")}>Sửa sản phẩm</span>
@@ -365,14 +404,24 @@ export default function Products() {
                           <input
                             aria-label="Tên tone"
                             value={t.name}
-                            onChange={(e) => set({ variants: d.variants.map((v, i) => (i === k ? { ...v, name: e.target.value } : v)) })}
+                            onChange={(e) =>
+                              set({
+                                variants: d.variants.map((v, i) => (i === k ? { ...v, name: e.target.value } : v)),
+                              })
+                            }
                             style={sx("box-sizing: border-box; width: 64px; border: 0; background: transparent; font: inherit; font-size: 11.5px; color: #3d3530; text-align: center; line-height: 1.25; padding: 0; text-overflow: ellipsis")}
                           />
                           <button
                             className="tone-x"
                             aria-label={"Xoá tone " + t.name}
-                            onClick={() => set({ variants: d.variants.filter((_, i) => i !== k) })}
-                            style={sx("position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #8f4459; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; padding: 0")}
+                            onClick={() =>
+                              set({
+                                variants: d.variants.filter((_, i) => i !== k),
+                              })
+                            }
+                            style={sx(
+                              "position: absolute; top: -6px; right: -6px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: #8f4459; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; padding: 0",
+                            )}
                           >
                             ✕
                           </button>
@@ -381,7 +430,9 @@ export default function Products() {
                       <button
                         onClick={() => toneFile.current?.click()}
                         aria-label="Thêm ảnh tone"
-                        style={sx("width: 64px; height: 64px; border-radius: 12px; border: 1.5px dashed #b3566f; background: #fdf3f5; color: #a3546a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 700")}
+                        style={sx(
+                          "width: 64px; height: 64px; border-radius: 12px; border: 1.5px dashed #b3566f; background: #fdf3f5; color: #a3546a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; font-weight: 700",
+                        )}
                       >
                         <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                           <path d="M12 5v14M5 12h14"></path>
@@ -451,7 +502,7 @@ export default function Products() {
                   <label style={sx("display: flex; flex-direction: column; gap: 6px")}>
                     <span style={sx(LABEL)}>Nước</span>
                     <select value={d.country} onChange={(e) => set({ country: e.target.value })} style={sx(FIELD)}>
-                      {[...new Set([...countries, d.country])].map((c) => (
+                      {[...new Set([...allCountries, d.country])].map((c) => (
                         <option key={c} value={c}>
                           {c}
                         </option>
@@ -497,7 +548,7 @@ export default function Products() {
                   </div>
                 )}
               </div>
-              <div style={sx("padding: 14px 20px 20px; border-top: 1px solid #efd9d3; display: flex; gap: 10px; align-items: center; margin-top: auto")}>
+              <div style={sx("padding: 14px 20px 20px; border-top: 1px solid #efd9d3; display: flex; gap: 10px; align-items: center")}>
                 <button
                   onClick={remove}
                   onBlur={() => setSure(false)}
@@ -520,15 +571,11 @@ export default function Products() {
                     const p = products?.find((x) => x.id === d.id);
                     if (p) setDraft(toDraft(p));
                   }}
-                  style={sx("border: 1px solid #efd9d3; background: #ffffff; color: #6f5a55; border-radius: 14px; padding: 12px 16px; font-weight: 600" + (dirty ? "" : "; opacity: 0.6"))}
+                  style={sx("border: 1px solid #efd9d3; background: #ffffff; color: #6f5a55; border-radius: 14px; padding: 12px 16px; font-weight: 600")}
                 >
                   Huỷ
                 </button>
-                <button
-                  disabled={saving || !!uploading || !dirty}
-                  onClick={save}
-                  style={sx("border: 0; background: #b3566f; color: #ffffff; border-radius: 14px; padding: 12px 20px; font-weight: 700" + (saving || uploading || !dirty ? "; opacity: 0.6" : ""))}
-                >
+                <button disabled={saving || !!uploading || !dirty} onClick={save} style={sx("border: 0; background: #b3566f; color: #ffffff; border-radius: 14px; padding: 12px 20px; font-weight: 700" + (saving || uploading ? "; opacity: 0.6" : ""))}>
                   {saving ? "Đang lưu…" : "Lưu thay đổi"}
                 </button>
               </div>

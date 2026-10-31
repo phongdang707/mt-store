@@ -1,0 +1,10 @@
+/* Hoá đơn trên điện thoại: tờ hoá đơn mở thành trang riêng (che danh sách), nền như thiết kế. */
+@media (max-width: 760px) {
+  .inv-sheet {
+    background: linear-gradient(180deg, #fcf8f0 0%, #f8efe8 45%, #f4dfda 100%) !important;
+    padding: 16px 12px 40px !important;
+    box-sizing: border-box;
+  }
+  .inv-row.inv-edit { grid-template-columns: minmax(0, 1fr) auto auto 32px !important; }
+  .inv-pay { flex-wrap: wrap; }
+}

@@ -27,17 +27,38 @@ export interface Bank {
   name: string;
 }
 
+/** Nước shop đi mua: mở đặt hàng hay đã khoá, lịch bay "dd/mm". */
+export interface Market {
+  key: string;
+  open: boolean;
+  fly: string;
+  until: string;
+}
+
+export interface Prefs {
+  notiOrder: boolean;
+  notiFind: boolean;
+  hideRev: boolean;
+}
+
 export interface Settings {
   store: string;
   subtitle: string;
+  logo: string;
   tagline: string;
   cats: string[];
+  /** Nước đang mở (server suy từ `markets`). */
   countries: string[];
+  /** Đủ 4 nước Nhật, Hàn, Úc, Trung theo thứ tự. */
+  markets: Market[];
   bank: Bank;
   qr: string;
   zalo: string;
   messenger: string;
   shippingFee: number;
+  freeShipFrom: number;
+  orderNote: string;
+  prefs: Prefs;
   storefrontUrl: string;
 }
 
@@ -70,6 +91,8 @@ export interface Order {
   items: OrderItem[];
   quoteTotal: number;
   shippingFee: number;
+  shipBase?: number | null;
+  freeShipFrom?: number;
   subtotal: number;
   total: number;
   status: "pending" | "confirmed";

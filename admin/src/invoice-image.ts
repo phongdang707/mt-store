@@ -1,8 +1,10 @@
 import LOGO from "@/logo.svg?raw";
 import type { Order, Settings } from "./types";
-type Catalog = Pick<Settings, "store" | "bank" | "qr">;
+type Catalog = Pick<Settings, "store" | "bank" | "qr"> & { logo?: string };
 import { fmt } from "./format";
 const nf = (n: unknown) => Number(n) || 0;
+/** Đơn đạt mức miễn phí giao: có phí giao gốc nhưng phí thực thu = 0. */
+export const freeShip = (o: { shipBase?: number | null; shippingFee: number }) => !!o.shipBase && o.shipBase > 0 && o.shippingFee === 0;
 export const memoOf = (o: { code: string; phone?: string }) => o.code + " " + String(o.phone || "").replace(/\D/g, "");
 import { loadImg } from "./load-img";
 import { bankOf, qrDataURL, vietqr } from "./vietqr";
@@ -38,8 +40,8 @@ export async function orderImage(o: Order, D: Catalog): Promise<Blob | null> {
     const im = await loadImg(u);
     if (im) shots.push(im);
   }
-  let logo: HTMLImageElement | null = null;
-  try {
+  let logo: HTMLImageElement | null = D.logo ? await loadImg(D.logo) : null;
+  if (!logo) try {
     let t = LOGO.replace(/currentColor/g, "#a3546a").match(/<svg[\s\S]*<\/svg>/)?.[0];
     if (t) {
       if (!/xmlns=/.test(t)) t = t.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"');
@@ -56,7 +58,7 @@ export async function orderImage(o: Order, D: Catalog): Promise<Blob | null> {
     isInv = rows.length > 0;
   const H =
     400 + 120 + (o.product ? 80 : 0) + rows.length * 130 + (shots.length ? Math.ceil(shots.length / 3) * (sz + 20) + 10 : 0) +
-    (isInv ? 120 + (o.shippingFee ? 50 : 0) : 0) + (isInv ? (qr ? 260 : 130) : 0) + 120;
+    (isInv ? 120 + (o.shippingFee || freeShip(o) ? 50 : 0) : 0) + (isInv ? (qr ? 260 : 130) : 0) + 120;
   const c = document.createElement("canvas");
   c.width = W;
   c.height = H;
@@ -221,13 +223,13 @@ export async function orderImage(o: Order, D: Catalog): Promise<Blob | null> {
     y += Math.ceil(shots.length / 3) * (sz + 20);
   }
   if (isInv) {
-    if (o.shippingFee && o.subtotal) {
+    if ((o.shippingFee || freeShip(o)) && o.subtotal) {
       y += 40;
       x.font = `600 22px ${F}`;
       x.fillStyle = "#7a6a66";
       x.fillText("Phí giao hàng", P, y);
       x.textAlign = "right";
-      x.fillText(fmt(o.shippingFee), W - P, y);
+      x.fillText(o.shippingFee ? fmt(o.shippingFee) : "Miễn phí", W - P, y);
       x.textAlign = "left";
     }
     y += 60;

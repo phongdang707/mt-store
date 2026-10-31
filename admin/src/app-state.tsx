@@ -1,6 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { api, auth, setUnauthorizedHandler, subscribe } from "./api";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { api, auth, setUnauthorizedHandler, subscribe, type OrderEvent } from "./api";
 import type { Badges, Settings } from "./types";
+
+/** Chấm đỏ trên mục điều hướng khi có đơn / yêu cầu mới (Cài đặt › Thông báo). */
+export interface Alerts {
+  orders: boolean;
+  requests: boolean;
+}
 
 interface AppState {
   me: { email: string; name: string } | null;
@@ -9,6 +15,8 @@ interface AppState {
   settings: Settings | null;
   /** Tăng mỗi khi server báo đơn thay đổi: trang theo dõi để tải lại. */
   tick: number;
+  alerts: Alerts;
+  clearAlert: (k: keyof Alerts) => void;
   refresh: () => void;
   setSettings: (s: Settings) => void;
   login: (email: string, password: string, remember: boolean) => Promise<void>;
@@ -18,12 +26,39 @@ interface AppState {
 const Ctx = createContext<AppState | null>(null);
 const ZERO: Badges = { pendingOrders: 0, pendingRequests: 0, products: 0, unsentInvoices: 0 };
 
+/** Tiếng "ting" ngắn khi có đơn mới (không cần file âm thanh). */
+function chime() {
+  try {
+    const A = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new A();
+    [880, 1320].forEach((f, i) => {
+      const o = ctx.createOscillator(),
+        g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = f;
+      const t = ctx.currentTime + i * 0.14;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
+      o.connect(g).connect(ctx.destination);
+      o.start(t);
+      o.stop(t + 0.4);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch {
+    /* trình duyệt chặn âm thanh */
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<AppState["me"]>(null);
   const [ready, setReady] = useState(false);
   const [badges, setBadges] = useState<Badges>(ZERO);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [tick, setTick] = useState(0);
+  const [alerts, setAlerts] = useState<Alerts>({ orders: false, requests: false });
+  const prefs = useRef(settings?.prefs);
+  prefs.current = settings?.prefs;
 
   const logout = useCallback(() => {
     auth.clear();
@@ -43,11 +78,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
+  const clearAlert = useCallback((k: keyof Alerts) => setAlerts((a) => (a[k] ? { ...a, [k]: false } : a)), []);
 
   useEffect(() => {
     if (!me) return;
     api.settings().then(setSettings).catch(() => {});
-    return subscribe(refresh);
+    return subscribe((e: OrderEvent | null) => {
+      if (e?.action === "created") {
+        const p = prefs.current;
+        const k = e.kind === "request" ? "requests" : "orders";
+        if (k === "orders" ? p?.notiOrder !== false : p?.notiFind !== false) {
+          setAlerts((a) => ({ ...a, [k]: true }));
+          chime();
+        }
+      }
+      if (e) refresh();
+    });
   }, [me]);
 
   useEffect(() => {
@@ -60,7 +106,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setMe(r.admin);
   };
 
-  return <Ctx.Provider value={{ me, ready, badges, settings, tick, refresh, setSettings, login, logout }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ me, ready, badges, settings, tick, alerts, clearAlert, refresh, setSettings, login, logout }}>{children}</Ctx.Provider>;
 }
 
 export function useApp() {

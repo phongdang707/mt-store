@@ -2,11 +2,22 @@ import { useEffect, useState } from "react";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
 import { Avatar, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
-import { MobileHead, Shell } from "@/components/shell";
-import { ago, dots, dotsInput, norm, parseMoney, timeOf } from "@/format";
+import { MAIN, MobileHead, Shell } from "@/components/shell";
+import { ago, dots, dotsInput, fmt, itemLabel, norm, parseMoney, timeOf } from "@/format";
 import { sx } from "@/sx";
 import type { Order } from "@/types";
-import { quoteText } from "./orders";
+
+/** Tin nhắn báo giá gửi khách (giống "Copy báo giá" của app gốc). */
+function quoteText(o: Order, store: string) {
+  const L = [`Chào ${o.name || "bạn"} ♡ ${store} báo giá yêu cầu #${o.code}:`];
+  if (o.product) L.push("Nhu cầu: " + o.product);
+  o.items.forEach((x) => L.push(`• ${itemLabel(x)} × ${x.qty} = ${x.price ? fmt(x.price * x.qty) : "đang báo giá"}`));
+  if (o.shippingFee && o.subtotal) L.push("Phí giao: " + fmt(o.shippingFee));
+  L.push("Tổng: " + (o.total ? fmt(o.total) : "đang cập nhật"));
+  if (o.addr) L.push("Giao đến: " + o.addr);
+  L.push("Bạn xác nhận giúp shop để shop đặt hàng nhé!");
+  return L.join("\n");
+}
 
 type Tab = "all" | "cho" | "xong";
 const st = (o: Order) => (o.status === "confirmed" ? "xong" : "cho");
@@ -64,8 +75,8 @@ function Detail({ r, onChange, onClose }: { r: Order; onChange: (o: Order) => vo
         <span style={sx("font-size: 13px; font-weight: 600; color: #6f5a55")}>Khách cần tìm</span>
         <b style={sx("font-size: 16px; line-height: 1.4")}>{r.product}</b>
         <div style={sx("display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px")}>
-          {r.photos.map((ph) => (
-            <a key={ph} href={ph} target="_blank" rel="noopener" style={sx("display: block; aspect-ratio: 1; border-radius: 14px; overflow: hidden; border: 1px solid #efd9d3; background: #ffffff")}>
+          {r.photos.map((ph, i) => (
+            <a key={i} href={ph} target="_blank" rel="noopener" style={sx("display: block; aspect-ratio: 1; border-radius: 14px; overflow: hidden; border: 1px solid #efd9d3; background: #ffffff")}>
               <img src={ph} alt="Ảnh khách gửi" style={sx("width: 100%; height: 100%; object-fit: cover; display: block")} />
             </a>
           ))}
@@ -76,7 +87,7 @@ function Detail({ r, onChange, onClose }: { r: Order; onChange: (o: Order) => vo
           <span style={sx("position: relative; display: block")}>
             <input
               inputMode="numeric"
-              placeholder="Tìm được hàng thì nhập giá"
+              placeholder="Nhập giá"
               value={quote}
               onChange={(e) => setQuote(dotsInput(e.target.value))}
               onBlur={saveQuote}
@@ -85,15 +96,24 @@ function Detail({ r, onChange, onClose }: { r: Order; onChange: (o: Order) => vo
             />
             <span style={sx("position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7d6862; font-size: 13px")}>đ</span>
           </span>
-          <span style={sx("font-size: 12px; color: #7d6862")}>{r.total && r.shippingFee ? `Khách thấy tổng ${dots(r.total)}đ (gồm phí giao ${dots(r.shippingFee)}đ)` : "Khách thấy giá này trong “Đơn của bạn”"}</span>
+          <span style={sx("font-size: 12px; color: #7d6862")}>
+            {r.total && r.shippingFee ? `Khách thấy tổng ${dots(r.total)}đ (gồm phí giao ${dots(r.shippingFee)}đ)` : r.total ? "Khách thấy giá này trong “Đơn của bạn”" : "Tìm được hàng thì nhập giá · khách thấy trong “Đơn của bạn”"}
+          </span>
         </label>
+        <button
+          onClick={() => copyText(quoteText(r, settings?.store || "MT store"), "Đã sao chép tin nhắn báo giá")}
+          style={sx("align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; color: #a3546a; font-weight: 600; font-size: 13.5px; padding: 6px 2px")}
+        >
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+            <path d="M5 15V5a1 1 0 0 1 1-1h10"></path>
+          </svg>
+          Copy báo giá
+        </button>
       </div>
 
       <div style={sx("padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 10px")}>
         <ConfirmBlock pending={s === "cho"} busy={busy} what="yêu cầu" onToggle={() => run(() => api.confirm(r.code, s === "cho"))} />
-        <button onClick={() => copyText(quoteText(r, settings?.store || "MT store"), "Đã sao chép tin nhắn báo giá")} style={sx("align-self: center; border: 0; background: transparent; color: #a3546a; font-weight: 600; font-size: 13px; padding: 4px 2px")}>
-          Sao chép tin nhắn báo giá
-        </button>
       </div>
     </section>
   );
@@ -128,7 +148,7 @@ export default function Requests() {
 
   return (
     <Shell>
-      <main className="main-pad" style={sx("flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 20px")}>
+      <main className="main-pad" style={sx(MAIN.scroll)}>
         <MobileHead title="Yêu cầu tìm hộ" sub={badges.pendingRequests + " yêu cầu chờ xử lý"} />
         <div style={sx("display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; justify-content: space-between")}>
           <div className="only-desktop" style={sx("display: flex; flex-direction: column; gap: 2px")}>

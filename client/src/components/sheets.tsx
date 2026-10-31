@@ -137,7 +137,17 @@ export function CartSheet() {
                   + {pendingCount} món chờ báo giá, {D.store} sẽ báo giá khi chốt đơn.
                 </p>
               ) : null}
-              {D.shippingFee ? <p className="pend">Phí giao hàng {fmt(D.shippingFee)} cộng khi gửi đơn.</p> : null}
+              {D.shippingFee ? (
+                D.freeShipFrom && cartTotal >= D.freeShipFrom ? (
+                  <p className="pend">Miễn phí giao hàng cho đơn này.</p>
+                ) : (
+                  <p className="pend">
+                    Phí giao hàng {fmt(D.shippingFee)} cộng khi gửi đơn.
+                    {D.freeShipFrom ? ` Miễn phí giao từ ${fmt(D.freeShipFrom)}.` : ""}
+                  </p>
+                )
+              ) : null}
+              {D.orderNote ? <p className="pend">{D.orderNote}</p> : null}
               <label htmlFor="o-phone">Số điện thoại</label>
               <input className="f" id="o-phone" inputMode="tel" value={info.phone} onChange={(e) => setInfo("phone", e.target.value)} placeholder="+84 9xx xxx xxx" />
               <label htmlFor="o-addr">Địa chỉ nhận hàng</label>

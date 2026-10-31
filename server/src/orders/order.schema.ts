@@ -68,7 +68,12 @@ export class Order {
   @Prop({ type: [SchemaFactory.createForClass(OrderItem)], default: [] }) items: OrderItem[];
   /** Giá shop báo cho yêu cầu tìm hộ (không có món cụ thể). */
   @Prop({ default: 0, min: 0 }) quoteTotal: number;
+  /** Phí giao thực thu (0 khi đạt mức miễn phí giao). */
   @Prop({ default: 0, min: 0 }) shippingFee: number;
+  /** Phí giao gốc của đơn; null = đơn cũ, giữ nguyên `shippingFee`. */
+  @Prop({ type: Number, default: null }) shipBase: number | null;
+  /** Mức miễn phí giao lúc khách đặt (0 = không áp dụng). */
+  @Prop({ default: 0, min: 0 }) freeShipFrom: number;
   @Prop({ default: 0 }) subtotal: number;
   @Prop({ default: 0 }) total: number;
   @Prop({ type: String, enum: ORDER_STATUSES, default: 'pending', index: true }) status: OrderStatus;
@@ -89,6 +94,9 @@ OrderSchema.index({ createdAt: -1 });
 /** Tạm tính = tổng món có giá (hoặc giá báo cho yêu cầu tìm hộ); tổng = tạm tính + phí giao nếu có giá. */
 export function recompute(o: Order) {
   o.subtotal = o.items.length ? o.items.reduce((a, x) => a + x.price * x.qty, 0) : o.quoteTotal;
+  if (o.shipBase !== null && o.shipBase !== undefined) {
+    o.shippingFee = o.freeShipFrom && o.subtotal >= o.freeShipFrom ? 0 : o.shipBase;
+  }
   o.total = o.subtotal ? o.subtotal + o.shippingFee : 0;
 }
 
