@@ -42,12 +42,20 @@ export class StorageService {
 
   async upload(data: Buffer, folder: string, publicId?: string): Promise<string> {
     if (this.cloud) {
+      // v2: upload_stream(options, (err, result)). Bản v1 nội bộ nhận (callback, options);
+      // adapter của v2 đã đảo và đổi result.error thành tham số err. Không đảo thêm ở đây.
+      const options: { folder: string; overwrite: boolean; resource_type: 'image'; public_id?: string } = {
+        folder: `mt-store/${folder}`,
+        overwrite: true,
+        resource_type: 'image',
+      };
+      if (publicId) options.public_id = publicId;
       const res = await new Promise<{ secure_url: string }>((resolve, reject) => {
         cloudinary.uploader
-          .upload_stream(
-            { folder: `mt-store/${folder}`, public_id: publicId, overwrite: true, resource_type: 'image' },
-            (err, r) => (err || !r ? reject(err ?? new Error('upload failed')) : resolve(r)),
-          )
+          .upload_stream(options, (err, result) => {
+            if (err || !result?.secure_url) reject(new Error(err?.message || 'upload failed'));
+            else resolve(result);
+          })
           .end(data);
       });
       return res.secure_url;

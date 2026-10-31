@@ -2,6 +2,7 @@
  * Nạp catalog tách từ app bán hàng (seed/catalog.json + seed/images) vào MongoDB.
  *   npm run seed            thêm sản phẩm chưa có, giữ nguyên món chủ shop đã sửa
  *   npm run seed -- --reset xoá hết sản phẩm rồi nạp lại (tải lại ảnh)
+ *   npm run seed -- --rehost  đẩy ảnh localhost trong DB lên Cloudinary, không đụng giá
  * Ảnh lên Cloudinary nếu đã cấu hình, không thì vào ./uploads.
  */
 import { readFile } from 'node:fs/promises';
@@ -12,7 +13,7 @@ import type { Model } from 'mongoose';
 import { AppModule } from './app.module.js';
 import { Product } from './products/product.schema.js';
 import { Settings } from './settings/settings.schema.js';
-import { StorageService } from './storage/storage.service.js';
+import { LOCAL_UPLOAD_DIR, StorageService } from './storage/storage.service.js';
 
 interface Seed {
   store: string;
@@ -26,12 +27,18 @@ interface Seed {
 
 const dir = join(process.cwd(), 'seed');
 const reset = process.argv.includes('--reset');
+const rehost = process.argv.includes('--rehost');
 
 const app = await NestFactory.createApplicationContext(AppModule, { logger: ['warn', 'error'] });
 try {
   const storage = app.get(StorageService);
   const products = app.get<Model<Product>>(getModelToken(Product.name));
   const settings = app.get<Model<Settings>>(getModelToken(Settings.name));
+  if (rehost) {
+    if (reset) throw new Error('--rehost không đi cùng --reset');
+    await rehostLocal(storage, products, settings);
+    return;
+  }
   const data = JSON.parse(await readFile(join(dir, 'catalog.json'), 'utf8')) as Seed;
 
   const up = async (file: string, folder = 'products') =>
