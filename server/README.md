@@ -24,7 +24,8 @@ Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, 
 
 - **Ảnh**: Cloudinary khi có `CLOUDINARY_*`; chưa có (dev) thì lưu `./uploads`, phục vụ ở `/uploads`. Production không có Cloudinary thì API upload trả lỗi, server vẫn chạy.
 - **Khách**: Zalo Mini App gửi `x-zalo-token` (access token), server xác minh qua Graph API bằng `ZALO_APP_SECRET`. Dev chưa có secret: header `x-dev-user`.
-- **Admin**: tài khoản tạo từ `ADMIN_EMAIL`/`ADMIN_PASSWORD` lúc khởi động; đổi `ADMIN_PASSWORD` rồi khởi động lại = đặt lại mật khẩu.
+- **Admin**: tài khoản tạo từ `ADMIN_EMAIL`/`ADMIN_PASSWORD` lúc khởi động. Chủ shop đổi mật khẩu trong Cài đặt (`POST /api/auth/password`), mật khẩu đó được giữ qua các lần khởi động; chỉ khi đổi giá trị `ADMIN_PASSWORD` rồi khởi động lại thì mật khẩu mới bị đặt lại theo env.
+- **Cài đặt**: `markets` (Nhật, Hàn, Úc, Trung: mở/khoá + ngày bay, hạn nhận đơn). Nước bị khoá bị ẩn khỏi `/api/catalog` cùng hàng của nó và không đặt được. `freeShipFrom`: đơn có tạm tính từ mức này được miễn phí giao (đơn lưu `shipBase` + `freeShipFrom` lúc đặt).
 - `seed/` được tách từ app gốc bằng `scripts/extract-artifact.py`.
 
 ## API (prefix `/api`)

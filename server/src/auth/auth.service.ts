@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
@@ -32,14 +32,28 @@ export class AuthService implements OnModuleInit {
     }
     const admin = await this.admins.findOne({ email }).exec();
     if (!admin) {
-      await this.admins.create({ email, passwordHash: await hashPassword(password) });
+      await this.admins.create({ email, passwordHash: await hashPassword(password), envPasswordHash: await hashPassword(password) });
       this.log.log(`Đã tạo tài khoản admin ${email}`);
-    } else if (!(await verifyPassword(password, admin.passwordHash))) {
-      // Đổi ADMIN_PASSWORD trong .env = đặt lại mật khẩu ở lần khởi động sau.
-      admin.passwordHash = await hashPassword(password);
-      await admin.save();
-      this.log.log(`Đã cập nhật mật khẩu admin ${email} theo ADMIN_PASSWORD`);
+      return;
     }
+    // ADMIN_PASSWORD không đổi kể từ lần trước: giữ mật khẩu chủ shop tự đổi trong trang Cài đặt.
+    if (admin.envPasswordHash && (await verifyPassword(password, admin.envPasswordHash))) return;
+    // ADMIN_PASSWORD mới (hoặc bản ghi cũ chưa có dấu) = đặt lại mật khẩu theo env.
+    if (!(await verifyPassword(password, admin.passwordHash))) {
+      admin.passwordHash = await hashPassword(password);
+      this.log.log(`Đã đặt lại mật khẩu admin ${email} theo ADMIN_PASSWORD`);
+    }
+    admin.envPasswordHash = await hashPassword(password);
+    await admin.save();
+  }
+
+  async changePassword(id: string, current: string, next: string) {
+    const admin = await this.admins.findById(id).exec();
+    if (!admin || !(await verifyPassword(current, admin.passwordHash))) {
+      throw new BadRequestException('Mật khẩu hiện tại chưa đúng');
+    }
+    admin.passwordHash = await hashPassword(next);
+    await admin.save();
   }
 
   async login(email: string, password: string, remember: boolean) {

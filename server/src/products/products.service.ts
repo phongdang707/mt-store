@@ -26,19 +26,24 @@ export class ProductsService {
     return this.products.find({ _id: { $in: ids } }).exec();
   }
 
-  /** Dữ liệu trang bán hàng: giống `DATA` của app gốc. */
+  /** Dữ liệu trang bán hàng: giống `DATA` của app gốc. Nước bị khoá bị ẩn cùng hàng của nó. */
   async catalog() {
     const [s, products] = await Promise.all([this.settings.get(), this.findAll()]);
+    const locked = new Set(s.markets.filter((m) => !m.open).map((m) => m.key));
     return {
       store: s.store,
       subtitle: s.subtitle,
+      logo: s.logo,
       cats: s.cats,
       countries: s.countries,
+      markets: s.markets.filter((m) => m.open),
       bank: s.bank,
       qr: s.qr,
       zalo: s.zalo,
       shippingFee: s.shippingFee,
-      products,
+      freeShipFrom: s.freeShipFrom,
+      orderNote: s.orderNote,
+      products: products.filter((p) => !locked.has(p.country)),
     };
   }
 
