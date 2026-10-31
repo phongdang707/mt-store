@@ -100,6 +100,18 @@ function useStoreState() {
     [byId],
   );
 
+  // Món của nước vừa bị khoá (hoặc đã ngừng bán) không còn trong bảng giá: bỏ khỏi giỏ và báo khách.
+  useEffect(() => {
+    if (!D) return;
+    const gone = Object.keys(cart).filter((k) => !ck(k));
+    if (!gone.length) return;
+    const c = { ...cart };
+    gone.forEach((k) => delete c[k]);
+    setCart(c);
+    storage.set("mt_cart", c);
+    toast(`Đã bỏ ${gone.length} món đang tạm ngừng nhận đặt khỏi giỏ`);
+  }, [D]);
+
   const entries = useMemo(() => Object.entries(cart).filter(([k]) => ck(k)), [cart, ck]);
   const cartCount = entries.reduce((a, [, n]) => a + n, 0);
   const cartTotal = entries.reduce((a, [k, n]) => a + ck(k)!.p.price * n, 0);

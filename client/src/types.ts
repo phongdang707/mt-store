@@ -26,15 +26,31 @@ export interface Bank {
   name: string;
 }
 
+/** Nước đang mở đặt hàng, kèm lịch bay "dd/mm" (có thể rỗng). */
+export interface Market {
+  key: string;
+  open: boolean;
+  fly: string;
+  until: string;
+}
+
 export interface Catalog {
   store: string;
   subtitle: string;
+  /** Logo shop đặt trong trang quản lý; rỗng = logo mặc định. */
+  logo?: string;
   cats: string[];
+  /** Chỉ các nước đang mở (nước bị khoá đã ẩn cùng hàng của nó). */
   countries: string[];
+  markets?: Market[];
   bank: Bank;
   qr: string;
   zalo: string;
   shippingFee: number;
+  /** Tạm tính từ mức này được miễn phí giao (0 = không áp dụng). */
+  freeShipFrom?: number;
+  /** Ghi chú cho khách khi đặt hàng. */
+  orderNote?: string;
   products: Product[];
 }
 
@@ -62,7 +78,11 @@ export interface Order {
   product: string;
   photos: string[];
   items: OrderItem[];
+  /** Phí giao thực thu (0 khi đạt mức miễn phí giao). */
   shippingFee: number;
+  /** Phí giao gốc; >0 mà `shippingFee` = 0 nghĩa là được miễn phí giao. */
+  shipBase?: number | null;
+  freeShipFrom?: number;
   subtotal: number;
   total: number;
   status: "pending" | "confirmed";

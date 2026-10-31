@@ -4,7 +4,13 @@ import { useStore, type Sort } from "@/state/store";
 import type { Product } from "@/types";
 import { CAT_ICON, FLAG, LABEL, fmt, norm } from "@/utils/format";
 
-export const Logo = () => <span style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: LOGO }} />;
+/** Logo shop: ảnh đặt trong trang quản lý nếu có, không thì logo mặc định (SVG nội tuyến). */
+export const Logo = ({ src, width }: { src?: string; width?: string }) =>
+  src ? (
+    <img src={src} alt="" style={{ width: width ?? "100%", height: "auto", display: "inline-block" }} />
+  ) : (
+    <span style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: LOGO }} />
+  );
 
 /** Ảnh sản phẩm, hoặc chữ cái đầu khi chưa có ảnh. */
 export function Ph({ p }: { p: Product }) {
@@ -33,7 +39,7 @@ export function Header() {
       </header>
       <div className="wrap top-wrap">
         <section className="hero">
-          <Logo />
+          <Logo src={D?.logo} width="min(280px, 56vw)" />
           <h1>{D?.subtitle}</h1>
         </section>
       </div>
@@ -253,9 +259,12 @@ function List() {
 export function Catalog() {
   const { D, q, setQ, country, setCountry, cat, setCat, sort, setSort, setOpen } = useStore();
   if (!D) return null;
+  const mk = D.markets?.find((m) => m.key === country);
+  const sched = mk && !q ? [mk.fly ? "bay ngày " + mk.fly : "", mk.until ? "nhận đơn đến hết " + mk.until : ""].filter(Boolean).join(" · ") : "";
+  const n = D.countries.length;
   return (
     <main className="wrap">
-      <nav className="ctabs" aria-label="Chọn nước">
+      <nav className="ctabs" aria-label="Chọn nước" style={n > 0 && n < 3 ? { gridTemplateColumns: `repeat(${n}, 1fr)` } : undefined}>
         {D.countries.map((c) => (
           <button key={c} className={`ctab ${c === country && !q ? "on" : ""}`} onClick={() => setCountry(c)}>
             <span>{FLAG[c] || ""}</span>
@@ -264,6 +273,11 @@ export function Catalog() {
           </button>
         ))}
       </nav>
+      {sched ? (
+        <p className="pend" style={{ textAlign: "center", marginTop: 10 }}>
+          {LABEL[country] || country}: {sched}
+        </p>
+      ) : null}
       <div className="search big">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="11" cy="11" r="7" />
