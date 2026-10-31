@@ -47,9 +47,11 @@ export class ProductsService {
     const s = await this.settings.get();
     const first = await this.products.findOne().sort({ sort: 1 }).select('sort').lean().exec();
     const { id, ...rest } = dto;
+    // DTO class gán field không gửi thành undefined. Bỏ chúng, kẻo `cat: undefined` đè mất danh mục mặc định.
+    const input = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== undefined));
     return this.products.create({
-      cat: s.cats[0] ?? 'Khác',
-      ...rest,
+      cat: s.cats?.find((c) => c.trim()) || 'Khác',
+      ...input,
       _id: id ?? 'p' + Date.now().toString(36),
       sort: (first?.sort ?? 0) - 1,
     });
