@@ -1,4 +1,4 @@
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -18,6 +18,8 @@ async function bootstrap() {
   app.useStaticAssets(LOCAL_UPLOAD_DIR, { prefix: '/uploads', maxAge: '30d' });
   app.enableShutdownHooks();
 
-  await app.listen(config.get<number>('PORT') ?? 3000);
+  const port = Number(config.get('PORT')) || 3000;
+  await app.listen(port, '0.0.0.0');
+  Logger.log(`Listening on 0.0.0.0:${port}`, 'Bootstrap');
 }
 await bootstrap();

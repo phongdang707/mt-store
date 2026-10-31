@@ -10,7 +10,18 @@ npm run seed -- --reset   # xoá hết sản phẩm rồi nạp lại (vd sau kh
 npm run start:dev         # http://localhost:3000/api
 ```
 
-- **Ảnh**: Cloudinary khi có `CLOUDINARY_*`; chưa có (dev) thì lưu `./uploads`, phục vụ ở `/uploads`.
+Render (instance 512MB), Root Directory = `server`:
+
+```bash
+# Build Command
+yarn install --production=false && yarn build
+# Start Command — bản đã build, không chạy nest start (hết RAM)
+yarn start
+```
+
+Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Ảnh production cần `CLOUDINARY_*`.
+
+- **Ảnh**: Cloudinary khi có `CLOUDINARY_*`; chưa có (dev) thì lưu `./uploads`, phục vụ ở `/uploads`. Production không có Cloudinary thì API upload trả lỗi, server vẫn chạy.
 - **Khách**: Zalo Mini App gửi `x-zalo-token` (access token), server xác minh qua Graph API bằng `ZALO_APP_SECRET`. Dev chưa có secret: header `x-dev-user`.
 - **Admin**: tài khoản tạo từ `ADMIN_EMAIL`/`ADMIN_PASSWORD` lúc khởi động; đổi `ADMIN_PASSWORD` rồi khởi động lại = đặt lại mật khẩu.
 - `seed/` được tách từ app gốc bằng `scripts/extract-artifact.py`.
