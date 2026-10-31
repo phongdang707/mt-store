@@ -4,7 +4,7 @@ import { StoreProvider } from "@/state/store";
 
 export default function Layout() {
   return (
-    <App theme="light">
+    <App theme={matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"}>
       <SnackbarProvider>
         <StoreProvider>
           <ZMPRouter>
