@@ -9,6 +9,7 @@ export class HealthController {
   @Get()
   check() {
     const up = this.connection.readyState === mongoose.ConnectionStates.connected;
-    return { status: up ? 'ok' : 'error', mongo: up ? 'up' : 'down' };
+    const images = process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET ? 'cloudinary' : 'local';
+    return { status: up ? 'ok' : 'error', mongo: up ? 'up' : 'down', images };
   }
 }
