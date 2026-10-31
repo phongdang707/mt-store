@@ -3,10 +3,11 @@ import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
 import { Avatar, CloseX, Search, Segmented } from "@/components/ui";
 import { Paper } from "@/components/paper";
-import { MobileHead, Shell } from "@/components/shell";
+import { MAIN, MobileHead, Shell } from "@/components/shell";
 import { ddmm, fmt, hhmm, norm, zaloOf } from "@/format";
 import { orderImage } from "@/invoice-image";
 import { sx } from "@/sx";
+import "@/css/invoices.css";
 import type { InvoiceVia, Order, Product } from "@/types";
 
 type F = "all" | "todo" | "sent";
@@ -85,7 +86,14 @@ export default function Invoices() {
   ];
   const list = list0.filter(Fs.find((f) => f[0] === filter)![2]);
   const cur = list0.find((o) => o.code === sel) || null;
-  const shop = { store: settings?.store || "MT store", tagline: settings?.tagline || "", zalo: settings?.zalo || "", bank: settings?.bank || { bank: "", bin: "", acc: "", name: "" }, qr: settings?.qr || "" };
+  const shop = {
+    store: settings?.store || "MT store",
+    tagline: settings?.tagline || "",
+    zalo: settings?.zalo || "",
+    bank: settings?.bank || { bank: "", bin: "", acc: "", name: "" },
+    qr: settings?.qr || "",
+    logo: settings?.logo || "",
+  };
 
   const replace = (u: Order) => {
     setAll((l) => l && l.map((x) => (x.code === u.code ? u : x)));
@@ -144,8 +152,8 @@ export default function Invoices() {
   const banner = st === "new" ? "Hoá đơn đã tạo sẵn khi bạn xác nhận đơn · chưa gửi khách" : st === "changed" ? `Hoá đơn đã cập nhật sau lần gửi lúc ${last ? at(last.at) : ""} · nhớ gửi lại cho khách` : `Đã gửi qua ${last ? VIA[last.via] : ""} lúc ${last ? at(last.at) : ""}`;
 
   return (
-    <Shell>
-      <main className="main-pad" style={sx("flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 20px")}>
+    <Shell variant="flow">
+      <main className="main-pad" style={sx(MAIN.flow)}>
         <MobileHead title="Hoá đơn" sub={list0.filter((o) => o.invoiceStatus !== "sent").length + " hoá đơn cần gửi"} />
         <div style={sx("display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; justify-content: space-between")}>
           <div className="only-desktop" style={sx("display: flex; flex-direction: column; gap: 2px")}>
@@ -191,7 +199,7 @@ export default function Invoices() {
           </section>
 
           {cur ? (
-            <section aria-label="Hoá đơn" className="detail-sheet" style={sx("flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px")}>
+            <section aria-label="Hoá đơn" className="detail-sheet inv-sheet" style={sx("flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px")}>
               <div style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 10px")}>
                 <span style={sx("box-sizing: border-box; font-size: 13.5px; font-weight: 600; border-radius: 12px; padding: 9px 14px; " + CH[st][1])}>{banner}</span>
                 <span style={{ flex: 1 }}></span>
@@ -237,6 +245,7 @@ export default function Invoices() {
               <Paper
                 o={cur}
                 shop={shop}
+                showQr
                 edit={{
                   busy,
                   dec: (k) => run(() => (cur.items[k].qty <= 1 ? api.removeItem(cur.code, k) : api.updateItem(cur.code, k, { qty: cur.items[k].qty - 1 }))),

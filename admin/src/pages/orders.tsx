@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
-import { Avatar, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Segmented, Tabs } from "@/components/ui";
+import { Avatar, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
 import { MobileHead, Shell } from "@/components/shell";
 import { CN, ago, dots, dotsInput, fmt, itemLabel, norm, parseMoney, thisMonth, timeOf } from "@/format";
 import { sx } from "@/sx";
 import type { Order, OrderItem } from "@/types";
+import "@/css/orders.css";
 
 type Tab = "all" | "cho" | "xong";
 const COUNTRIES: [string, string, string][] = [
@@ -20,15 +21,6 @@ const ctyOf = (o: Order) => [...new Set(o.items.map((i) => i.country))];
 const summaryOf = (o: Order) => o.items.map((i) => i.name + " ×" + i.qty).join(", ");
 const monthNum = (m: string) => +m.slice(5);
 const monthLabel = (m: string) => monthNum(m) + "/" + m.slice(0, 4);
-
-function loadPref<T>(k: string, d: T): T {
-  try {
-    const v = localStorage.getItem(k);
-    return v === null ? d : (JSON.parse(v) as T);
-  } catch {
-    return d;
-  }
-}
 
 /** Tin nhắn báo giá gửi khách (giống "Copy báo giá" của app gốc). */
 export function quoteText(o: Order, store: string) {
@@ -77,12 +69,14 @@ function PriceCell({ it, onSave }: { it: OrderItem; onSave: (price: number) => P
         setEdit(true);
       }}
       title={it.price ? "Sửa giá" : "Báo giá cho khách"}
+      aria-label={(it.price ? "Sửa giá " : "Báo giá ") + it.name}
+      className="price-edit"
       style={sx(
-        "box-sizing: border-box; flex: 0 0 auto; text-align: right; border: 0; background: transparent; padding: 0; " +
-          (it.price ? "font-weight: 700; color: #a3546a; font-size: 15px" : "font-size: 12px; font-weight: 700; color: #7a4f00; background: #fdecc8; border-radius: 999px; padding: 3px 10px"),
+        "box-sizing: border-box; flex: 0 0 auto; text-align: right; border: 0; background: transparent; padding: 0; font-family: inherit; " +
+          (it.price ? "font-weight: 700; color: #a3546a; font-size: 15px" : "font-size: 13px; color: #7d6862"),
       )}
     >
-      {it.price ? fmt(it.price * it.qty) : "Chưa có giá · Báo giá"}
+      {it.price ? fmt(it.price * it.qty) : "Chưa có giá"}
     </button>
   );
 }
@@ -215,13 +209,16 @@ function MobileCard({ o, onOpen, onToggle }: { o: Order; onOpen: () => void; onT
 }
 
 export default function Orders() {
-  const { tick, refresh, badges } = useApp();
+  const { tick, refresh, badges, settings } = useApp();
   const [months, setMonths] = useState<string[]>([thisMonth()]);
   const [month, setMonth] = useState(thisMonth());
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [tab, setTab] = useState<Tab>("all");
   const [sel, setSel] = useState<string | null>(null);
-  const [showRev, setShowRev] = useState(() => loadPref("mt_show_rev", true));
+  // null = theo Cài đặt › "Ẩn doanh thu khi mở trang" cho tới khi bấm con mắt.
+  const [revPick, setRevPick] = useState<boolean | null>(null);
+  const showRev = revPick ?? !settings?.prefs?.hideRev;
+  const setShowRev = (v: boolean) => setRevPick(v);
   const [country, setCountry] = useState<string | null>(null);
   const [sumOpen, setSumOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -229,7 +226,10 @@ export default function Orders() {
   const mobile = typeof matchMedia !== "undefined" && matchMedia("(max-width: 760px)").matches;
 
   useEffect(() => {
-    api.months().then((m) => setMonths(m.slice(0, 3).reverse())).catch(() => {});
+    api
+      .months()
+      .then((m) => setMonths([...new Set([thisMonth(), ...m])].sort().reverse().slice(0, 3).reverse()))
+      .catch(() => {});
   }, [tick]);
   useEffect(() => {
     let live = true;
@@ -241,7 +241,6 @@ export default function Orders() {
       live = false;
     };
   }, [month, tick]);
-  useEffect(() => localStorage.setItem("mt_show_rev", JSON.stringify(showRev)), [showRev]);
 
   const all = orders ?? [];
   const searched = q ? all.filter((o) => norm([o.code, o.name, o.phone, o.addr, o.note, ...o.items.map((i) => i.name)].join(" ")).includes(norm(q))) : all;
@@ -251,10 +250,7 @@ export default function Orders() {
     ["xong", "Đã xác nhận", (o) => st(o) === "xong"],
   ];
   const cur = T.find((t) => t[0] === tab)!;
-  const list = searched
-    .filter(cur[2])
-    .filter((o) => !country || ctyOf(o).includes(country))
-    .sort((a, b) => (st(a) === "xong" ? 1 : 0) - (st(b) === "xong" ? 1 : 0) || +new Date(b.createdAt) - +new Date(a.createdAt));
+  const list = searched.filter(cur[2]).filter((o) => !country || ctyOf(o).includes(country));
 
   useEffect(() => {
     if (!mobile && !sel && list.length) setSel(list[0].code);
@@ -305,10 +301,18 @@ export default function Orders() {
     }
   };
   const ml = monthLabel(month);
+  /** Bỏ lọc nước: về tháng hiện tại (như thiết kế). */
+  const clearCountry = () => {
+    setCountry(null);
+    if (month !== thisMonth()) {
+      setMonth(thisMonth());
+      setSel(null);
+    }
+  };
 
   return (
-    <Shell>
-      <main className="main-pad" style={sx("flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 22px")}>
+    <Shell variant="scroll">
+      <main className="main-pad orders-main" style={sx("flex: 999 1 560px; min-width: 0; height: 100%; overflow-y: auto; box-sizing: border-box; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 22px")}>
         <MobileHead
           title="Đơn hàng"
           sub={badges.pendingOrders + " đơn chờ xử lý"}
@@ -327,19 +331,7 @@ export default function Orders() {
         />
         <div className={mSearch ? undefined : "only-desktop"} style={sx("display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; justify-content: space-between")}>
           <div className="only-desktop" style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 16px")}>
-            <h1 style={sx("margin: 0; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 30px; color: #a3546a; letter-spacing: 0.3px")}>
-              Đơn hàng
-            </h1>
-            <Segmented
-              label="Chọn tháng"
-              items={months.map((m) => [m, "Tháng " + monthNum(m)] as [string, string])}
-              value={month}
-              onPick={(m) => {
-                setMonth(m);
-                setCountry(null);
-                setSel(null);
-              }}
-            />
+            <h1 style={sx("margin: 0; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 30px; color: #a3546a; letter-spacing: 0.3px")}>Đơn hàng</h1>
           </div>
           <span className={mSearch ? undefined : "only-desktop"} style={sx("display: flex; flex: 0 1 340px; min-width: 220px")}>
             <Search label="Tìm đơn" placeholder="Tìm mã đơn, tên, số điện thoại…" value={q} onChange={setQ} flex="1 1 auto" />
@@ -378,7 +370,7 @@ export default function Orders() {
             <div style={sx("display: flex; align-items: center; justify-content: space-between; gap: 8px")}>
               <span style={sx("font-size: 13px; font-weight: 700; color: #6f5a55")}>Lịch sử đơn theo nước · tháng {ml} · bấm một nước để xem đơn</span>
               {country ? (
-                <button onClick={() => setCountry(null)} style={sx("border: 0; background: transparent; color: #a3546a; font-size: 13px; font-weight: 600; padding: 4px 2px")}>
+                <button onClick={clearCountry} style={sx("border: 0; background: transparent; color: #a3546a; font-size: 13px; font-weight: 600; padding: 4px 2px")}>
                   Xem tất cả
                 </button>
               ) : null}
@@ -390,7 +382,8 @@ export default function Orders() {
                   <button
                     key={c.key}
                     onClick={() => {
-                      setCountry(on ? null : c.key);
+                      if (on) clearCountry();
+                      else setCountry(c.key);
                       setTab("all");
                     }}
                     aria-pressed={on}
@@ -414,7 +407,7 @@ export default function Orders() {
           </div>
         </div>
 
-        <section aria-label="Tổng sản phẩm khách đặt" className="only-desktop" style={sx("background: #fffaf7; border: 1px solid #efd9d3; border-radius: 20px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10); display: flex; flex-direction: column; overflow: hidden")}>
+        <section aria-label="Tổng sản phẩm khách đặt" className="only-desktop" style={sx("flex-shrink: 0; background: #fffaf7; border: 1px solid #efd9d3; border-radius: 20px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10); display: flex; flex-direction: column; overflow: hidden")}>
           <div style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px")}>
             <span style={sx("width: 36px; height: 36px; flex: 0 0 36px; border-radius: 12px; background: #f6e1dc; color: #a3546a; display: flex; align-items: center; justify-content: center")}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -472,14 +465,45 @@ export default function Orders() {
             <h2 className="only-desktop" style={sx("margin: 0; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 18px; color: #3d3530")}>
               Đơn tháng {ml} <span style={sx("font-family: 'Be Vietnam Pro', sans-serif; font-size: 13.5px; font-weight: 600; color: #7d6862")}>· {all.length} đơn</span>
             </h2>
-            <Tabs tabs={T.map(([id, l, f]) => [id, l, searched.filter(f).length])} value={tab} onPick={setTab} />
+            <span className="only-desktop">
+              <Tabs tabs={T.map(([id, l, f]) => [id, l, searched.filter(f).length])} value={tab} onPick={setTab} />
+            </span>
+            <div className="only-mobile orders-mtabs" style={sx("display: flex; gap: 8px; overflow-x: auto")}>
+              {T.map(([id, l]) => (
+                <button
+                  key={id}
+                  onClick={() => setTab(id)}
+                  style={sx(
+                    "box-sizing: border-box; flex: 0 0 auto; min-height: 40px; border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 13.5px; white-space: nowrap; " +
+                      (id === tab ? "border: 1.5px solid #b3566f; background: #b3566f; color: #ffffff" : "border: 1px solid #efd9d3; background: #fffaf7; color: #6f5a55"),
+                  )}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
             {country ? (
-              <div style={sx("display: flex; align-items: center; gap: 10px; background: #fbe7ec; border: 1px solid #e8c3cd; border-radius: 14px; padding: 10px 14px")}>
+              <div className="only-desktop" style={sx("display: flex; align-items: center; gap: 10px; background: #fbe7ec; border: 1px solid #e8c3cd; border-radius: 14px; padding: 10px 14px")}>
                 <span style={sx("flex: 1; font-size: 14px; color: #6e3346")}>
                   Đang xem đơn có hàng <b>{CN[country]}</b> · {list.length} đơn
                 </span>
+                <div role="group" aria-label="Xem lịch sử theo tháng" style={sx("display: flex; gap: 4px; background: #ffffff; border: 1px solid #e8c3cd; border-radius: 999px; padding: 3px")}>
+                  {months.map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        setMonth(m);
+                        setSel(null);
+                      }}
+                      aria-pressed={m === month}
+                      style={sx("box-sizing: border-box; border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 13.5px; " + (m === month ? "background: #b3566f; color: #ffffff" : "background: transparent; color: #8f4459"))}
+                    >
+                      Tháng {monthNum(m)}
+                    </button>
+                  ))}
+                </div>
                 <button
-                  onClick={() => setCountry(null)}
+                  onClick={clearCountry}
                   aria-label="Bỏ lọc theo nước"
                   style={sx("display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e8c3cd; background: #ffffff; color: #a3546a; border-radius: 999px; padding: 6px 12px; font-weight: 600; font-size: 13px")}
                 >

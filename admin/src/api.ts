@@ -26,7 +26,17 @@ export class ApiError extends Error {
 let onUnauthorized = () => {};
 export const setUnauthorizedHandler = (f: () => void) => (onUnauthorized = f);
 
+const FIXTURE = import.meta.env.VITE_FIXTURE === "1";
+
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  if (FIXTURE) {
+    const { handle } = await import("./fixture");
+    try {
+      return await handle<T>(method, path, body);
+    } catch (e) {
+      throw new ApiError((e as Error).message, (e as { status?: number }).status ?? 500);
+    }
+  }
   const headers: Record<string, string> = {};
   const t = auth.get();
   if (t) headers.authorization = "Bearer " + t;
@@ -57,6 +67,7 @@ const q = (o: Record<string, string | undefined>) => {
 export const api = {
   login: (email: string, password: string, remember: boolean) =>
     call<{ token: string; admin: { email: string; name: string } }>("POST", "/auth/login", { email, password, remember }),
+  changePassword: (current: string, next: string) => call<null>("POST", "/auth/password", { current, next }),
   me: () => call<{ email: string; name: string }>("GET", "/auth/me"),
   badges: () => call<Badges>("GET", "/admin/badges"),
   months: () => call<string[]>("GET", "/admin/orders/months"),
@@ -79,18 +90,34 @@ export const api = {
     return call<{ url: string }>("POST", "/admin/uploads", fd);
   },
   publicInvoice: (token: string) =>
-    call<{ order: Order; shop: Pick<Settings, "store" | "tagline" | "zalo" | "bank" | "qr"> }>("GET", `/invoices/${token}`),
+    call<{ order: Order; shop: Pick<Settings, "store" | "tagline" | "logo" | "zalo" | "bank" | "qr"> }>("GET", `/invoices/${token}`),
 };
 
+export interface OrderEvent {
+  type: "order";
+  code: string;
+  kind: "order" | "request";
+  action: "created" | "updated" | "paid";
+}
+
 /** Đơn mới / đổi trạng thái: server đẩy sự kiện, trang tải lại dữ liệu. */
-export function subscribe(onChange: () => void) {
+export function subscribe(onChange: (e: OrderEvent | null) => void) {
+  if (FIXTURE) return () => {};
   let es: EventSource | null = null,
     stop = false,
     timer = 0;
   const open = () => {
     if (stop || !auth.get()) return;
     es = new EventSource(`${API}/admin/events?token=${encodeURIComponent(auth.get())}`);
-    es.onmessage = () => onChange();
+    es.onmessage = (m) => {
+      let e: OrderEvent | null = null;
+      try {
+        e = JSON.parse(m.data) as OrderEvent;
+      } catch {
+        /* ping */
+      }
+      onChange(e);
+    };
     es.onerror = () => {
       es?.close();
       timer = window.setTimeout(open, 5000);

@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { useEffect, type ReactNode } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { useApp } from "@/app-state";
 import LOGO from "@/logo.svg";
 import { sx } from "@/sx";
@@ -56,8 +56,36 @@ const PILL: Record<Key, string> = {
   settings: "",
 };
 
-function Sidebar({ fixed }: { fixed?: boolean }) {
-  const { badges, me, logout, settings } = useApp();
+/**
+ * 3 bố cục khung của thiết kế:
+ * - `scroll` (Đơn hàng, Tìm hộ, Cài đặt): cao đúng màn hình, cột nội dung tự cuộn.
+ * - `fixed` (Sản phẩm): sidebar cố định 248px, lưới và khung sửa cuộn riêng.
+ * - `flow` (Hoá đơn): trang dài, cuộn cả trang.
+ */
+export type ShellVariant = "scroll" | "fixed" | "flow";
+
+const ROOT: Record<ShellVariant, string> = {
+  scroll: "height: 100vh; overflow: hidden; display: flex; ",
+  fixed: "height: 100vh; overflow: hidden; display: flex; ",
+  flow: "min-height: 100vh; display: flex; flex-wrap: wrap; ",
+};
+const ASIDE: Record<ShellVariant, string> = {
+  scroll: "flex: 1 1 240px; max-width: 264px; min-width: 220px; flex-shrink: 0; height: 100%; overflow-y: auto; z-index: 3; ",
+  fixed: "flex: 0 0 248px; height: 100%; overflow-y: auto; ",
+  flow: "flex: 1 1 240px; max-width: 264px; min-width: 220px; ",
+};
+/** Cột nội dung (thẻ <main>) của từng bố cục, chép từ thiết kế. */
+export const MAIN: Record<ShellVariant, string> = {
+  scroll: "flex: 999 1 560px; min-width: 0; height: 100%; overflow-y: auto; box-sizing: border-box; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 20px",
+  fixed: "flex: 1 1 auto; min-width: 0; height: 100%; box-sizing: border-box; padding: 28px 32px 24px; display: flex; flex-direction: column; gap: 20px",
+  flow: "flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 48px; display: flex; flex-direction: column; gap: 20px",
+};
+
+const Dot = () => <span aria-label="Có mới" style={sx("position: absolute; top: -3px; right: -3px; width: 9px; height: 9px; border-radius: 50%; background: #e0475e; box-shadow: 0 0 0 2px #fffaf7")}></span>;
+
+function Sidebar({ variant }: { variant: ShellVariant }) {
+  const { badges, me, logout, settings, alerts } = useApp();
+  const dot: Partial<Record<Key, boolean>> = { orders: alerts.orders, requests: alerts.requests };
   const count: Record<Key, number | null> = {
     orders: badges.pendingOrders,
     products: badges.products,
@@ -70,12 +98,12 @@ function Sidebar({ fixed }: { fixed?: boolean }) {
     <aside
       className="only-desktop"
       style={sx(
-        (fixed ? "flex: 0 0 248px; height: 100%; overflow-y: auto; " : "flex: 1 1 240px; max-width: 264px; min-width: 220px; ") +
+        ASIDE[variant] +
           "box-sizing: border-box; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; border-right: 1px solid #efd9d3; background: rgba(255, 250, 247, 0.7)",
       )}
     >
       <div style={sx("display: flex; align-items: center; gap: 10px; padding: 0 8px 18px")}>
-        <img src={LOGO} alt="MT store" style={sx("width: 72px; height: auto")} />
+        <img src={settings?.logo || LOGO} alt={settings?.store || "MT store"} style={sx("width: 72px; height: auto")} />
         <div style={sx("display: flex; flex-direction: column")}>
           <span style={sx("font-family: Quicksand, sans-serif; font-weight: 700; font-size: 16px; color: #a3546a; letter-spacing: 0.5px")}>Quản lý</span>
           <span style={sx("font-size: 12.5px; color: #7d6862")}>Hàng xách tay</span>
@@ -93,7 +121,10 @@ function Sidebar({ fixed }: { fixed?: boolean }) {
         >
           {({ isActive }) => (
             <>
-              {ICON[k]()}
+              <span style={sx("position: relative; display: flex")}>
+                {ICON[k]()}
+                {dot[k] ? <Dot /> : null}
+              </span>
               <span style={{ flex: 1 }}>{label}</span>
               {count[k] ? <span style={sx(isActive ? PILL_ON : PILL[k])}>{count[k]}</span> : null}
             </>
@@ -143,7 +174,7 @@ function Sidebar({ fixed }: { fixed?: boolean }) {
 
 /** Thanh tab dưới trên điện thoại (bản "Điện thoại – Đơn hàng"). */
 function BottomNav() {
-  const { badges } = useApp();
+  const { badges, alerts } = useApp();
   const items = NAV.filter(([k]) => k !== "invoices");
   return (
     <nav
@@ -163,7 +194,10 @@ function BottomNav() {
             )
           }
         >
-          {ICON[k](22)}
+          <span style={sx("position: relative; display: flex")}>
+            {ICON[k](22)}
+            {(k === "orders" && alerts.orders) || (k === "requests" && alerts.requests) ? <Dot /> : null}
+          </span>
           {short}
           {k === "orders" && badges.pendingOrders ? (
             <span style={sx("position: absolute; top: 0; left: calc(50% + 6px); background: #b3566f; color: #fff; border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 0 6px")}>{badges.pendingOrders}</span>
@@ -174,16 +208,20 @@ function BottomNav() {
   );
 }
 
-export function Shell({ children, fixed }: { children: ReactNode; fixed?: boolean }) {
+export function Shell({ children, fixed, variant }: { children: ReactNode; fixed?: boolean; variant?: ShellVariant }) {
+  const v: ShellVariant = variant ?? (fixed ? "fixed" : "scroll");
+  const { pathname } = useLocation();
+  const { clearAlert } = useApp();
+  useEffect(() => {
+    if (pathname === "/") clearAlert("orders");
+    if (pathname === "/tim-ho") clearAlert("requests");
+  }, [pathname, clearAlert]);
   return (
     <div
-      className={fixed ? "prod-frame" : undefined}
-      style={sx(
-        (fixed ? "height: 100vh; overflow: hidden; display: flex; " : "min-height: 100vh; display: flex; flex-wrap: wrap; ") +
-          "background: linear-gradient(180deg, #fcf8f0 0%, #f8efe8 45%, #f4dfda 100%); font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #3d3530; font-size: 15px; line-height: 1.45",
-      )}
+      className={"shell-root shell-" + v}
+      style={sx(ROOT[v] + "background: linear-gradient(180deg, #fcf8f0 0%, #f8efe8 45%, #f4dfda 100%); font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #3d3530; font-size: 15px; line-height: 1.45")}
     >
-      <Sidebar fixed={fixed} />
+      <Sidebar variant={v} />
       {children}
       <BottomNav />
     </div>
@@ -192,9 +230,10 @@ export function Shell({ children, fixed }: { children: ReactNode; fixed?: boolea
 
 /** Đầu trang trên điện thoại: logo + tiêu đề + dòng phụ (bản Mobile). */
 export function MobileHead({ title, sub, action }: { title: string; sub?: string; action?: ReactNode }) {
+  const { settings } = useApp();
   return (
     <header className="only-mobile" style={sx("margin: -18px -16px 4px; padding: 18px 18px 12px; align-items: center; gap: 12px; border-bottom: 1px solid #efd9d3; background: rgba(255, 250, 247, 0.85)")}>
-      <img src={LOGO} alt="MT store" style={sx("width: 58px; height: auto")} />
+      <img src={settings?.logo || LOGO} alt={settings?.store || "MT store"} style={sx("width: 58px; height: auto")} />
       <div style={sx("flex: 1; display: flex; flex-direction: column")}>
         <span style={sx("font-family: Quicksand, sans-serif; font-weight: 700; font-size: 20px; color: #a3546a; line-height: 1.2")}>{title}</span>
         {sub ? <span style={sx("font-size: 12.5px; color: #7d6862")}>{sub}</span> : null}

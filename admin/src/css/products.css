@@ -1,0 +1,7 @@
+/* Sản phẩm trên điện thoại: lưới 2 cột, chip lọc trượt ngang dưới ô tìm. */
+.prod-chips { display: contents; }
+@media (max-width: 760px) {
+  .prod-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; padding: 2px 0 16px !important; }
+  .prod-chips { display: flex; flex: 0 0 auto; width: calc(100% + 32px); gap: 8px; overflow-x: auto; margin: 0 -16px; padding: 0 16px; box-sizing: border-box; }
+  .prod-chips > button { flex: 0 0 auto; min-height: 40px; }
+}

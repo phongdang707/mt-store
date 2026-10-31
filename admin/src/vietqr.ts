@@ -51,3 +51,71 @@ export function qrDataURL(payload: string) {
   q.make();
   return q.createDataURL(8, 2);
 }
+
+/** Mã BIN Napas theo tên ngân hàng: ô "Ngân hàng" trong Cài đặt chỉ cần gõ tên. */
+const BINS: [string, string[]][] = [
+  ["970436", ["vietcombank", "vcb", "ngoaithuong"]],
+  ["970415", ["vietinbank", "ctg", "congthuong"]],
+  ["970418", ["bidv", "dautuvaphattrien"]],
+  ["970405", ["agribank", "nongnghiep"]],
+  ["970407", ["techcombank", "tcb", "kythuong"]],
+  ["970422", ["mbbank", "mb", "quandoi"]],
+  ["970416", ["acb", "achau"]],
+  ["970432", ["vpbank", "vietnamthinhvuong"]],
+  ["970423", ["tpbank", "tienphong"]],
+  ["970403", ["sacombank", "stb", "saigonthuongtin"]],
+  ["970437", ["hdbank", "hdb"]],
+  ["970441", ["vib", "quocte"]],
+  ["970443", ["shb", "saigonhanoi"]],
+  ["970431", ["eximbank", "eib"]],
+  ["970426", ["msb", "maritime", "hanghai"]],
+  ["970448", ["ocb", "phuongdong"]],
+  ["970440", ["seabank", "dongnama"]],
+  ["970449", ["lpbank", "lienvietpostbank", "lienviet", "locphat"]],
+  ["970428", ["namabank", "nama"]],
+  ["970409", ["bacabank", "baca"]],
+  ["970425", ["abbank", "anbinh"]],
+  ["970427", ["vietabank", "vieta"]],
+  ["970419", ["ncb", "quocdan"]],
+  ["970412", ["pvcombank", "daichung"]],
+  ["970452", ["kienlongbank", "kienlong"]],
+  ["970429", ["scb", "saigon"]],
+  ["970400", ["saigonbank", "saigoncongthuong"]],
+  ["970438", ["baovietbank", "baoviet"]],
+  ["970430", ["pgbank", "xangdau"]],
+  ["970433", ["vietbank", "vietnamthuongtin"]],
+  ["970406", ["dongabank", "donga"]],
+  ["970408", ["gpbank", "daukhitoancau"]],
+  ["970414", ["oceanbank", "daiduong"]],
+  ["970454", ["bvbank", "vietcapitalbank", "vietcapital", "banviet"]],
+  ["546034", ["cake", "cakebyvpbank"]],
+  ["546035", ["ubank"]],
+  ["963388", ["timo"]],
+  ["970424", ["shinhan", "shinhanbank"]],
+  ["970457", ["woori", "wooribank"]],
+  ["970439", ["publicbank"]],
+  ["458761", ["hsbc"]],
+  ["970458", ["uob"]],
+  ["970410", ["standardchartered"]],
+  ["422589", ["cimb"]],
+  ["970434", ["indovina", "ivb"]],
+  ["668888", ["kbank", "kasikorn"]],
+];
+
+const key = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/[^a-z0-9]/g, "")
+    .replace(/^(nganhang|nh|tmcp|nganhangtmcp)+/, "");
+
+/** "Vietcombank", "NH Ngoại Thương", "MB" → "970436" / "970422"; không nhận ra thì rỗng. */
+export function binOf(bankName: string) {
+  const k = key(bankName || "");
+  if (!k) return "";
+  for (const [bin, names] of BINS) if (names.some((n) => k === n)) return bin;
+  for (const [bin, names] of BINS) if (names.some((n) => n.length >= 5 && (k.startsWith(n) || k.includes(n)))) return bin;
+  return "";
+}
