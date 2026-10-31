@@ -17,9 +17,14 @@ export class StorageService {
   private readonly cloud: boolean;
 
   constructor(private readonly config: ConfigService) {
-    const name = config.get<string>('CLOUDINARY_CLOUD_NAME');
-    const key = config.get<string>('CLOUDINARY_API_KEY');
-    const secret = config.get<string>('CLOUDINARY_API_SECRET');
+    const name = config.get<string>('CLOUDINARY_CLOUD_NAME')?.trim();
+    let key = config.get<string>('CLOUDINARY_API_KEY')?.trim();
+    let secret = config.get<string>('CLOUDINARY_API_SECRET')?.trim();
+    // API key của Cloudinary là chuỗi số. Nếu hai biến bị điền ngược, upload bị từ chối.
+    if (key && secret && !/^\d+$/.test(key) && /^\d+$/.test(secret)) {
+      [key, secret] = [secret, key];
+      this.log.warn('CLOUDINARY_API_KEY và CLOUDINARY_API_SECRET đang đảo, đã dùng đúng chiều');
+    }
     this.cloud = !!(name && key && secret);
     if (this.cloud) cloudinary.config({ cloud_name: name, api_key: key, api_secret: secret, secure: true });
     else this.log.warn('Chưa cấu hình Cloudinary, ảnh lưu tạm vào ./uploads');
@@ -51,7 +56,13 @@ export class StorageService {
       };
       if (publicId) options.public_id = publicId;
       const res = await new Promise<{ secure_url: string }>((resolve, reject) => {
-        const fail = (err?: { message?: string }) => reject(new ServiceUnavailableException(err?.message || 'Không lưu được ảnh'));
+        const fail = (err?: { message?: string }) => {
+          const raw = err?.message || '';
+          const message = /api_key|api_secret|unauthorized|invalid signature/i.test(raw)
+            ? 'Cloudinary từ chối khóa API. Kiểm tra CLOUDINARY_API_KEY và CLOUDINARY_API_SECRET.'
+            : raw || 'Không lưu được ảnh';
+          reject(new ServiceUnavailableException(message));
+        };
         try {
           const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
             if (err || !result?.secure_url) fail(err);
