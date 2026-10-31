@@ -43,7 +43,16 @@ button{cursor:pointer}
 .ph{background:#fff;border-radius:14px;aspect-ratio:1;overflow:hidden;display:flex;align-items:center;justify-content:center}
 .ph img{width:100%;height:100%;object-fit:contain}
 .ph span{font-family:'Quicksand',sans-serif;font-weight:600;font-size:40px;color:#c2677f}
-.tagx{position:absolute;top:18px;right:18px;z-index:1;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:11.5px;border-radius:999px;padding:3px 10px;letter-spacing:.2px}
+.tagx{position:absolute;top:16px;right:16px;left:auto;z-index:2;display:inline-flex;align-items:center;gap:4px;padding:5px 12px 5px 9px;border-radius:999px;border:2px solid #fff;color:#fff;font-family:'Be Vietnam Pro',system-ui,sans-serif;font-weight:800;font-size:12.5px;letter-spacing:1.4px;line-height:1;overflow:hidden;isolation:isolate}
+.tagx span{font-size:14px;letter-spacing:0}
+.tagx.hot{background:linear-gradient(135deg,#ff6b8b 0%,#e8336f 55%,#b8124f 100%);box-shadow:0 4px 14px rgba(232,51,111,.5)}
+.tagx.best{background:linear-gradient(135deg,#ffcf6b 0%,#f0a020 60%,#c97a00 100%);box-shadow:0 4px 14px rgba(240,160,32,.45);color:#fff}
+.tagw{position:absolute;top:16px;right:16px;z-index:2;display:flex;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none}
+.tagw .tagx{position:relative;top:auto;right:auto;left:auto}
+.tagx.bogo{background:linear-gradient(135deg,#a66bff 0%,#d63384 60%,#a3125a 100%);box-shadow:0 4px 14px rgba(214,51,132,.5);font-size:14px;letter-spacing:1px}
+.tagx.hot::after,.tagx.best::after,.tagx.bogo::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.55) 45%,transparent 60%);transform:translateX(-120%);animation:tagshine 2.8s ease-in-out infinite}
+@keyframes tagshine{0%,55%{transform:translateX(-120%)}100%{transform:translateX(120%)}}
+@media (prefers-reduced-motion:reduce){.tagx::after{animation:none;display:none}}
 .brands{margin:26px 0 6px}
 .br-h{text-align:center;margin-bottom:14px}
 .br-h h2{font-family:'Quicksand',sans-serif;font-weight:700;font-size:20px;color:var(--brand);letter-spacing:.3px}
@@ -72,7 +81,8 @@ button{cursor:pointer}
 .pr small{font-size:12px;color:var(--muted);font-weight:500;display:block;letter-spacing:.3px}
 .act{margin-top:auto;padding-top:10px}
 .add{width:100%;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:12px;padding:9px;font-weight:600}
-.add.plus{font-size:26px;line-height:1;padding:6px 9px 8px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,color .15s}
+.add.plus{font-size:15px;line-height:1;padding:8px 9px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,color .15s}
+.add.plus b{font-size:22px;font-weight:500;line-height:.8;margin-right:-2px}
 .add.plus:hover{background:var(--accent);color:var(--accent-ink)}
 .add.plus small{font-size:12.5px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:2px 8px}
 .add.plus:hover small{background:var(--accent-ink);color:var(--accent)}

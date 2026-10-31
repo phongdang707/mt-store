@@ -42,16 +42,30 @@ export function Header() {
 }
 
 const SORT_LABEL: Record<string, string> = { default: "Nổi bật", asc: "Giá thấp → cao", best: "Sản phẩm bán chạy" };
-const Badge = ({ p }: { p: Product }) =>
-  p.soldout ? (
-    <div className="tagx out">Hết hàng</div>
-  ) : p.hot || p.best ? (
-    <div className="tagx">
-      {p.hot ? "🔥 Hot" : ""}
-      {p.hot && p.best ? " · " : ""}
-      {p.best ? "Bán chạy" : ""}
-    </div>
-  ) : null;
+/** Món "mua 1 tặng 1" nhận ra từ tên. */
+const is11 = (p: Product) => /mua 1 tặng 1|\(1\+1\)/i.test(String(p.name || ""));
+const Badge = ({ p }: { p: Product }) => {
+  const t = p.soldout
+    ? [<div key="out" className="tagx out">Hết hàng</div>]
+    : [
+        p.hot && (
+          <div key="hot" className="tagx hot">
+            <span aria-hidden="true">🔥</span>HOT
+          </div>
+        ),
+        p.best && (
+          <div key="best" className="tagx best">
+            <span aria-hidden="true">★</span>BÁN CHẠY
+          </div>
+        ),
+        is11(p) && (
+          <div key="bogo" className="tagx bogo">
+            <span aria-hidden="true">🎁</span>1+1
+          </div>
+        ),
+      ].filter(Boolean);
+  return t.length ? <div className="tagw">{t}</div> : null;
+};
 
 /** Sản phẩm dạng link: xem mẫu, màu, giá tại cửa hàng chính hãng Việt Nam. */
 function LinkCard({ p }: { p: Product }) {
@@ -115,7 +129,7 @@ function VariantCard({ p }: { p: Product }) {
           </button>
         ) : (
           <button className={`add plus ${n ? "has" : ""}`} onClick={() => startPick(p.id)} aria-label={`Chọn ${p.name}`}>
-            +{n ? <small>{n}</small> : null}
+            <b aria-hidden="true">+</b>Chọn{n ? <small>{n}</small> : null}
           </button>
         )}
       </div>
@@ -155,7 +169,7 @@ export function Card({ p }: { p: Product }) {
           </button>
         ) : (
           <button className="add plus" onClick={() => setQty(p.id, 1)} aria-label={`Chọn ${p.name}`}>
-            +
+            <b aria-hidden="true">+</b>Chọn
           </button>
         )}
       </div>
@@ -218,7 +232,10 @@ function List() {
   if (sort === "best") ps = ps.filter((p) => p.best);
   if (sort === "asc") ps = [...ps].sort((a, b) => (a.price || 1e12) - (b.price || 1e12));
   if (sort === "desc") ps = [...ps].sort((a, b) => b.price - a.price);
-  if (sort === "default") ps = [...ps].sort((a, b) => (b.hot ? 2 : 0) + (b.best ? 1 : 0) - ((a.hot ? 2 : 0) + (a.best ? 1 : 0)));
+  if (sort === "default") {
+    const sc = (x: Product) => (x.hot ? 2 : 0) + (is11(x) ? 2 : 0) + (x.best ? 1 : 0);
+    ps = [...ps].sort((a, b) => sc(b) - sc(a));
+  }
   ps = [...ps].sort((a, b) => (a.soldout ? 1 : 0) - (b.soldout ? 1 : 0));
   if (!ps.length && (sort === "hot" || sort === "best"))
     return <div className="empty">Chưa có món {sort === "hot" ? "đang hot" : "bán chạy"} trong mục này.</div>;
