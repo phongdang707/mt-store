@@ -37,8 +37,7 @@ try {
   if (rehost) {
     if (reset) throw new Error('--rehost không đi cùng --reset');
     await rehostLocal(storage, products, settings);
-    return;
-  }
+  } else {
   const data = JSON.parse(await readFile(join(dir, 'catalog.json'), 'utf8')) as Seed;
 
   const up = async (file: string, folder = 'products') =>
@@ -73,6 +72,95 @@ try {
     process.stdout.write(`\r${added} sản phẩm mới…`);
   }
   console.log(`\nXong: ${added} sản phẩm mới, ${have.size} giữ nguyên. Ảnh: ${storage.usesCloud ? 'Cloudinary' : './uploads'}`);
+  }
 } finally {
   await app.close();
+}
+
+/** Ảnh đang trỏ `http://localhost/.../uploads/...` thì đọc file local và đẩy lên Cloudinary. */
+function localUpload(url: string): { file: string; folder: string; publicId: string } | null {
+  let pathname: string;
+  try {
+    const u = new URL(url);
+    if (u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') return null;
+    pathname = decodeURIComponent(u.pathname);
+  } catch {
+    return null;
+  }
+  if (!pathname.startsWith('/uploads/')) return null;
+  const rel = pathname.slice('/uploads/'.length);
+  const slash = rel.indexOf('/');
+  if (slash <= 0 || rel.includes('..')) return null;
+  const folder = rel.slice(0, slash);
+  const base = rel.slice(slash + 1);
+  if (!base) return null;
+  return { file: join(LOCAL_UPLOAD_DIR, folder, base), folder, publicId: base.replace(/\.[^.]+$/, '') };
+}
+
+async function pool<T>(n: number, items: T[], fn: (item: T) => Promise<void>) {
+  let i = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(n, items.length) }, async () => {
+      while (i < items.length) await fn(items[i++]);
+    }),
+  );
+}
+
+async function rehostLocal(storage: StorageService, products: Model<Product>, settings: Model<Settings>) {
+  if (!storage.usesCloud) throw new Error('Cần CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY và CLOUDINARY_API_SECRET để đẩy ảnh.');
+  const docs = await products.find().select('img variants').lean().exec();
+  const shop = await settings.findById('main').select('qr').lean().exec();
+  const files = new Map<string, { file: string; folder: string; publicId: string }>();
+  const add = (url: string) => {
+    const loc = url ? localUpload(url) : null;
+    if (loc) files.set(loc.file, loc);
+  };
+  for (const p of docs) {
+    add(p.img);
+    for (const v of p.variants ?? []) add(v.img);
+  }
+  if (shop?.qr) add(shop.qr);
+
+  const uploaded = new Map<string, string>();
+  const failures: string[] = [];
+  await pool(4, [...files.values()], async (loc) => {
+    try {
+      uploaded.set(loc.file, await storage.upload(await readFile(loc.file), loc.folder, loc.publicId));
+      process.stdout.write(`\r${uploaded.size}/${files.size} ảnh…`);
+    } catch (e) {
+      failures.push(`${loc.file}: ${(e as Error).message}`);
+    }
+  });
+  const next = (url: string) => {
+    const loc = url ? localUpload(url) : null;
+    return (loc && uploaded.get(loc.file)) || url;
+  };
+
+  let changed = 0;
+  for (const p of docs) {
+    const img = next(p.img);
+    let variantsChanged = false;
+    const variants = (p.variants ?? []).map((v) => {
+      const imgUrl = next(v.img);
+      if (imgUrl !== v.img) variantsChanged = true;
+      return { name: v.name, img: imgUrl };
+    });
+    if (img !== p.img || variantsChanged) {
+      await products.updateOne({ _id: p._id }, { $set: variantsChanged ? { img, variants } : { img } });
+      changed++;
+    }
+  }
+  let qrChanged = false;
+  if (shop?.qr) {
+    const qr = next(shop.qr);
+    if (qr !== shop.qr) {
+      await settings.updateOne({ _id: 'main' }, { $set: { qr } });
+      qrChanged = true;
+    }
+  }
+  console.log(`\nĐã đẩy ${uploaded.size} ảnh. ${changed} sản phẩm cập nhật${qrChanged ? ', QR shop đã đổi' : ''}.`);
+  if (failures.length) {
+    console.error(failures.join('\n'));
+    throw new Error(`${failures.length} ảnh chưa đẩy được`);
+  }
 }

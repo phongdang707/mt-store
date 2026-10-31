@@ -7,6 +7,7 @@ cp .env.example .env      # điền MONGODB_URI, JWT_SECRET, ADMIN_EMAIL/ADMIN_P
 npm install               # npm 10 lỗi "edgesOut" thì: npx npm@11 install
 npm run seed              # nạp 72 sản phẩm + cài đặt shop từ seed/ (chạy lại chỉ thêm món chưa có)
 npm run seed -- --reset   # xoá hết sản phẩm rồi nạp lại (vd sau khi thêm key Cloudinary)
+npm run seed -- --rehost  # đẩy ảnh localhost đang có trong DB lên Cloudinary, giữ giá
 npm run start:dev         # http://localhost:3000/api
 ```
 
