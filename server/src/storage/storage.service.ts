@@ -51,12 +51,17 @@ export class StorageService {
       };
       if (publicId) options.public_id = publicId;
       const res = await new Promise<{ secure_url: string }>((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(options, (err, result) => {
-            if (err || !result?.secure_url) reject(new Error(err?.message || 'upload failed'));
+        const fail = (err?: { message?: string }) => reject(new ServiceUnavailableException(err?.message || 'Không lưu được ảnh'));
+        try {
+          const stream = cloudinary.uploader.upload_stream(options, (err, result) => {
+            if (err || !result?.secure_url) fail(err);
             else resolve(result);
-          })
-          .end(data);
+          });
+          stream.on('error', (err: Error) => fail(err));
+          stream.end(data);
+        } catch (e) {
+          fail(e instanceof Error ? e : undefined);
+        }
       });
       return res.secure_url;
     }
