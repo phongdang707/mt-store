@@ -1,11 +1,43 @@
+# API only. MongoDB is Atlas via MONGODB_URI in .env.
+# Public HTTPS is the existing nhatro nginx on nhatro_edge, not this file.
+
 services:
-  mongo:
-    image: mongo:8
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: prod
+    image: mt-store-api:latest
+    container_name: mt-store-api
     restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 3000
     ports:
-      - '27017:27017'
+      - "127.0.0.1:${API_PORT:-3000}:3000"
     volumes:
-      - mongo-data:/data/db
+      - uploads:/app/uploads
+    networks:
+      edge:
+        aliases:
+          - mt-store-api
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then((r)=>r.json()).then((b)=>process.exit(b.mongo==='up'?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 25s
+
+networks:
+  edge:
+    external: true
+    name: nhatro_edge
 
 volumes:
-  mongo-data:
+  uploads:
