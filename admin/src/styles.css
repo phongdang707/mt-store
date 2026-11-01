@@ -22,7 +22,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid #b3566f;outline-offset
   .bottom-nav{display:grid!important}
   .tabs-row{flex-wrap:nowrap!important;overflow-x:auto;margin:0 -16px;padding:0 16px}
   .tabs-row button{flex:0 0 auto;min-height:40px;white-space:nowrap}
-  .main-pad{padding:18px 16px 110px!important}
+  .main-pad{padding:18px 16px 150px!important}
+  .save-bar{bottom:calc(84px + env(safe-area-inset-bottom, 0px))!important;z-index:35!important}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom, 0px))}
+  .stack-2{grid-template-columns:minmax(0,1fr)!important}
+  .pay-row{flex-direction:column;align-items:flex-start}
+  .pay-qr{flex:0 0 auto!important}
   .shell-root{height:auto!important;min-height:100vh;overflow:visible!important}
   .shell-root>main{height:auto!important;overflow:visible!important}
   .detail-sheet{position:fixed!important;inset:0;z-index:40;max-width:none!important;border-radius:0!important;overflow-y:auto}

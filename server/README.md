@@ -35,6 +35,8 @@ Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, 
 | công khai | GET | `/catalog` | cài đặt shop + toàn bộ sản phẩm |
 | | GET | `/invoices/:token` | hoá đơn qua link chia sẻ |
 | khách | GET | `/me` | SĐT/địa chỉ lần trước |
+| | POST | `/me/visit` | hồ sơ, máy, số giây app đang hiện |
+| | POST | `/me/events` | `{ events: [{ type: view\|open\|cart, productId }] }` |
 | | POST | `/orders` | `{ phone, addr, name?, note?, items: [{ productId, variant?, qty }] }`, giá lấy từ DB |
 | | POST | `/uploads` → `/requests` | ảnh tìm hộ → `{ product, photos[] }` |
 | | GET | `/orders/mine` | 30 đơn gần nhất |
@@ -49,5 +51,7 @@ Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, 
 | | GET/PATCH | `/admin/settings` | |
 | | POST | `/admin/uploads` | ảnh sản phẩm |
 | | GET (SSE) | `/admin/events?token=` | đơn mới / đổi trạng thái |
+| | GET | `/admin/analytics?days=7\|30\|90` | người dùng, thời gian dùng, sản phẩm xem nhiều |
+| | GET | `/admin/analytics/users/:id?days=` | phiên và sản phẩm của một khách |
 
 Lưu ý ESM: import giá trị từ `mongoose` bằng default import; kiểu (`Model`, `Connection`, …) dùng `import type`.

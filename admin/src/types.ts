@@ -112,3 +112,74 @@ export interface Badges {
   products: number;
   unsentInvoices: number;
 }
+
+export interface AnalyticsSummary {
+  activeUsers: number;
+  newUsers: number;
+  visits: number;
+  durationSec: number;
+  avgSessionSec: number;
+  avgUserSec: number;
+  views: number;
+  opens: number;
+  carts: number;
+  orders: number;
+  viewers: number;
+  cartUsers: number;
+  orderUsers: number;
+}
+
+export interface AnalyticsProduct {
+  id: string;
+  name: string;
+  img: string;
+  views: number;
+  viewers: number;
+  opens: number;
+  carts: number;
+  orders: number;
+}
+
+export interface AnalyticsUser {
+  id: string;
+  name: string;
+  avatar: string;
+  phone: string;
+  platform: string;
+  model: string;
+  lastSeenAt: string | null;
+  visits: number;
+  durationSec: number;
+  products: { id: string; name: string; views: number }[];
+}
+
+export interface Analytics {
+  days: number;
+  summary: AnalyticsSummary;
+  rates: { view: number; cart: number; order: number };
+  platforms: { platform: string; users: number }[];
+  daily: { date: string; visits: number; durationSec: number; views: number }[];
+  products: AnalyticsProduct[];
+  users: AnalyticsUser[];
+}
+
+export interface AnalyticsUserDetail {
+  days: number;
+  orders: number;
+  user: {
+    id: string;
+    name: string;
+    avatar: string;
+    phone: string;
+    platform: string;
+    os: string;
+    model: string;
+    zaloVersion: string;
+    language: string;
+    lastSeenAt: string | null;
+    visitCount: number;
+    createdAt: string;
+  };
+  visits: { startedAt: string; durationSec: number; platform: string; model: string }[];
+  products: { id: string; name: string; img: string; views: number; opens: number; carts: number }[];
+}

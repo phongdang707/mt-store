@@ -38,6 +38,16 @@ export const timeOf = (iso: string) => {
   const d = new Date(iso);
   return hhmm(d) + " · " + ddmm(d);
 };
+/** Giây sử dụng app → "dưới 1 phút", "12 phút", "2 giờ 5 phút". */
+export function duration(sec: number) {
+  const s = Math.max(0, Math.round(sec) || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (!h && !m) return s ? "dưới 1 phút" : "0 phút";
+  if (!h) return m + " phút";
+  return m ? `${h} giờ ${m} phút` : `${h} giờ`;
+}
+
 /** "12 phút", "1 giờ", "2 ngày", quá 7 ngày thì "28/09". */
 export function ago(iso: string) {
   const d = new Date(iso),

@@ -11,6 +11,6 @@ import { ZaloService } from './zalo.service.js';
   imports: [MongooseModule.forFeature([{ name: Customer.name, schema: CustomerSchema }])],
   controllers: [CustomersController],
   providers: [ZaloService, CustomersService, CustomerGuard],
-  exports: [ZaloService, CustomersService, CustomerGuard],
+  exports: [MongooseModule, ZaloService, CustomersService, CustomerGuard],
 })
 export class CustomersModule {}

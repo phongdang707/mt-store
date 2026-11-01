@@ -12,5 +12,6 @@ import { OrdersService } from './orders.service.js';
   imports: [MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]), ProductsModule],
   controllers: [OrdersController, AdminOrdersController, UploadsController],
   providers: [OrdersService, EventsService],
+  exports: [MongooseModule],
 })
 export class OrdersModule {}

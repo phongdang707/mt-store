@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
 import { Avatar, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
@@ -223,7 +224,7 @@ export default function Orders() {
   const [sumOpen, setSumOpen] = useState(false);
   const [q, setQ] = useState("");
   const [mSearch, setMSearch] = useState(false);
-  const mobile = typeof matchMedia !== "undefined" && matchMedia("(max-width: 760px)").matches;
+  const mobile = useNarrow();
 
   useEffect(() => {
     api
@@ -254,7 +255,7 @@ export default function Orders() {
 
   useEffect(() => {
     if (!mobile && !sel && list.length) setSel(list[0].code);
-  }, [orders]);
+  }, [orders, mobile]);
 
   const confirmed = all.filter((o) => st(o) === "xong");
   const revenue = confirmed.reduce((a, o) => a + o.total, 0);
@@ -338,7 +339,7 @@ export default function Orders() {
           </span>
         </div>
 
-        <div className="only-desktop" style={sx("display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch")}>
+        <div style={sx("display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch")}>
           <div style={sx("flex: 1 1 320px; max-width: 420px; background: #b3566f; color: #ffffff; border-radius: 20px; padding: 16px 20px; box-shadow: 0 8px 20px rgba(150, 90, 100, 0.20); display: flex; flex-direction: column; justify-content: center; gap: 6px")}>
             <div style={sx("display: flex; align-items: center; gap: 8px")}>
               <span style={sx("font-size: 13px; font-weight: 600")}>Doanh thu tháng {ml}</span>
@@ -407,7 +408,7 @@ export default function Orders() {
           </div>
         </div>
 
-        <section aria-label="Tổng sản phẩm khách đặt" className="only-desktop" style={sx("flex-shrink: 0; background: #fffaf7; border: 1px solid #efd9d3; border-radius: 20px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10); display: flex; flex-direction: column; overflow: hidden")}>
+        <section aria-label="Tổng sản phẩm khách đặt" style={sx("flex-shrink: 0; background: #fffaf7; border: 1px solid #efd9d3; border-radius: 20px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10); display: flex; flex-direction: column; overflow: hidden")}>
           <div style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px")}>
             <span style={sx("width: 36px; height: 36px; flex: 0 0 36px; border-radius: 12px; background: #f6e1dc; color: #a3546a; display: flex; align-items: center; justify-content: center")}>
               <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -437,7 +438,7 @@ export default function Orders() {
                   <span style={sx("font-size: 12px; font-weight: 700; color: #7d6862; letter-spacing: 0.6px; text-transform: uppercase; padding: 8px 0 4px")}>
                     {g.country} · {g.qty}
                   </span>
-                  <div style={sx("display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); column-gap: 24px")}>
+                  <div style={sx("display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); column-gap: 24px")}>
                     {g.items.map((s) => (
                       <div key={s.name} style={sx("display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #efd9d3")}>
                         <span style={sx("flex: 0 0 36px; text-align: right; font-size: 17px; font-weight: 700; color: #a3546a")}>{s.qty}×</span>
@@ -483,7 +484,7 @@ export default function Orders() {
               ))}
             </div>
             {country ? (
-              <div className="only-desktop" style={sx("display: flex; align-items: center; gap: 10px; background: #fbe7ec; border: 1px solid #e8c3cd; border-radius: 14px; padding: 10px 14px")}>
+              <div style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 10px; background: #fbe7ec; border: 1px solid #e8c3cd; border-radius: 14px; padding: 10px 14px")}>
                 <span style={sx("flex: 1; font-size: 14px; color: #6e3346")}>
                   Đang xem đơn có hàng <b>{CN[country]}</b> · {list.length} đơn
                 </span>

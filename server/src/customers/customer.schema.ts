@@ -10,6 +10,16 @@ export class Customer {
   @Prop({ default: '' }) avatar: string;
   @Prop({ default: '' }) phone: string;
   @Prop({ default: '' }) addr: string;
+  /** ios, android hoặc web. Cập nhật mỗi lần mở app. */
+  @Prop({ default: '' }) platform: string;
+  @Prop({ default: '' }) os: string;
+  @Prop({ default: '' }) model: string;
+  @Prop({ default: '' }) zaloVersion: string;
+  @Prop({ default: '' }) language: string;
+  @Prop() lastSeenAt?: Date;
+  @Prop({ default: 0, min: 0 }) visitCount: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export type CustomerDocument = HydratedDocument<Customer>;

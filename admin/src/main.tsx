@@ -7,6 +7,7 @@ import Login from "./pages/login";
 import Orders from "./pages/orders";
 import Products from "./pages/products";
 import PublicInvoice from "./pages/public-invoice";
+import Reports from "./pages/reports";
 import Requests from "./pages/requests";
 import Settings from "./pages/settings";
 import "./styles.css";
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")!).render(
                   <Route path="/san-pham" element={<Products />} />
                   <Route path="/tim-ho" element={<Requests />} />
                   <Route path="/hoa-don" element={<Invoices />} />
+                  <Route path="/bao-cao" element={<Reports />} />
                   <Route path="/cai-dat" element={<Settings />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

@@ -36,6 +36,14 @@ const ICON = {
       <path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12a7 7 0 0 0 .1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6A7 7 0 0 0 19 12z"></path>
     </svg>
   ),
+  reports: (s = 20) => (
+    <svg aria-hidden="true" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19V10"></path>
+      <path d="M10 19V5"></path>
+      <path d="M16 19v-7"></path>
+      <path d="M3 19h18"></path>
+    </svg>
+  ),
 };
 
 type Key = keyof typeof ICON;
@@ -44,6 +52,7 @@ const NAV: [Key, string, string, string][] = [
   ["products", "/san-pham", "Sản phẩm", "Sản phẩm"],
   ["requests", "/tim-ho", "Yêu cầu tìm hộ", "Tìm hộ"],
   ["invoices", "/hoa-don", "Hoá đơn", "Hoá đơn"],
+  ["reports", "/bao-cao", "Báo cáo", "Báo cáo"],
   ["settings", "/cai-dat", "Cài đặt cửa hàng", "Cài đặt"],
 ];
 
@@ -53,6 +62,7 @@ const PILL: Record<Key, string> = {
   products: "background: #f6e1dc; color: #8f4459; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
   requests: "background: #fdecc8; color: #7a4f00; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
   invoices: "background: #fdecc8; color: #7a4f00; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
+  reports: "background: #f6e1dc; color: #8f4459; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
   settings: "",
 };
 
@@ -92,6 +102,7 @@ function Sidebar({ variant }: { variant: ShellVariant }) {
     requests: badges.pendingRequests,
     invoices: badges.unsentInvoices,
     settings: null,
+    reports: null,
   };
   const store = settings?.storefrontUrl || import.meta.env.VITE_STOREFRONT_URL || "";
   return (
@@ -175,30 +186,29 @@ function Sidebar({ variant }: { variant: ShellVariant }) {
 /** Thanh tab dưới trên điện thoại (bản "Điện thoại – Đơn hàng"). */
 function BottomNav() {
   const { badges, alerts } = useApp();
-  const items = NAV.filter(([k]) => k !== "invoices");
   return (
     <nav
       aria-label="Điều hướng"
       className="only-mobile bottom-nav"
-      style={sx("position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #efd9d3; background: #fffaf7; padding: 8px 6px calc(14px + env(safe-area-inset-bottom, 0px))")}
+      style={sx("position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(" + NAV.length + ", minmax(0, 1fr)); border-top: 1px solid #efd9d3; background: #fffaf7; padding: 6px 2px calc(10px + env(safe-area-inset-bottom, 0px))")}
     >
-      {items.map(([k, to, , short]) => (
+      {NAV.map(([k, to, , short]) => (
         <NavLink
           key={k}
           to={to}
           end
           style={({ isActive }) =>
             sx(
-              "position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; text-decoration: none; font-size: 11.5px; padding: 6px 0; " +
+              "position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; width: 100%; text-decoration: none; font-size: 10.5px; line-height: 1.15; text-align: center; padding: 4px 1px; " +
                 (isActive ? "color: #a3546a; font-weight: 700" : "color: #7d6862; font-weight: 600"),
             )
           }
         >
           <span style={sx("position: relative; display: flex")}>
-            {ICON[k](22)}
+            {ICON[k](20)}
             {(k === "orders" && alerts.orders) || (k === "requests" && alerts.requests) ? <Dot /> : null}
           </span>
-          {short}
+          <span style={sx("display: block; max-width: 100%; min-width: 0; white-space: normal")}>{short}</span>
           {k === "orders" && badges.pendingOrders ? (
             <span style={sx("position: absolute; top: 0; left: calc(50% + 6px); background: #b3566f; color: #fff; border-radius: 999px; font-size: 10.5px; font-weight: 700; padding: 0 6px")}>{badges.pendingOrders}</span>
           ) : null}

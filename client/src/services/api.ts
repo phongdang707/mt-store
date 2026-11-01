@@ -1,4 +1,4 @@
-import { getAccessToken, getUserInfo } from "zmp-sdk/apis";
+import { authorize, getAccessToken, getSetting, getSystemInfo, getUserInfo } from "zmp-sdk/apis";
 import type { Catalog, Order } from "@/types";
 import { storage } from "@/utils/storage";
 
@@ -26,23 +26,120 @@ async function authHeaders(fresh = false): Promise<Record<string, string>> {
   return { "x-dev-user": id };
 }
 
-let cachedZaloName = "";
-let zaloNameDenied = false;
+const DENIED = "mt_zalo_userinfo_denied";
+const EMPTY_PROFILE = { name: "", avatar: "" };
+let profile: { name: string; avatar: string } | null = null;
+let profileTask: Promise<{ name: string; avatar: string }> | null = null;
+let checked = false;
+let prompted = false;
+
+function denied(e: unknown) {
+  const code = (e as { code?: number })?.code;
+  return code === -201 || code === -1401;
+}
+
+function pick(userInfo?: { name?: string; avatar?: string } | null) {
+  return {
+    name: (userInfo?.name?.trim() || "").slice(0, 120),
+    avatar: (userInfo?.avatar?.trim() || "").slice(0, 2000),
+  };
+}
 
 /**
- * Tên Zalo lấy trên máy khách. Server ở ngoài Việt Nam không xin được tên.
- * `ask` hiện hộp thoại quyền một lần. Khách từ chối thì để trống, không hỏi lại.
+ * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID;
+ * hai trường này cần khách cấp `scope.userInfo`. Server ở ngoài Việt Nam xin Graph API sẽ bị -501.
+ * Chỉ hiện hộp thoại khi `ask` (lúc bấm gửi đơn). Lúc mở app chỉ đọc nếu đã cấp trước đó.
  */
-export async function zaloName(ask = false): Promise<string> {
-  if (!inZalo || cachedZaloName || zaloNameDenied) return cachedZaloName;
+async function fetchProfile(ask: boolean) {
+  let allowed = false;
   try {
-    const { userInfo } = await getUserInfo(ask ? { autoRequestPermission: true } : {});
-    cachedZaloName = userInfo?.name?.trim() || "";
+    const { authSetting } = await getSetting();
+    allowed = authSetting["scope.userInfo"] === true;
   } catch (e) {
-    console.warn("getUserInfo", e);
-    if ((e as { code?: number }).code === -201) zaloNameDenied = true;
+    console.warn("getSetting", e);
   }
-  return cachedZaloName;
+  if (!allowed && !ask) return EMPTY_PROFILE;
+  if (!allowed) {
+    if (storage.get(DENIED, false) && prompted) return EMPTY_PROFILE;
+    prompted = true;
+    try {
+      const scopes = await authorize({ scopes: ["scope.userInfo"] });
+      allowed = scopes["scope.userInfo"] === true;
+      if (!allowed) storage.set(DENIED, true);
+    } catch (e) {
+      if (denied(e)) {
+        storage.set(DENIED, true);
+        return EMPTY_PROFILE;
+      }
+      console.warn("authorize", e);
+      const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: true });
+      return pick(userInfo);
+    }
+  }
+  if (!allowed) return EMPTY_PROFILE;
+  const { userInfo } = await getUserInfo({ avatarType: "normal" });
+  return pick(userInfo);
+}
+
+export function zaloProfile(ask = false): Promise<{ name: string; avatar: string }> {
+  if (!inZalo) return Promise.resolve(EMPTY_PROFILE);
+  if (profile?.name && profile.avatar) return Promise.resolve(profile);
+  if (profileTask && !ask) return profileTask;
+  if (!ask && checked) return Promise.resolve(profile ?? EMPTY_PROFILE);
+  const task = fetchProfile(ask)
+    .then((got) => {
+      checked = true;
+      if (got.name || got.avatar) {
+        profile = got;
+        storage.set(DENIED, false);
+      }
+      return profile ?? got;
+    })
+    .catch((e: unknown) => {
+      console.warn("getUserInfo", e);
+      if (denied(e)) {
+        storage.set(DENIED, true);
+        checked = true;
+      }
+      return profile ?? EMPTY_PROFILE;
+    })
+    .finally(() => {
+      if (profileTask === task) profileTask = null;
+    });
+  profileTask = task;
+  return task;
+}
+
+/** Tên Zalo. `ask` chỉ dùng lúc khách bấm gửi đơn. */
+export async function zaloName(ask = false) {
+  return (await zaloProfile(ask)).name;
+}
+
+/** Nền tảng và máy. Ngoài Zalo thì platform là web. */
+export function deviceInfo() {
+  let platform = "web";
+  let zaloVersion = "";
+  let language = navigator.language || "";
+  let os = "";
+  if (inZalo) {
+    try {
+      const s = getSystemInfo();
+      platform = s.platform === "iOS" ? "ios" : s.platform === "android" ? "android" : "web";
+      zaloVersion = s.zaloVersion || "";
+      language = s.zaloLanguage || s.language || language;
+      os = s.platform || "";
+    } catch (e) {
+      console.warn("getSystemInfo", e);
+    }
+  }
+  const ua = navigator.userAgent;
+  const android = ua.match(/Android\s+([\d.]+)/);
+  const ios = ua.match(/OS (\d+(?:_\d+)*)/);
+  if (!os && android) os = "Android " + android[1];
+  if (!os && ios && /iPhone|iPad/.test(ua)) os = "iOS " + ios[1].replace(/_/g, ".");
+  const build = ua.match(/;\s*([^;)]+?)\s+Build\//);
+  const model = (build?.[1] || (/iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : "")).slice(0, 64);
+  return { platform, os: os.slice(0, 64), model, zaloVersion: zaloVersion.slice(0, 32), language: language.slice(0, 16) };
 }
 
 export class ApiError extends Error {
@@ -81,8 +178,27 @@ export interface CartLineInput {
   qty: number;
 }
 
+export interface VisitInput {
+  name?: string;
+  avatar?: string;
+  platform: string;
+  os: string;
+  model: string;
+  zaloVersion: string;
+  language: string;
+  seconds: number;
+}
+
+export interface ProductEventInput {
+  type: "view" | "open" | "cart";
+  productId: string;
+}
+
 export const api = {
   zaloName,
+  zaloProfile,
+  visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
+  events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
   me: () => call<{ name: string; phone: string; addr: string }>("GET", "/me"),
   mine: () => call<Order[]>("GET", "/orders/mine"),

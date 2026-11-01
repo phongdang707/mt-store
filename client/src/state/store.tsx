@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { api, type CartLineInput } from "@/services/api";
+import { api, deviceInfo, type CartLineInput } from "@/services/api";
+import { startPresence, track } from "@/services/track";
 import type { Catalog, CustomerInfo, Order, Product, Variant } from "@/types";
 import { shrink } from "@/utils/image";
 import { storage } from "@/utils/storage";
@@ -65,6 +66,7 @@ function useStoreState() {
   }, []);
 
   useEffect(() => {
+    startPresence();
     loadCatalog();
     refreshMine();
     // Điền sẵn SĐT/địa chỉ đã dùng ở đơn trước nếu máy chưa lưu.
@@ -72,7 +74,7 @@ function useStoreState() {
       .me()
       .then((m) => setInfoState((i) => ({ ...i, phone: i.phone || m.phone, addr: i.addr || m.addr, name: i.name || m.name })))
       .catch(() => {});
-    api.zaloName().then((name) => {
+    api.zaloName(false).then((name) => {
       if (!name) return;
       setInfoState((i) => {
         if (i.name) return i;
@@ -132,10 +134,13 @@ function useStoreState() {
     storage.set("mt_cart", c);
   };
   const setQty = (id: string, n: number) => {
+    const productId = id.split("::")[0];
+    const had = prodCount(productId) > 0;
     const c = { ...cart };
     if (n <= 0) delete c[id];
     else c[id] = Math.min(n, 99);
     saveCart(c);
+    if (n > 0 && !had) track("cart", productId);
   };
   const setCountry = (c: string) => {
     setCountryState(c);
@@ -148,14 +153,17 @@ function useStoreState() {
     setMsg("");
   };
   const startPick = (id: string) => {
+    track("open", id);
     setPick({ id, sel: null, qty: 1 });
     setOpenState("pick");
   };
   const addPick = () => {
     const p = pick && byId(pick.id);
     if (!p || !pick || pick.sel == null) return;
+    const had = prodCount(p.id) > 0;
     const k = p.id + "::" + pick.sel;
     saveCart({ ...cart, [k]: Math.min(99, (cart[k] || 0) + pick.qty) });
+    if (!had) track("cart", p.id);
     const vn = p.variants[pick.sel].name;
     setOpenState(null);
     setPick(null);
@@ -204,7 +212,13 @@ function useStoreState() {
     setSending(true);
     setMsg("");
     try {
-      const name = i.name.trim() || (await api.zaloName(true));
+      const who = await api.zaloProfile(true);
+      const name = i.name.trim() || who.name;
+      if (who.name || who.avatar) {
+        await api
+          .visit({ name: who.name || undefined, avatar: who.avatar || undefined, ...deviceInfo(), seconds: 0 })
+          .catch(() => {});
+      }
       const order = await api.createOrder({ name: name || undefined, phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim() || undefined, items });
       setMY((l) => [order, ...l]);
       saveCart({});
@@ -239,7 +253,7 @@ function useStoreState() {
     try {
       const photos: string[] = [];
       for (const f of phFiles) photos.push((await api.upload(await shrink(f.file))).url);
-      const name = info.name.trim() || (await api.zaloName(true));
+      const name = info.name.trim() || (await api.zaloName(false));
       const r = await api.createRequest({
         name: name || undefined,
         phone: info.phone.trim() || undefined,

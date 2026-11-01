@@ -4,7 +4,7 @@
  * mà không cần server / MongoDB. Sản phẩm + ảnh lấy từ `server/seed` (vite.config phục vụ ở /__seed).
  * Không bao giờ được nạp trong bản build thật (api.ts chỉ import động khi có cờ).
  */
-import type { Badges, InvoiceVia, Order, OrderItem, Product, Settings } from "./types";
+import type { Analytics, AnalyticsUserDetail, Badges, InvoiceVia, Order, OrderItem, Product, Settings } from "./types";
 
 type Raw = Omit<Product, "variants" | "img"> & { img: string; variants?: { name: string; img: string }[] };
 
@@ -147,6 +147,74 @@ const find = (code: string) => {
 const save = (o: Order) => (recompute(o), structuredClone(o));
 const ym = (iso: string) => new Date(new Date(iso).getTime() + 7 * HOUR).toISOString().slice(0, 7);
 
+function sampleAnalytics(days: number): Analytics {
+  const picks = products.slice(0, 5);
+  const now = new Date().toISOString();
+  const daily = Array.from({ length: days }, (_, i) => {
+    const date = new Date(Date.now() - (days - 1 - i) * DAY).toISOString().slice(0, 10);
+    const visits = (i % 4) + 1;
+    return { date, visits, durationSec: visits * 640, views: (i % 5) * 3 };
+  });
+  return {
+    days,
+    summary: {
+      activeUsers: 8,
+      newUsers: 3,
+      visits: 14,
+      durationSec: 8 * 3600 + 24 * 60,
+      avgSessionSec: 2200,
+      avgUserSec: 3800,
+      views: 96,
+      opens: 22,
+      carts: 11,
+      orders: 6,
+      viewers: 7,
+      cartUsers: 4,
+      orderUsers: 3,
+    },
+    rates: { view: 7 / 8, cart: 4 / 7, order: 3 / 8 },
+    platforms: [
+      { platform: "ios", users: 5 },
+      { platform: "android", users: 3 },
+    ],
+    daily,
+    products: picks.map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 40 - i * 6, viewers: 8 - i, opens: Math.max(1, 6 - i), carts: Math.max(0, 3 - (i % 3)), orders: i === 0 ? 4 : 1 })),
+    users: [
+      { id: "u1", name: "Ngọc Anh", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },
+      { id: "u2", name: "Thu Hà", avatar: "", phone: "0987112233", platform: "android", model: "Pixel 7", lastSeenAt: new Date(Date.now() - 2 * HOUR).toISOString(), visits: 2, durationSec: 1800, products: picks.slice(1, 3).map((p) => ({ id: p.id, name: p.name, views: 2 })) },
+      { id: "u3", name: "Bảo Trâm", avatar: "", phone: "0938667120", platform: "ios", model: "iPhone", lastSeenAt: new Date(Date.now() - DAY).toISOString(), visits: 1, durationSec: 420, products: picks.slice(0, 1).map((p) => ({ id: p.id, name: p.name, views: 1 })) },
+    ],
+  };
+}
+
+function sampleUser(id: string, days: number): AnalyticsUserDetail {
+  const row = sampleAnalytics(days).users.find((u) => u.id === id) ?? sampleAnalytics(days).users[0];
+  const picks = products.slice(0, 3);
+  return {
+    days,
+    orders: 1,
+    user: {
+      id: row.id,
+      name: row.name,
+      avatar: row.avatar,
+      phone: row.phone,
+      platform: row.platform,
+      os: row.platform === "ios" ? "iOS 18" : "Android 14",
+      model: row.model,
+      zaloVersion: "24.08.01",
+      language: "vi",
+      lastSeenAt: row.lastSeenAt,
+      visitCount: row.visits + 2,
+      createdAt: new Date(Date.now() - 12 * DAY).toISOString(),
+    },
+    visits: [
+      { startedAt: row.lastSeenAt || new Date().toISOString(), durationSec: row.durationSec, platform: row.platform, model: row.model },
+      { startedAt: new Date(Date.now() - 2 * DAY).toISOString(), durationSec: 300, platform: row.platform, model: row.model },
+    ],
+    products: picks.map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 4 - i, opens: i === 0 ? 2 : 0, carts: i === 0 ? 1 : 0 })),
+  };
+}
+
 export async function handle<T>(method: string, path: string, body?: unknown): Promise<T> {
   ready ??= load();
   await ready;
@@ -163,6 +231,8 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
     if (!b.current) throw new FixtureError("Mật khẩu hiện tại chưa đúng", 400);
     return null as T;
   }
+  if (p === "/admin/analytics" && method === "GET") return R(sampleAnalytics(Number(q.get("days")) || 30));
+  if ((m = p.match(/^\/admin\/analytics\/users\/([^/]+)$/))) return R(sampleUser(decodeURIComponent(m[1]), Number(q.get("days")) || 30));
   if (p === "/admin/badges") {
     const bd: Badges = {
       pendingOrders: orders.filter((o) => o.kind === "order" && o.status === "pending").length,

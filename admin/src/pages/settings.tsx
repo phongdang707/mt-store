@@ -148,7 +148,7 @@ function PasswordForm({ onDone }: { onDone: () => void }) {
       <Field label="Mật khẩu hiện tại">
         <input type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} style={sx(INPUT)} />
       </Field>
-      <div style={sx("display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px")}>
+      <div className="stack-2" style={sx("display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px")}>
         <Field label="Mật khẩu mới">
           <input type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} style={sx(INPUT)} />
         </Field>
@@ -358,7 +358,7 @@ export default function Settings() {
                         </button>
                       </div>
                       {on ? (
-                        <div style={sx("display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 10px; margin-top: 10px; border-top: 1px dashed #efd9d3")}>
+                        <div className="stack-2" style={sx("display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-top: 10px; margin-top: 10px; border-top: 1px dashed #efd9d3")}>
                           <label style={sx("display: flex; flex-direction: column; gap: 4px")}>
                             <span style={sx("font-size: 12px; font-weight: 600; color: #6f5a55")}>Ngày bay</span>
                             <input placeholder="dd/mm" inputMode="numeric" value={m.fly} onChange={(e) => setMarket(m.key, { fly: e.target.value })} onBlur={(e) => setMarket(m.key, { fly: ddmm(e.target.value) })} style={sx(SMALL)} />
@@ -411,7 +411,7 @@ export default function Settings() {
             <h2 id="s-pay" style={sx(H2)}>
               Thanh toán
             </h2>
-            <div style={sx("display: flex; gap: 16px")}>
+            <div className="pay-row" style={sx("display: flex; gap: 16px")}>
               <div style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px")}>
                 <Field label="Ngân hàng" hint={d.bank.trim() ? (bin ? "Mã QR trên hoá đơn tự điền sẵn số tiền" : "Chưa nhận ra ngân hàng này · hoá đơn sẽ dùng ảnh QR bạn tải lên") : undefined}>
                   <input placeholder="vd: Vietcombank" value={d.bank} onChange={(e) => set({ bank: e.target.value })} style={sx(INPUT)} />
@@ -423,7 +423,7 @@ export default function Settings() {
                   <input placeholder="Viết hoa không dấu" value={d.holder} onChange={(e) => set({ holder: e.target.value })} style={sx(INPUT + "; text-transform: uppercase")} />
                 </Field>
               </div>
-              <div style={sx("flex: 0 0 136px; display: flex; flex-direction: column; gap: 6px; align-items: center")}>
+              <div className="pay-qr" style={sx("flex: 0 0 136px; display: flex; flex-direction: column; gap: 6px; align-items: center")}>
                 <span style={sx(LBL + "; align-self: flex-start")}>Mã QR</span>
                 {d.qr ? (
                   <button type="button" onClick={() => qrIn.current?.click()} aria-label="Đổi ảnh QR" style={sx("width: 136px; height: 136px; border-radius: 16px; border: 1px solid #efd9d3; background: #ffffff; padding: 6px; box-sizing: border-box")}>
@@ -455,7 +455,7 @@ export default function Settings() {
             <h2 id="s-ship" style={sx(H2)}>
               Giao hàng
             </h2>
-            <div style={sx("display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px")}>
+            <div className="stack-2" style={sx("display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px")}>
               <Field label="Phí giao hàng" hint={ship ? undefined : "Để trống: không thu phí giao"}>
                 <span style={sx("position: relative; display: block")}>
                   <input inputMode="numeric" placeholder="vd 30.000" value={d.ship} onChange={(e) => set({ ship: dotsInput(e.target.value) })} style={sx(INPUT + "; padding: 11px 28px 11px 12px; font-weight: 600")} />
