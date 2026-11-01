@@ -8,6 +8,7 @@ import { sx } from "@/sx";
 import type { Analytics, AnalyticsUserDetail } from "@/types";
 
 const DAYS = [7, 30, 90] as const;
+const PRODUCT_PAGE = 10;
 const PLATFORM: Record<string, string> = { ios: "iOS", android: "Android", web: "Web" };
 const platformOf = (p: string) => PLATFORM[p] || p || "Không rõ";
 const pct = (n: number) => Math.round((n || 0) * 100) + "%";
@@ -172,6 +173,7 @@ export default function Reports() {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [productPage, setProductPage] = useState(0);
 
   useEffect(() => {
     let stop = false;
@@ -212,6 +214,9 @@ export default function Reports() {
       ]
     : [];
   const maxVisits = Math.max(...(data?.daily.map((d) => d.visits) ?? [1]), 1);
+  const productCount = data?.products.length ?? 0;
+  const productPages = Math.max(1, Math.ceil(productCount / PRODUCT_PAGE));
+  const page = Math.min(productPage, productPages - 1);
 
   return (
     <Shell variant="scroll">
@@ -222,7 +227,15 @@ export default function Reports() {
           <Search label="Tìm người dùng" placeholder="Tìm tên, máy, số điện thoại…" value={q} onChange={setQ} />
         </div>
         <div style={sx("display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px")}>
-          <Segmented label="Khoảng thời gian" items={DAYS.map((d) => [d, d + " ngày"])} value={days} onPick={setDays} />
+          <Segmented
+            label="Khoảng thời gian"
+            items={DAYS.map((d) => [d, d + " ngày"])}
+            value={days}
+            onPick={(d) => {
+              setDays(d);
+              setProductPage(0);
+            }}
+          />
           <span className="only-mobile" style={sx("flex: 1 1 180px")}>
             <Search label="Tìm người dùng" placeholder="Tìm tên, máy…" value={q} onChange={setQ} flex="1 1 auto" minWidth="0" />
           </span>
@@ -263,25 +276,6 @@ export default function Reports() {
                 <span style={sx(MUTED)}>Mỗi cột là một ngày: lượt mở app. Giữ một cột để xem thời gian dùng và lượt xem.</span>
               </section>
             </div>
-
-            <section style={sx(CARD + "; padding: 8px 8px 12px")}>
-              <h2 style={sx(H2 + "; padding: 12px 12px 8px")}>Sản phẩm xem nhiều nhất</h2>
-              {data.products.length ? (
-                data.products.map((p) => (
-                  <div key={p.id} style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 10px 12px; border-radius: 14px")}>
-                    {p.img ? <img src={p.img} alt="" style={sx("width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; object-fit: contain; background: #ffffff; border: 1px solid #efd9d3")} /> : <span style={sx("width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; background: #f6e1dc; color: #8f4459; display: flex; align-items: center; justify-content: center; font-weight: 700")}>{(p.name || "?").charAt(0)}</span>}
-                    <span style={sx("flex: 1 1 180px; min-width: 0; font-weight: 600")}>{p.name}</span>
-                    <span style={sx("display: flex; flex-wrap: wrap; gap: 6px")}>
-                      <span style={sx("background: #b3566f; color: #ffffff; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700")}>{p.views} xem</span>
-                      <span style={sx("background: #f6e1dc; color: #8f4459; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700")}>{p.viewers} người</span>
-                      <span style={sx("color: #7d6862; font-size: 12.5px; font-weight: 600")}>{p.opens} mở · {p.carts} giỏ · {p.orders} đơn</span>
-                    </span>
-                  </div>
-                ))
-              ) : (
-                <p style={sx("margin: 0; padding: 28px 12px; text-align: center; color: #7d6862")}>Chưa có lượt xem nào trong khoảng này.</p>
-              )}
-            </section>
 
             <div style={sx("display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start")}>
               <section aria-label="Danh sách người dùng" style={sx("flex: 999 1 460px; min-width: 0; display: flex; flex-direction: column; gap: 12px")}>
@@ -337,6 +331,56 @@ export default function Reports() {
                 />
               ) : null}
             </div>
+
+            <section style={sx(CARD + "; padding: 8px 8px 12px")}>
+              <h2 style={sx(H2 + "; padding: 12px 12px 8px")}>
+                Sản phẩm xem nhiều nhất
+                {data.products.length ? <span style={sx("font-family: 'Be Vietnam Pro', sans-serif; font-size: 13.5px; font-weight: 600; color: #7d6862")}> · {data.products.length}</span> : null}
+              </h2>
+              {data.products.length ? (
+                data.products.slice(page * PRODUCT_PAGE, page * PRODUCT_PAGE + PRODUCT_PAGE).map((p) => (
+                  <div key={p.id} style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding: 10px 12px; border-radius: 14px")}>
+                    {p.img ? <img src={p.img} alt="" style={sx("width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; object-fit: contain; background: #ffffff; border: 1px solid #efd9d3")} /> : <span style={sx("width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; background: #f6e1dc; color: #8f4459; display: flex; align-items: center; justify-content: center; font-weight: 700")}>{(p.name || "?").charAt(0)}</span>}
+                    <span style={sx("flex: 1 1 180px; min-width: 0; font-weight: 600")}>{p.name}</span>
+                    <span style={sx("display: flex; flex-wrap: wrap; gap: 6px")}>
+                      <span style={sx("background: #b3566f; color: #ffffff; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700")}>{p.views} xem</span>
+                      <span style={sx("background: #f6e1dc; color: #8f4459; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 700")}>{p.viewers} người</span>
+                      <span style={sx("color: #7d6862; font-size: 12.5px; font-weight: 600")}>{p.opens} mở · {p.carts} giỏ · {p.orders} đơn</span>
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p style={sx("margin: 0; padding: 28px 12px; text-align: center; color: #7d6862")}>Chưa có lượt xem nào trong khoảng này.</p>
+              )}
+              {productCount > PRODUCT_PAGE ? (
+                <div style={sx("display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px 4px")}>
+                  <span style={sx(MUTED)}>
+                    {page * PRODUCT_PAGE + 1}–{Math.min(productCount, (page + 1) * PRODUCT_PAGE)} / {productCount}
+                  </span>
+                  <div role="group" aria-label="Phân trang sản phẩm" style={sx("display: flex; align-items: center; gap: 4px; background: #f6e1dc; border-radius: 999px; padding: 4px")}>
+                    <button
+                      type="button"
+                      disabled={page === 0}
+                      onClick={() => setProductPage(page - 1)}
+                      style={sx("border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 13.5px; background: transparent; color: #8f4459" + (page === 0 ? "; opacity: 0.4" : ""))}
+                    >
+                      Trước
+                    </button>
+                    <span style={sx("padding: 7px 8px; font-weight: 700; font-size: 13.5px; color: #8f4459")}>
+                      {page + 1}/{productPages}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={page >= productPages - 1}
+                      onClick={() => setProductPage(page + 1)}
+                      style={sx("border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 13.5px; background: transparent; color: #8f4459" + (page >= productPages - 1 ? "; opacity: 0.4" : ""))}
+                    >
+                      Sau
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </section>
           </>
         )}
       </main>

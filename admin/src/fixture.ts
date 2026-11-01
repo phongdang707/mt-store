@@ -204,7 +204,7 @@ function sampleAnalytics(days: number): Analytics {
       { platform: "android", users: 3 },
     ],
     daily,
-    products: picks.map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 40 - i * 6, viewers: 8 - i, opens: Math.max(1, 6 - i), carts: Math.max(0, 3 - (i % 3)), orders: i === 0 ? 4 : 1 })),
+    products: products.slice(0, 22).map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 80 - i * 3, viewers: Math.max(1, 12 - Math.floor(i / 2)), opens: Math.max(1, 10 - Math.floor(i / 2)), carts: i % 4, orders: i % 5 === 0 ? 2 : 0 })),
     users: (() => {
       const base = [
         { id: "u1", name: "Ngọc Anh", zaloName: "Ngọc", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, blocked: !!blockedCustomers.get("u1"), support: supportCustomers.has("u1"), products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },

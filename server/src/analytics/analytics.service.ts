@@ -242,8 +242,7 @@ export class AnalyticsService implements OnModuleInit {
     }
     const productRows = [...productMap.entries()]
       .map(([id, n]) => ({ id, name: names.get(id)?.name || id, img: names.get(id)?.img || '', ...n, orders: ordersByProduct.get(id) ?? 0 }))
-      .sort((a, b) => b.views - a.views || b.opens - a.opens || b.carts - a.carts)
-      .slice(0, 30);
+      .sort((a, b) => b.views - a.views || b.opens - a.opens || b.carts - a.carts);
 
     const seenIds = active.map((c) => c._id);
     const named = await this.customers

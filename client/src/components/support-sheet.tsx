@@ -124,9 +124,8 @@ export function SupportSheet() {
     );
   };
 
-  const sendBill = async (o: SupportInvoice) => {
+  const saveBill = async (o: SupportInvoice) => {
     if (busy || !desk) return;
-    if (!o.zaloUserId) return toast("Chưa có Zalo id của khách");
     setBusy(true);
     try {
       const file = png ?? (await invoiceImage(o, desk));
@@ -137,14 +136,12 @@ export function SupportSheet() {
       const name = "hoa-don-" + o.code + ".png";
       if (!inZalo) {
         download(file, name);
-        toast("Đã tải ảnh hoá đơn. Mở trong Zalo để gửi cho khách.");
-        return;
+        toast("Đã tải ảnh hoá đơn");
+      } else {
+        await saveImageToGallery({ imageBase64Data: await blobToBase64(file) });
+        toast("Đã lưu ảnh hoá đơn vào máy");
       }
-      await saveImageToGallery({ imageBase64Data: await blobToBase64(file) });
-      const opened = await openZalo(o.zaloUserId);
-      if (!opened) return;
       await markSent(o);
-      toast("Đã lưu ảnh hoá đơn. Gửi ảnh đó trong cuộc chat.");
     } catch (e) {
       toast((e as Error).message || "Chưa lưu được ảnh hoá đơn");
     } finally {
@@ -185,8 +182,8 @@ export function SupportSheet() {
               {!cur.zaloUserId ? <p className="lock">Chưa có Zalo id của khách này.</p> : null}
             </div>
             <div className="sh-f cs-acts">
-              <button className="btn" disabled={busy || !cur.zaloUserId || !png} onClick={() => sendBill(cur)}>
-                Gửi hoá đơn
+              <button className="btn" disabled={busy || !png} onClick={() => saveBill(cur)}>
+                Lưu hình
               </button>
               <button className="btn ghost" disabled={busy || !cur.zaloUserId} onClick={() => talk(cur)}>
                 Nhắn tin
