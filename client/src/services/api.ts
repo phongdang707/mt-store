@@ -179,7 +179,7 @@ export interface CartLineInput {
 }
 
 export interface VisitInput {
-  name?: string;
+  zaloName?: string;
   avatar?: string;
   platform: string;
   os: string;

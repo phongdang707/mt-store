@@ -204,16 +204,16 @@ function sampleAnalytics(days: number): Analytics {
     products: picks.map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 40 - i * 6, viewers: 8 - i, opens: Math.max(1, 6 - i), carts: Math.max(0, 3 - (i % 3)), orders: i === 0 ? 4 : 1 })),
     users: (() => {
       const base = [
-        { id: "u1", name: "Ngọc Anh", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, blocked: !!blockedCustomers.get("u1"), products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },
-        { id: "u2", name: "Thu Hà", avatar: "", phone: "0987112233", platform: "android", model: "Pixel 7", lastSeenAt: new Date(Date.now() - 2 * HOUR).toISOString(), visits: 2, durationSec: 1800, blocked: !!blockedCustomers.get("u2"), products: picks.slice(1, 3).map((p) => ({ id: p.id, name: p.name, views: 2 })) },
-        { id: "u3", name: "Bảo Trâm", avatar: "", phone: "0938667120", platform: "ios", model: "iPhone", lastSeenAt: new Date(Date.now() - DAY).toISOString(), visits: 1, durationSec: 420, blocked: !!blockedCustomers.get("u3"), products: picks.slice(0, 1).map((p) => ({ id: p.id, name: p.name, views: 1 })) },
+        { id: "u1", name: "Ngọc Anh", zaloName: "Ngọc", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, blocked: !!blockedCustomers.get("u1"), products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },
+        { id: "u2", name: "Thu Hà", zaloName: "Thu Hà", avatar: "", phone: "0987112233", platform: "android", model: "Pixel 7", lastSeenAt: new Date(Date.now() - 2 * HOUR).toISOString(), visits: 2, durationSec: 1800, blocked: !!blockedCustomers.get("u2"), products: picks.slice(1, 3).map((p) => ({ id: p.id, name: p.name, views: 2 })) },
+        { id: "u3", name: "Bảo Trâm", zaloName: "Trâm", avatar: "", phone: "0938667120", platform: "ios", model: "iPhone", lastSeenAt: new Date(Date.now() - DAY).toISOString(), visits: 1, durationSec: 420, blocked: !!blockedCustomers.get("u3"), products: picks.slice(0, 1).map((p) => ({ id: p.id, name: p.name, views: 1 })) },
       ].filter((u) => !removedUsers.has(u.id));
       const have = new Set(base.map((u) => u.id));
       const extra = [...blockedCustomers.entries()]
         .filter(([id, on]) => on && !have.has(id) && !removedUsers.has(id))
         .map(([id]) => {
           const o = orders.find((x) => x.customer === id);
-          return { id, name: o?.name || "", avatar: "", phone: o?.phone || "", platform: "", model: "", lastSeenAt: null, visits: 0, durationSec: 0, blocked: true, products: [] as { id: string; name: string; views: number }[] };
+          return { id, name: o?.name || "", zaloName: "", avatar: "", phone: o?.phone || "", platform: "", model: "", lastSeenAt: null, visits: 0, durationSec: 0, blocked: true, products: [] as { id: string; name: string; views: number }[] };
         });
       return [...base, ...extra];
     })(),
@@ -229,6 +229,7 @@ function sampleUser(id: string, days: number): AnalyticsUserDetail {
     user: {
       id: row.id,
       name: row.name,
+      zaloName: row.zaloName,
       avatar: row.avatar,
       phone: row.phone,
       platform: row.platform,

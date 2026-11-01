@@ -66,10 +66,10 @@ export class AnalyticsService {
       zaloVersion: text(dto.zaloVersion, 32),
     };
     const set: Record<string, string | Date> = { lastSeenAt: now };
-    const name = text(dto.name, 120);
+    const zaloName = text(dto.zaloName || dto.name, 120);
     const language = text(dto.language, 16);
     const avatar = avatarUrl(dto.avatar);
-    if (name) set.name = name;
+    if (zaloName) set.zaloName = zaloName;
     if (language) set.language = language;
     if (avatar) set.avatar = avatar;
     for (const key of ['platform', 'os', 'model', 'zaloVersion'] as const) {
@@ -247,6 +247,7 @@ export class AnalyticsService {
           return {
             id: String(r._id),
             name: c?.name || '',
+            zaloName: c?.zaloName || '',
             avatar: c?.avatar || '',
             phone: c?.phone || '',
             platform: c?.platform || '',
@@ -261,6 +262,7 @@ export class AnalyticsService {
         ...blockedAway.map((c) => ({
           id: String(c._id),
           name: c.name || '',
+          zaloName: c.zaloName || '',
           avatar: c.avatar || '',
           phone: c.phone || '',
           platform: c.platform || '',
@@ -308,6 +310,7 @@ export class AnalyticsService {
       user: {
         id: String(customer._id),
         name: customer.name,
+        zaloName: customer.zaloName,
         avatar: customer.avatar,
         phone: customer.phone,
         platform: customer.platform,

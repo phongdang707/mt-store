@@ -234,7 +234,7 @@ function useStoreState() {
       const name = i.name.trim() || who.name;
       if (who.name || who.avatar) {
         await api
-          .visit({ name: who.name || undefined, avatar: who.avatar || undefined, ...deviceInfo(), seconds: 0 })
+          .visit({ zaloName: who.name || undefined, avatar: who.avatar || undefined, ...deviceInfo(), seconds: 0 })
           .catch(() => {});
       }
       const order = await api.createOrder({ name: name || undefined, phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim() || undefined, items });

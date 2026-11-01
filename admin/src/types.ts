@@ -146,6 +146,7 @@ export interface AnalyticsProduct {
 export interface AnalyticsUser {
   id: string;
   name: string;
+  zaloName: string;
   avatar: string;
   phone: string;
   platform: string;
@@ -173,6 +174,7 @@ export interface AnalyticsUserDetail {
   user: {
     id: string;
     name: string;
+    zaloName: string;
     avatar: string;
     phone: string;
     platform: string;

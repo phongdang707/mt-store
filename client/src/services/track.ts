@@ -85,7 +85,7 @@ async function beat() {
   ]);
   try {
     await api.visit({
-      name: quick.p.name || undefined,
+      zaloName: quick.p.name || undefined,
       avatar: quick.p.avatar || undefined,
       ...device,
       seconds,
@@ -98,7 +98,7 @@ async function beat() {
     const who = await ready;
     if (!who.name && !who.avatar) return;
     await api.visit({
-      name: who.name || undefined,
+      zaloName: who.name || undefined,
       avatar: who.avatar || undefined,
       ...device,
       seconds: 0,

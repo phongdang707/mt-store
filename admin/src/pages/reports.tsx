@@ -13,6 +13,7 @@ const platformOf = (p: string) => PLATFORM[p] || p || "Không rõ";
 const pct = (n: number) => Math.round((n || 0) * 100) + "%";
 const dayLabel = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
 const machine = (model: string, platform: string) => [model, platformOf(platform)].filter((s) => s && s !== "Không rõ").join(" · ") || "Chưa rõ máy";
+const labelOf = (u: { zaloName?: string; name?: string }) => u.zaloName || u.name || "Khách";
 
 const CARD = "background: #fffaf7; border: 1px solid #efd9d3; border-radius: 22px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10)";
 const H2 = "margin: 0; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 18px; color: #3d3530";
@@ -62,7 +63,7 @@ function Detail({ id, days, onClose, onDeleted, onBlocked }: { id: string; days:
     setBusy(true);
     try {
       await api.deleteUser(id);
-      toast(`Đã xoá “${u.name || "Khách"}”`);
+      toast(`Đã xoá “${labelOf(u)}”`);
       onDeleted();
     } catch (e) {
       toast((e as Error).message);
@@ -81,15 +82,16 @@ function Detail({ id, days, onClose, onDeleted, onBlocked }: { id: string; days:
         {u ? (
           <>
             <div style={sx("display: flex; align-items: center; gap: 12px")}>
-              <Avatar src={u.avatar} name={u.name || "Khách"} size={56} font={20} />
+              <Avatar src={u.avatar} name={labelOf(u)} size={56} font={20} />
               <span style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column")}>
                 <span style={sx("display: flex; align-items: center; gap: 8px; flex-wrap: wrap")}>
-                  <b style={sx("font-family: Quicksand, sans-serif; font-size: 20px")}>{u.name || "Khách"}</b>
+                  <b style={sx("font-family: Quicksand, sans-serif; font-size: 20px")}>{labelOf(u)}</b>
                   {u.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
                 </span>
                 <span style={sx(MUTED)}>{machine(u.model, u.platform)}{u.zaloVersion ? " · Zalo " + u.zaloVersion : ""}</span>
               </span>
             </div>
+            {u.zaloName && u.name && u.name !== u.zaloName ? <span style={sx(MUTED)}>Tên đặt hàng: {u.name}</span> : null}
             <ContactPills phone={u.phone} />
             <BlockCustomer id={u.id} blocked={u.blocked} onChange={(blocked) => {
               setD((cur) => (cur ? { ...cur, user: { ...cur.user, blocked } } : cur));
@@ -186,7 +188,7 @@ export default function Reports() {
     const n = norm(q);
     if (!data) return [];
     if (!n) return data.users;
-    return data.users.filter((u) => norm(u.name + " " + u.phone + " " + u.model + " " + platformOf(u.platform)).includes(n));
+    return data.users.filter((u) => norm(u.zaloName + " " + u.name + " " + u.phone + " " + u.model + " " + platformOf(u.platform)).includes(n));
   }, [data, q]);
 
   const s = data?.summary;
@@ -292,10 +294,10 @@ export default function Reports() {
                           (u.id === sel ? "background: #fbe7ec; border: 1.5px solid #b3566f" : "background: transparent; border: 1.5px solid transparent"),
                       )}
                     >
-                      <Avatar src={u.avatar} name={u.name || "Khách"} size={44} />
+                      <Avatar src={u.avatar} name={labelOf(u)} size={44} />
                       <span style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px")}>
                         <span style={sx("display: flex; align-items: center; gap: 8px; min-width: 0")}>
-                          <b style={sx("font-size: 15px")}>{u.name || "Khách"}</b>
+                          <b style={sx("font-size: 15px")}>{labelOf(u)}</b>
                           {u.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
                         </span>
                         <span style={sx("font-size: 13.5px; color: #7d6862; overflow: hidden; text-overflow: ellipsis; white-space: nowrap")}>

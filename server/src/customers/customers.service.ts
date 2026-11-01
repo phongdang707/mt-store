@@ -8,7 +8,7 @@ import type { ZaloUser } from './zalo.service.js';
 export class CustomersService {
   constructor(@InjectModel(Customer.name) private readonly customers: Model<Customer>) {}
 
-  /** Tạo khách theo Zalo user ID nếu chưa có. Tên và ảnh không lấy từ Zalo. */
+  /** Tạo khách theo Zalo user ID nếu chưa có. Tên Zalo ghi ở `zaloName` khi mở app. */
   upsert(u: ZaloUser) {
     return this.customers
       .findOneAndUpdate({ zaloId: u.id }, { $setOnInsert: { zaloId: u.id } }, { new: true, upsert: true })
