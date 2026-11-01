@@ -40,8 +40,25 @@ function item(id: string, qty: number, variant: number | null = null, price?: nu
   return { productId: p.id, variant, variantName: v?.name ?? "", name: p.name, country: p.country, img: v?.img || p.img, price: price ?? p.price, qty, addedLater: false };
 }
 
+const KNOWN_CUSTOMER: Record<string, string> = { "Ngọc Anh": "u1", "Thu Hà": "u2", "Bảo Trâm": "u3" };
+const blockedCustomers = new Map<string, boolean>();
+
+function customerOf(name: string) {
+  return (
+    KNOWN_CUSTOMER[name] ||
+    "c-" +
+      name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/đ/g, "d")
+        .replace(/\s+/g, "-")
+  );
+}
+
 function order(o: Partial<Order> & { code: string; name: string; ageMs: number }): Order {
   const created = new Date(Date.now() - o.ageMs).toISOString();
+  const customer = o.customer || customerOf(o.name);
   const r: Order = {
     id: o.code,
     kind: o.code.startsWith("TH") ? "request" : "order",
@@ -65,8 +82,12 @@ function order(o: Partial<Order> & { code: string; name: string; ageMs: number }
     updatedAt: created,
     invoice: { version: 0, sends: [], log: [] },
     invoiceStatus: null,
+    customer,
+    blocked: blockedCustomers.get(customer) ?? false,
     ...o,
   } as Order;
+  r.customer = customer;
+  r.blocked = blockedCustomers.get(customer) ?? false;
   if (r.status === "confirmed" && !r.confirmedAt) r.confirmedAt = created;
   recompute(r);
   return r;
@@ -147,6 +168,8 @@ const find = (code: string) => {
 const save = (o: Order) => (recompute(o), structuredClone(o));
 const ym = (iso: string) => new Date(new Date(iso).getTime() + 7 * HOUR).toISOString().slice(0, 7);
 
+const removedUsers = new Set<string>();
+
 function sampleAnalytics(days: number): Analytics {
   const picks = products.slice(0, 5);
   const now = new Date().toISOString();
@@ -179,11 +202,21 @@ function sampleAnalytics(days: number): Analytics {
     ],
     daily,
     products: picks.map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 40 - i * 6, viewers: 8 - i, opens: Math.max(1, 6 - i), carts: Math.max(0, 3 - (i % 3)), orders: i === 0 ? 4 : 1 })),
-    users: [
-      { id: "u1", name: "Ngọc Anh", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },
-      { id: "u2", name: "Thu Hà", avatar: "", phone: "0987112233", platform: "android", model: "Pixel 7", lastSeenAt: new Date(Date.now() - 2 * HOUR).toISOString(), visits: 2, durationSec: 1800, products: picks.slice(1, 3).map((p) => ({ id: p.id, name: p.name, views: 2 })) },
-      { id: "u3", name: "Bảo Trâm", avatar: "", phone: "0938667120", platform: "ios", model: "iPhone", lastSeenAt: new Date(Date.now() - DAY).toISOString(), visits: 1, durationSec: 420, products: picks.slice(0, 1).map((p) => ({ id: p.id, name: p.name, views: 1 })) },
-    ],
+    users: (() => {
+      const base = [
+        { id: "u1", name: "Ngọc Anh", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, blocked: !!blockedCustomers.get("u1"), products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },
+        { id: "u2", name: "Thu Hà", avatar: "", phone: "0987112233", platform: "android", model: "Pixel 7", lastSeenAt: new Date(Date.now() - 2 * HOUR).toISOString(), visits: 2, durationSec: 1800, blocked: !!blockedCustomers.get("u2"), products: picks.slice(1, 3).map((p) => ({ id: p.id, name: p.name, views: 2 })) },
+        { id: "u3", name: "Bảo Trâm", avatar: "", phone: "0938667120", platform: "ios", model: "iPhone", lastSeenAt: new Date(Date.now() - DAY).toISOString(), visits: 1, durationSec: 420, blocked: !!blockedCustomers.get("u3"), products: picks.slice(0, 1).map((p) => ({ id: p.id, name: p.name, views: 1 })) },
+      ].filter((u) => !removedUsers.has(u.id));
+      const have = new Set(base.map((u) => u.id));
+      const extra = [...blockedCustomers.entries()]
+        .filter(([id, on]) => on && !have.has(id) && !removedUsers.has(id))
+        .map(([id]) => {
+          const o = orders.find((x) => x.customer === id);
+          return { id, name: o?.name || "", avatar: "", phone: o?.phone || "", platform: "", model: "", lastSeenAt: null, visits: 0, durationSec: 0, blocked: true, products: [] as { id: string; name: string; views: number }[] };
+        });
+      return [...base, ...extra];
+    })(),
   };
 }
 
@@ -206,6 +239,7 @@ function sampleUser(id: string, days: number): AnalyticsUserDetail {
       lastSeenAt: row.lastSeenAt,
       visitCount: row.visits + 2,
       createdAt: new Date(Date.now() - 12 * DAY).toISOString(),
+      blocked: !!row.blocked,
     },
     visits: [
       { startedAt: row.lastSeenAt || new Date().toISOString(), durationSec: row.durationSec, platform: row.platform, model: row.model },
@@ -231,8 +265,26 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
     if (!b.current) throw new FixtureError("Mật khẩu hiện tại chưa đúng", 400);
     return null as T;
   }
+  if ((m = p.match(/^\/admin\/customers\/([^/]+)$/)) && method === "PATCH") {
+    const id = decodeURIComponent(m[1]);
+    if (removedUsers.has(id)) throw new FixtureError("Không tìm thấy người dùng", 404);
+    const on = !!b.blocked;
+    if (on) blockedCustomers.set(id, true);
+    else blockedCustomers.delete(id);
+    for (const o of orders) if (o.customer === id) o.blocked = on;
+    return R({ id, blocked: on });
+  }
   if (p === "/admin/analytics" && method === "GET") return R(sampleAnalytics(Number(q.get("days")) || 30));
-  if ((m = p.match(/^\/admin\/analytics\/users\/([^/]+)$/))) return R(sampleUser(decodeURIComponent(m[1]), Number(q.get("days")) || 30));
+  if ((m = p.match(/^\/admin\/analytics\/users\/([^/]+)$/))) {
+    const id = decodeURIComponent(m[1]);
+    if (method === "DELETE") {
+      removedUsers.add(id);
+      blockedCustomers.delete(id);
+      return null as T;
+    }
+    if (removedUsers.has(id)) throw new FixtureError("Không tìm thấy người dùng", 404);
+    return R(sampleUser(id, Number(q.get("days")) || 30));
+  }
   if (p === "/admin/badges") {
     const bd: Badges = {
       pendingOrders: orders.filter((o) => o.kind === "order" && o.status === "pending").length,

@@ -191,8 +191,9 @@ export class AnalyticsService {
       .slice(0, 30);
 
     const userIds = userRoll.map((r) => r._id);
-    const [people, previews] = await Promise.all([
+    const [people, blockedAway, previews] = await Promise.all([
       this.customers.find({ _id: { $in: userIds } }).exec(),
+      this.customers.find(userIds.length ? { blocked: true, _id: { $nin: userIds } } : { blocked: true }).exec(),
       this.events.aggregate<{ _id: Types.ObjectId; products: { productId: string; views: number }[] }>([
         { $match: { at: span, type: 'view', customer: { $in: userIds } } },
         { $group: { _id: { customer: '$customer', productId: '$productId' }, views: { $sum: 1 } } },
@@ -239,22 +240,38 @@ export class AnalyticsService {
         views: viewByDay.get(date) ?? 0,
       })),
       products: productRows,
-      users: userRoll.map((r) => {
-        const c = person.get(String(r._id));
-        const seen = preview.get(String(r._id)) ?? [];
-        return {
-          id: String(r._id),
-          name: c?.name || '',
-          avatar: c?.avatar || '',
-          phone: c?.phone || '',
-          platform: c?.platform || '',
-          model: c?.model || '',
-          lastSeenAt: r.lastSeen?.toISOString() ?? null,
-          visits: r.visits,
-          durationSec: r.duration,
-          products: seen.map((p) => ({ id: p.productId, name: names.get(p.productId)?.name || p.productId, views: p.views })),
-        };
-      }),
+      users: [
+        ...userRoll.map((r) => {
+          const c = person.get(String(r._id));
+          const seen = preview.get(String(r._id)) ?? [];
+          return {
+            id: String(r._id),
+            name: c?.name || '',
+            avatar: c?.avatar || '',
+            phone: c?.phone || '',
+            platform: c?.platform || '',
+            model: c?.model || '',
+            lastSeenAt: r.lastSeen?.toISOString() ?? null,
+            visits: r.visits,
+            durationSec: r.duration,
+            blocked: !!c?.blocked,
+            products: seen.map((p) => ({ id: p.productId, name: names.get(p.productId)?.name || p.productId, views: p.views })),
+          };
+        }),
+        ...blockedAway.map((c) => ({
+          id: String(c._id),
+          name: c.name || '',
+          avatar: c.avatar || '',
+          phone: c.phone || '',
+          platform: c.platform || '',
+          model: c.model || '',
+          lastSeenAt: c.lastSeenAt?.toISOString() ?? null,
+          visits: 0,
+          durationSec: 0,
+          blocked: true,
+          products: [],
+        })),
+      ],
     };
   }
 
@@ -301,6 +318,7 @@ export class AnalyticsService {
         lastSeenAt: customer.lastSeenAt?.toISOString() ?? null,
         visitCount: customer.visitCount || 0,
         createdAt: customer.createdAt.toISOString(),
+        blocked: !!customer.blocked,
       },
       visits: visits.map((v) => ({
         startedAt: v.startedAt.toISOString(),
@@ -312,6 +330,18 @@ export class AnalyticsService {
         .map(([pid, n]) => ({ id: pid, name: names.get(pid)?.name || pid, img: names.get(pid)?.img || '', ...n }))
         .sort((a, b) => b.views - a.views || b.opens - a.opens),
     };
+  }
+
+  /** Xoá khách cùng phiên và lượt xem. Đơn giữ lại vì đã chụp tên, SĐT lúc đặt. */
+  async remove(id: string) {
+    if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Không tìm thấy người dùng');
+    const customer = await this.customers.findById(id).select('_id').exec();
+    if (!customer) throw new NotFoundException('Không tìm thấy người dùng');
+    await Promise.all([
+      this.visits.deleteMany({ customer: customer._id }).exec(),
+      this.events.deleteMany({ customer: customer._id }).exec(),
+    ]);
+    await this.customers.deleteOne({ _id: customer._id }).exec();
   }
 
   private async productNames(ids: string[]) {

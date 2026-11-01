@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
-import { Avatar, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
+import { Avatar, BlockCustomer, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
 import { MAIN, MobileHead, Shell } from "@/components/shell";
 import { ago, dots, dotsInput, fmt, itemLabel, norm, parseMoney, timeOf } from "@/format";
 import { sx } from "@/sx";
@@ -24,7 +24,7 @@ type Tab = "all" | "cho" | "xong";
 const st = (o: Order) => (o.status === "confirmed" ? "xong" : "cho");
 const LABEL = { cho: "Chờ xử lý", xong: "Đã xác nhận" };
 
-function Detail({ r, onChange, onClose }: { r: Order; onChange: (o: Order) => void; onClose: () => void }) {
+function Detail({ r, onChange, onClose, onBlocked }: { r: Order; onChange: (o: Order) => void; onClose: () => void; onBlocked: (blocked: boolean) => void }) {
   const { settings } = useApp();
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState(r.quoteTotal ? dots(r.quoteTotal) : "");
@@ -61,7 +61,10 @@ function Detail({ r, onChange, onClose }: { r: Order; onChange: (o: Order) => vo
         </div>
         <div style={sx("display: flex; align-items: center; gap: 12px; padding: 4px 0")}>
           <Avatar src={r.avatar} name={r.name} size={56} font={20} />
-          <span style={sx("font-family: Quicksand, sans-serif; font-weight: 700; font-size: 20px")}>{r.name || "Khách"}</span>
+          <span style={sx("display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0")}>
+            <span style={sx("font-family: Quicksand, sans-serif; font-weight: 700; font-size: 20px")}>{r.name || "Khách"}</span>
+            {r.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
+          </span>
         </div>
         <ContactPills phone={r.phone} />
         {r.addr ? (
@@ -115,6 +118,7 @@ function Detail({ r, onChange, onClose }: { r: Order; onChange: (o: Order) => vo
 
       <div style={sx("padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 10px")}>
         <ConfirmBlock pending={s === "cho"} busy={busy} what="yêu cầu" onToggle={() => run(() => api.confirm(r.code, s === "cho"))} />
+        {r.customer ? <BlockCustomer id={r.customer} blocked={r.blocked} onChange={onBlocked} /> : null}
       </div>
     </section>
   );
@@ -199,6 +203,10 @@ export default function Requests() {
               onChange={(u) => {
                 setAll((l) => l && l.map((x) => (x.code === u.code ? u : x)));
                 refresh();
+              }}
+              onBlocked={(blocked) => {
+                const id = selR.customer;
+                setAll((l) => l && l.map((x) => (id && x.customer === id ? { ...x, blocked } : x)));
               }}
             />
           ) : null}

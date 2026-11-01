@@ -72,6 +72,8 @@ export const api = {
   badges: () => call<Badges>("GET", "/admin/badges"),
   analytics: (days: number) => call<Analytics>("GET", "/admin/analytics?days=" + days),
   analyticsUser: (id: string, days: number) => call<AnalyticsUserDetail>("GET", `/admin/analytics/users/${encodeURIComponent(id)}?days=${days}`),
+  blockCustomer: (id: string, blocked: boolean) => call<{ id: string; blocked: boolean }>("PATCH", `/admin/customers/${encodeURIComponent(id)}`, { blocked }),
+  deleteUser: (id: string) => call<null>("DELETE", `/admin/analytics/users/${encodeURIComponent(id)}`),
   months: () => call<string[]>("GET", "/admin/orders/months"),
   orders: (p: { kind?: string; month?: string; status?: string }) => call<Order[]>("GET", "/admin/orders" + q(p)),
   confirm: (code: string, on: boolean) => call<Order>("POST", `/admin/orders/${code}/${on ? "confirm" : "unconfirm"}`),

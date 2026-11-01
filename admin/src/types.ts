@@ -101,6 +101,9 @@ export interface Order {
   paidAt?: string;
   createdAt: string;
   updatedAt: string;
+  /** Khách Zalo của đơn. Có trên API admin. */
+  customer?: string;
+  blocked?: boolean;
   invoice: { version: number; sends: { version: number; via: InvoiceVia; at: string }[]; log: { at: string; msg: string }[] };
   invoiceStatus: "new" | "changed" | "sent" | null;
   shots?: File[];
@@ -150,6 +153,7 @@ export interface AnalyticsUser {
   lastSeenAt: string | null;
   visits: number;
   durationSec: number;
+  blocked: boolean;
   products: { id: string; name: string; views: number }[];
 }
 
@@ -179,6 +183,7 @@ export interface AnalyticsUserDetail {
     lastSeenAt: string | null;
     visitCount: number;
     createdAt: string;
+    blocked: boolean;
   };
   visits: { startedAt: string; durationSec: number; platform: string; model: string }[];
   products: { id: string; name: string; img: string; views: number; opens: number; carts: number }[];

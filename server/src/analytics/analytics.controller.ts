@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { CustomerGuard, type CustomerRequest } from '../customers/customer.guard.js';
 import { DaysQuery, EventsDto, VisitDto } from './analytics.dto.js';
@@ -38,5 +38,12 @@ export class AdminAnalyticsController {
   @Get('users/:id')
   user(@Param('id') id: string, @Query() q: DaysQuery) {
     return this.analytics.user(id, q);
+  }
+
+  /** Xoá hồ sơ khách và lịch sử xem. Đơn hàng đã đặt giữ nguyên. */
+  @Delete('users/:id')
+  @HttpCode(204)
+  remove(@Param('id') id: string) {
+    return this.analytics.remove(id);
   }
 }

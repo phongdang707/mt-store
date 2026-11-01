@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { api } from "@/api";
+import { toast } from "@/app-state";
 import { initialOf } from "@/format";
 import { sx } from "@/sx";
 
@@ -47,6 +49,7 @@ export const CHIP = {
   cho: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #f6e1dc; color: #8f4459; white-space: nowrap",
   xong: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #e3efe6; color: #2f6b45; white-space: nowrap",
   warn: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #fdecc8; color: #7a4f00; white-space: nowrap",
+  chan: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #3d3530; color: #ffffff; white-space: nowrap",
 };
 
 export function Tabs<T extends string>({ tabs, value, onPick }: { tabs: [T, string, number][]; value: T; onPick: (t: T) => void }) {
@@ -156,6 +159,40 @@ export function ConfirmBlock({ pending, onToggle, busy, what }: { pending: boole
         Hoàn tác
       </button>
     </div>
+  );
+}
+
+/** Chặn hoặc bỏ chặn một khách. Hỏi lại trước khi gọi API. */
+export function BlockCustomer({ id, blocked, onChange }: { id: string; blocked?: boolean; onChange: (blocked: boolean) => void }) {
+  const [busy, setBusy] = useState(false);
+  const on = !!blocked;
+  const run = async () => {
+    const next = !on;
+    const ask = next ? "Chặn người này? Họ sẽ không đặt hàng hay gửi yêu cầu được nữa." : "Bỏ chặn người này? Họ dùng cửa hàng lại được.";
+    if (!confirm(ask)) return;
+    setBusy(true);
+    try {
+      const r = await api.blockCustomer(id, next);
+      onChange(r.blocked);
+      toast(r.blocked ? "Đã chặn người dùng" : "Đã bỏ chặn");
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={run}
+      disabled={busy}
+      style={sx(
+        "border: 1.5px solid #b3566f; background: #ffffff; color: #a3546a; border-radius: 14px; padding: 12px 14px; font-weight: 700; font-size: 14.5px" +
+          (busy ? "; opacity: 0.7" : ""),
+      )}
+    >
+      {on ? "Bỏ chặn" : "Chặn người dùng"}
+    </button>
   );
 }
 

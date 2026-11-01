@@ -7,7 +7,7 @@ import { CartSheet, OrdersSheet, PhotoSheet, PickSheet } from "@/components/shee
 import { useStore } from "@/state/store";
 
 export default function HomePage() {
-  const { D, loadError, loadCatalog, open, setOpen } = useStore();
+  const { D, loadError, loadCatalog, open, setOpen, blocked } = useStore();
 
   useEffect(() => {
     if (!open) return;
@@ -15,6 +15,16 @@ export default function HomePage() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+
+  if (blocked) {
+    return (
+      <Page>
+        <main className="wrap">
+          <div className="empty">Cửa hàng đã chặn tài khoản này</div>
+        </main>
+      </Page>
+    );
+  }
 
   return (
     <Page>

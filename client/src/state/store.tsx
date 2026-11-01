@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { api, deviceInfo, type CartLineInput } from "@/services/api";
+import { ApiError, api, deviceInfo, type CartLineInput } from "@/services/api";
 import { startPresence, track } from "@/services/track";
 import type { Catalog, CustomerInfo, Order, Product, Variant } from "@/types";
 import { shrink } from "@/utils/image";
@@ -43,6 +43,7 @@ function useStoreState() {
   const [phSending, setPhSending] = useState(false);
   const [phMsg, setPhMsg] = useState("");
   const [overlay, setOverlay] = useState<Overlay>(null);
+  const [blocked, setBlocked] = useState(false);
 
   const loadCatalog = useCallback(() => {
     setLoadError("");
@@ -66,26 +67,43 @@ function useStoreState() {
   }, []);
 
   useEffect(() => {
-    startPresence();
-    loadCatalog();
-    refreshMine();
-    // Điền sẵn SĐT/địa chỉ đã dùng ở đơn trước nếu máy chưa lưu.
+    let stop = false;
+    let listening = false;
+    const onVis = () => document.visibilityState === "visible" && refreshMine();
+    const start = () => {
+      if (stop) return;
+      startPresence();
+      loadCatalog();
+      refreshMine();
+      api.zaloName(false).then((name) => {
+        if (!name || stop) return;
+        setInfoState((i) => {
+          if (i.name) return i;
+          const next = { ...i, name };
+          if (storage.get("mt_remember", true)) storage.set("mt_info", next);
+          return next;
+        });
+      });
+      document.addEventListener("visibilitychange", onVis);
+      listening = true;
+    };
+    // Hồ sơ 403: cửa hàng đã chặn, không mở bảng giá.
     api
       .me()
-      .then((m) => setInfoState((i) => ({ ...i, phone: i.phone || m.phone, addr: i.addr || m.addr, name: i.name || m.name })))
-      .catch(() => {});
-    api.zaloName(false).then((name) => {
-      if (!name) return;
-      setInfoState((i) => {
-        if (i.name) return i;
-        const next = { ...i, name };
-        if (storage.get("mt_remember", true)) storage.set("mt_info", next);
-        return next;
+      .then((m) => {
+        if (stop) return;
+        setInfoState((i) => ({ ...i, phone: i.phone || m.phone, addr: i.addr || m.addr, name: i.name || m.name }));
+        start();
+      })
+      .catch((e) => {
+        if (stop) return;
+        if (e instanceof ApiError && e.status === 403) setBlocked(true);
+        else start();
       });
-    });
-    const onVis = () => document.visibilityState === "visible" && refreshMine();
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+    return () => {
+      stop = true;
+      if (listening) document.removeEventListener("visibilitychange", onVis);
+    };
   }, []);
 
   // Đang mở "Đơn của bạn": cập nhật trạng thái/giá báo mỗi 20 giây.
@@ -226,6 +244,7 @@ function useStoreState() {
       setOpenState(null);
       setOverlay({ type: "bill", o: order, success: true });
     } catch (e) {
+      if (e instanceof ApiError && e.status === 403) setBlocked(true);
       setMsg((e as Error).message || "Chưa gửi được đơn, bạn thử lại nhé.");
     } finally {
       setSending(false);
@@ -269,7 +288,10 @@ function useStoreState() {
       setOverlay({ type: "cel", code: r.code, ord: r });
     } catch (e) {
       const m = (e as Error).message;
-      setPhMsg(/too large|quá lớn|File too large/i.test(m) ? "Ảnh quá lớn, bạn chọn ảnh khác nhé." : `Chưa gửi được ảnh. Bạn thử lại hoặc gửi qua Zalo/Messenger cho ${D?.store} nhé.`);
+      if (e instanceof ApiError && e.status === 403) {
+        setBlocked(true);
+        setPhMsg(m);
+      } else setPhMsg(/too large|quá lớn|File too large/i.test(m) ? "Ảnh quá lớn, bạn chọn ảnh khác nhé." : `Chưa gửi được ảnh. Bạn thử lại hoặc gửi qua Zalo/Messenger cho ${D?.store} nhé.`);
     } finally {
       setPhSending(false);
     }
@@ -303,7 +325,7 @@ function useStoreState() {
     msg, sending, sendOrder,
     showPaid, setShowPaid, MY, myReady, refreshMine, markPaid,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
-    overlay, setOverlay,
+    overlay, setOverlay, blocked,
   };
 }
 

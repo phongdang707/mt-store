@@ -18,6 +18,9 @@ export class Customer {
   @Prop({ default: '' }) language: string;
   @Prop() lastSeenAt?: Date;
   @Prop({ default: 0, min: 0 }) visitCount: number;
+  /** Admin chặn: khách không đặt hàng, gửi tìm hộ, hay gọi API mini app. */
+  @Prop({ default: false }) blocked: boolean;
+  @Prop() blockedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

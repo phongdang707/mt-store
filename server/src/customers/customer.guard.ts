@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
 import type { CustomerDocument } from './customer.schema.js';
 import { CustomersService } from './customers.service.js';
@@ -23,6 +23,7 @@ export class CustomerGuard implements CanActivate {
     else if (dev && this.zalo.devMode && /^[\w-]{6,64}$/.test(dev)) user = { id: 'dev:' + dev };
     else throw new UnauthorizedException('Cần đăng nhập Zalo');
     req.customer = await this.customers.upsert(user);
+    if (req.customer.blocked) throw new ForbiddenException('Cửa hàng đã chặn tài khoản này');
     return true;
   }
 }

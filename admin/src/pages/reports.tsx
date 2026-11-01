@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/api";
 import { toast } from "@/app-state";
 import { MAIN, MobileHead, Shell } from "@/components/shell";
-import { Avatar, CloseX, ContactPills, H1, Search, Segmented } from "@/components/ui";
+import { Avatar, BlockCustomer, CHIP, CloseX, ContactPills, H1, Search, Segmented } from "@/components/ui";
 import { ago, duration, norm, timeOf } from "@/format";
 import { sx } from "@/sx";
 import type { Analytics, AnalyticsUserDetail } from "@/types";
@@ -38,8 +38,10 @@ function Bars({ rows, value }: { rows: { label: string; n: number; hint?: string
   );
 }
 
-function Detail({ id, days, onClose }: { id: string; days: number; onClose: () => void }) {
+function Detail({ id, days, onClose, onDeleted, onBlocked }: { id: string; days: number; onClose: () => void; onDeleted: () => void; onBlocked: (id: string, blocked: boolean) => void }) {
   const [d, setD] = useState<AnalyticsUserDetail | null>(null);
+  const [sure, setSure] = useState(false);
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     let stop = false;
     setD(null);
@@ -54,6 +56,20 @@ function Detail({ id, days, onClose }: { id: string; days: number; onClose: () =
     };
   }, [id, days]);
   const u = d?.user;
+  const remove = async () => {
+    if (!u || busy) return;
+    if (!sure) return setSure(true);
+    setBusy(true);
+    try {
+      await api.deleteUser(id);
+      toast(`Đã xoá “${u.name || "Khách"}”`);
+      onDeleted();
+    } catch (e) {
+      toast((e as Error).message);
+      setBusy(false);
+      setSure(false);
+    }
+  };
   return (
     <section aria-label="Chi tiết người dùng" className="detail-sheet" style={sx("flex: 1 1 380px; max-width: 460px; min-width: 0; " + CARD + "; display: flex; flex-direction: column")}>
       <div style={sx("padding: 18px 20px 14px; border-bottom: 1px solid #efd9d3; display: flex; flex-direction: column; gap: 8px")}>
@@ -67,14 +83,41 @@ function Detail({ id, days, onClose }: { id: string; days: number; onClose: () =
             <div style={sx("display: flex; align-items: center; gap: 12px")}>
               <Avatar src={u.avatar} name={u.name || "Khách"} size={56} font={20} />
               <span style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column")}>
-                <b style={sx("font-family: Quicksand, sans-serif; font-size: 20px")}>{u.name || "Khách"}</b>
+                <span style={sx("display: flex; align-items: center; gap: 8px; flex-wrap: wrap")}>
+                  <b style={sx("font-family: Quicksand, sans-serif; font-size: 20px")}>{u.name || "Khách"}</b>
+                  {u.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
+                </span>
                 <span style={sx(MUTED)}>{machine(u.model, u.platform)}{u.zaloVersion ? " · Zalo " + u.zaloVersion : ""}</span>
               </span>
             </div>
             <ContactPills phone={u.phone} />
+            <BlockCustomer id={u.id} blocked={u.blocked} onChange={(blocked) => {
+              setD((cur) => (cur ? { ...cur, user: { ...cur.user, blocked } } : cur));
+              onBlocked(u.id, blocked);
+            }} />
             <span style={sx(MUTED)}>
               {u.visitCount} lần vào · lần cuối {u.lastSeenAt ? ago(u.lastSeenAt) : "—"} · gặp từ {timeOf(u.createdAt)}
             </span>
+            <div style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px")}>
+              <button
+                onClick={remove}
+                onBlur={() => setSure(false)}
+                disabled={busy}
+                style={sx(
+                  "border: 0; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; " +
+                    (sure ? "background: #c0392b; color: #ffffff; border-radius: 999px; padding: 8px 14px" : "background: transparent; color: #8f4459; padding: 6px 2px") +
+                    (busy ? "; opacity: 0.6" : ""),
+                )}
+              >
+                <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 7h16"></path>
+                  <path d="M9 7V4h6v3"></path>
+                  <path d="M6 7l1 13h10l1-13"></path>
+                </svg>
+                {busy ? "Đang xoá…" : sure ? "Bấm lần nữa để xoá" : "Xoá khỏi app"}
+              </button>
+              {sure ? <span style={sx(MUTED)}>Xoá hồ sơ và lịch sử xem. Đơn trong trang quản lý vẫn giữ. Họ mở app lại sẽ là người dùng mới.</span> : null}
+            </div>
           </>
         ) : (
           <p style={sx("margin: 0; " + MUTED)}>Đang tải…</p>
@@ -121,6 +164,7 @@ export default function Reports() {
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
   const [sel, setSel] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let stop = false;
@@ -136,7 +180,7 @@ export default function Reports() {
     return () => {
       stop = true;
     };
-  }, [days]);
+  }, [days, reload]);
 
   const users = useMemo(() => {
     const n = norm(q);
@@ -250,7 +294,10 @@ export default function Reports() {
                     >
                       <Avatar src={u.avatar} name={u.name || "Khách"} size={44} />
                       <span style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px")}>
-                        <b style={sx("font-size: 15px")}>{u.name || "Khách"}</b>
+                        <span style={sx("display: flex; align-items: center; gap: 8px; min-width: 0")}>
+                          <b style={sx("font-size: 15px")}>{u.name || "Khách"}</b>
+                          {u.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
+                        </span>
                         <span style={sx("font-size: 13.5px; color: #7d6862; overflow: hidden; text-overflow: ellipsis; white-space: nowrap")}>
                           {machine(u.model, u.platform)}
                           {u.products.length ? " · " + u.products.map((p) => p.name).join(", ") : ""}
@@ -265,7 +312,21 @@ export default function Reports() {
                   {!users.length ? <p style={sx("margin: 0; padding: 40px 16px; text-align: center; color: #7d6862")}>{q ? "Không có người dùng nào khớp." : "Chưa có người dùng nào trong khoảng này."}</p> : null}
                 </div>
               </section>
-              {sel ? <Detail key={sel + days} id={sel} days={days} onClose={() => setSel(null)} /> : null}
+              {sel ? (
+                <Detail
+                  key={sel + days}
+                  id={sel}
+                  days={days}
+                  onClose={() => setSel(null)}
+                  onDeleted={() => {
+                    const id = sel;
+                    setSel(null);
+                    setData((cur) => (cur ? { ...cur, users: cur.users.filter((u) => u.id !== id) } : cur));
+                    setReload((n) => n + 1);
+                  }}
+                  onBlocked={(id, blocked) => setData((cur) => (cur ? { ...cur, users: cur.users.map((u) => (u.id === id ? { ...u, blocked } : u)) } : cur))}
+                />
+              ) : null}
             </div>
           </>
         )}

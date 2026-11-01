@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
-import { Avatar, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
+import { Avatar, BlockCustomer, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
 import { MobileHead, Shell } from "@/components/shell";
 import { CN, ago, dots, dotsInput, fmt, itemLabel, norm, parseMoney, thisMonth, timeOf } from "@/format";
 import { sx } from "@/sx";
@@ -82,7 +82,7 @@ function PriceCell({ it, onSave }: { it: OrderItem; onSave: (price: number) => P
   );
 }
 
-function Detail({ o, onClose, onChange }: { o: Order; onClose: () => void; onChange: (o: Order) => void }) {
+function Detail({ o, onClose, onChange, onBlocked }: { o: Order; onClose: () => void; onChange: (o: Order) => void; onBlocked: (blocked: boolean) => void }) {
   const { settings } = useApp();
   const [busy, setBusy] = useState(false);
   const s = st(o);
@@ -108,6 +108,7 @@ function Detail({ o, onClose, onChange }: { o: Order; onClose: () => void; onCha
           <span style={sx("font-weight: 800; color: #a3546a; letter-spacing: 0.5px")}>ĐƠN #{o.code}</span>
           <span style={sx("box-sizing: border-box; " + CHIP[s])}>{LABEL[s]}</span>
           {o.paid ? <span style={sx(CHIP.xong)}>Khách báo đã CK</span> : null}
+          {o.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
           <span style={{ flex: 1 }}></span>
           <CloseX onClick={onClose} label="Đóng đơn hàng" />
         </div>
@@ -153,6 +154,7 @@ function Detail({ o, onClose, onChange }: { o: Order; onClose: () => void; onCha
           <span style={sx("font-size: 24px; font-weight: 700; color: #a3546a")}>{o.total ? fmt(o.total) : "—"}</span>
         </div>
         <ConfirmBlock pending={s === "cho"} busy={busy} what="đơn" onToggle={() => run(() => api.confirm(o.code, s === "cho"))} />
+        {o.customer ? <BlockCustomer id={o.customer} blocked={o.blocked} onChange={onBlocked} /> : null}
         <button
           onClick={() => copyText(quoteText(o, settings?.store || "MT store"), "Đã sao chép tin nhắn báo giá")}
           style={sx("align-self: center; border: 0; background: transparent; color: #a3546a; font-weight: 600; font-size: 13px; padding: 4px 2px")}
@@ -554,7 +556,18 @@ export default function Orders() {
               {!list.length ? <p style={sx("margin: 0; padding: 40px 16px; text-align: center; color: #7d6862")}>{orders ? "Không có đơn nào trong mục này." : "Đang tải đơn…"}</p> : null}
             </div>
           </section>
-          {selO ? <Detail key={selO.code} o={selO} onClose={() => setSel(null)} onChange={replace} /> : null}
+          {selO ? (
+            <Detail
+              key={selO.code}
+              o={selO}
+              onClose={() => setSel(null)}
+              onChange={replace}
+              onBlocked={(blocked) => {
+                const id = selO.customer;
+                setOrders((l) => (l ? l.map((x) => (id && x.customer === id ? { ...x, blocked } : x)) : l));
+              }}
+            />
+          ) : null}
         </div>
       </main>
     </Shell>

@@ -67,5 +67,6 @@ Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, 
 | | GET (SSE) | `/admin/events?token=` | đơn mới / đổi trạng thái |
 | | GET | `/admin/analytics?days=7\|30\|90` | người dùng, thời gian dùng, sản phẩm xem nhiều |
 | | GET | `/admin/analytics/users/:id?days=` | phiên và sản phẩm của một khách |
+| | DELETE | `/admin/analytics/users/:id` | xoá hồ sơ khách và lịch sử xem; đơn đã đặt giữ nguyên |
 
 Lưu ý ESM: import giá trị từ `mongoose` bằng default import; kiểu (`Model`, `Connection`, …) dùng `import type`.

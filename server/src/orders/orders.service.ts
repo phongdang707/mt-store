@@ -97,7 +97,8 @@ export class OrdersService {
         norm([o.code, o.name, o.phone, o.addr, o.product, o.note, ...o.items.map((i) => i.name)].join(' ')).includes(k),
       );
     }
-    return list.map((o) => this.adminView(o));
+    const flags = await this.customers.blockedOf(list.map((o) => o.customer));
+    return list.map((o) => this.adminView(o, flags.get(String(o.customer)) ?? false));
   }
 
   /** Các tháng có đơn (mới nhất trước), luôn gồm tháng hiện tại. */
@@ -122,7 +123,8 @@ export class OrdersService {
   }
 
   async adminGet(code: string) {
-    return this.adminView(await this.byCode(code));
+    const o = await this.byCode(code);
+    return this.adminView(o, await this.customers.isBlocked(o.customer));
   }
 
   async setStatus(code: string, confirmed: boolean) {
@@ -260,11 +262,16 @@ export class OrdersService {
     recompute(o);
     await o.save();
     this.events.emit({ type: 'order', code: o.code, kind: o.kind, action: 'updated' });
-    return this.adminView(o);
+    return this.adminView(o, await this.customers.isBlocked(o.customer));
   }
 
-  private adminView(o: OrderDocument) {
-    return { ...(o.toJSON() as object), invoiceStatus: o.status === 'confirmed' ? invoiceStatus(o) : null };
+  private adminView(o: OrderDocument, blocked: boolean) {
+    return {
+      ...(o.toJSON() as object),
+      customer: String(o.customer),
+      blocked,
+      invoiceStatus: o.status === 'confirmed' ? invoiceStatus(o) : null,
+    };
   }
 }
 
