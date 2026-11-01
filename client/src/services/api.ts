@@ -65,6 +65,11 @@ export async function userInfoGranted() {
  * hai trường này cần khách cấp `scope.userInfo`. Server ở ngoài Việt Nam xin Graph API sẽ bị -501.
  * `ask` chỉ bật từ nút Cho phép lúc gửi đơn. Không xin số điện thoại hay vị trí.
  */
+async function loadUser(autoRequest: boolean) {
+  const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: autoRequest });
+  return pick(userInfo);
+}
+
 async function fetchProfile(ask: boolean) {
   let allowed = false;
   try {
@@ -77,36 +82,40 @@ async function fetchProfile(ask: boolean) {
   if (!allowed) {
     try {
       const scopes = await authorize({ scopes: ["scope.userInfo"] });
+      if (scopes["scope.userInfo"] === false) return EMPTY_PROFILE;
       allowed = scopes["scope.userInfo"] === true;
     } catch (e) {
       if (denied(e)) return EMPTY_PROFILE;
       console.warn("authorize", e);
-      try {
-        const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: true });
-        return pick(userInfo);
-      } catch (err) {
-        if (denied(err)) return EMPTY_PROFILE;
-        throw err;
-      }
     }
   }
-  if (!allowed) return EMPTY_PROFILE;
-  const { userInfo } = await getUserInfo({ avatarType: "normal" });
-  return pick(userInfo);
+  try {
+    const got = await loadUser(ask && !allowed);
+    if (got.name || !ask || !allowed) return got;
+  } catch (e) {
+    if (denied(e) || !ask) return EMPTY_PROFILE;
+    console.warn("getUserInfo", e);
+  }
+  try {
+    return await loadUser(true);
+  } catch (e) {
+    if (denied(e)) return EMPTY_PROFILE;
+    throw e;
+  }
 }
 
 export function zaloProfile(ask = false): Promise<{ name: string; avatar: string }> {
   if (!inZalo) return Promise.resolve(EMPTY_PROFILE);
-  if (profile?.name && profile.avatar) return Promise.resolve(profile);
+  if (profile?.name) return Promise.resolve(profile);
   if (profileTask && !ask) return profileTask;
   if (!ask && checked) return Promise.resolve(profile ?? EMPTY_PROFILE);
   const task = fetchProfile(ask)
     .then((got) => {
-      checked = true;
-      if (got.name || got.avatar) {
+      if (got.name) {
         profile = got;
-      }
-      return profile ?? got;
+        checked = true;
+      } else if (ask) checked = true;
+      return got.name ? got : (profile ?? got);
     })
     .catch((e: unknown) => {
       console.warn("getUserInfo", e);

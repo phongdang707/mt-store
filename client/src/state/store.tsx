@@ -366,7 +366,7 @@ function useStoreState() {
     draft.current = { phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim(), items };
     busy.current = true;
     try {
-      if (await api.userInfoGranted()) await finishOrder(() => api.zaloProfile(false));
+      if (await api.userInfoGranted()) await finishOrder(() => api.zaloProfile(true));
       else setAskProfile(true);
     } catch {
       setAskProfile(true);
