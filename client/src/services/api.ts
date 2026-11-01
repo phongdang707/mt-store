@@ -1,4 +1,4 @@
-import { getAccessToken, getSetting, getSystemInfo, getUserInfo } from "zmp-sdk/apis";
+import { authorize, getAccessToken, getSetting, getSystemInfo, getUserInfo } from "zmp-sdk/apis";
 import type { Catalog, Order } from "@/types";
 import { storage } from "@/utils/storage";
 
@@ -77,18 +77,28 @@ async function readIfGranted() {
   }
 }
 
+/** Popup quyền của Zalo (`MP_USER_AUTHORIZE`). Gọi ngay trong cú bấm, trước mọi `await`. */
+function askZaloPermission() {
+  return authorize({ scopes: ["scope.userInfo"] })
+    .then((scopes) => scopes["scope.userInfo"] !== false)
+    .catch((e: unknown) => {
+      if (!denied(e)) console.warn("authorize", e);
+      return false;
+    });
+}
+
 /**
  * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID.
- * Đã cấp `scope.userInfo` thì đọc im, không mở hộp thoại.
- * Chưa cấp thì `getUserInfo` hiện đúng popup quyền mặc định của Zalo Mini App và trả name + avatar.
+ * Đã cấp `scope.userInfo` thì đọc im. Chưa cấp thì không tự mở popup ở đây.
  * Không xin số điện thoại hay vị trí.
  */
 async function fetchProfile(ask: boolean) {
   const silent = await readIfGranted();
-  if (silent) return silent;
+  if (silent && (silent.name || silent.avatar || !ask)) return silent;
   if (!ask) return EMPTY_PROFILE;
+  if (!(await askZaloPermission())) return EMPTY_PROFILE;
   try {
-    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: true });
+    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
     return pick(userInfo);
   } catch (e) {
     if (denied(e)) return EMPTY_PROFILE;
@@ -113,60 +123,79 @@ export interface ProfileStatus {
   avatar: string;
 }
 
-let cartSync: Promise<void> | null = null;
-/** Đã mở popup quyền trong phiên này. Hồ sơ cũ còn trống thì lần mở app sau hỏi lại. */
-let asked = false;
+/** `null` khi chưa hỏi server. `true` khi hồ sơ cũ chưa có tên và ảnh. */
+let missing: boolean | null = null;
+let granted = false;
+let tapSync: Promise<void> | null = null;
+
+async function saveProfile(raw: { name: string; avatar: string }) {
+  if (!raw.name && !raw.avatar) return;
+  profile = raw;
+  checked = true;
+  missing = false;
+  const saved = await call<ProfileStatus>("POST", "/me/profile", {
+    zaloName: raw.name || undefined,
+    avatar: raw.avatar || undefined,
+  });
+  rememberProfile(saved);
+}
 
 /** Đợi lần sync của lần mở giỏ hiện tại, không xin quyền thêm. */
 export function waitCartProfile() {
-  return cartSync ?? Promise.resolve();
+  return tapSync ?? Promise.resolve();
+}
+
+/** Lúc mở app, không bấm: chỉ ghi tên và ảnh nếu đã cấp quyền. Không mở popup. */
+export function prepareProfile() {
+  if (!inZalo) return Promise.resolve();
+  return pullProfile(false, null);
 }
 
 /**
- * Hồ sơ cũ thiếu tên hoặc ảnh: hỏi server, rồi ghi vào đúng khách đó.
- * Đã cấp quyền thì đọc im. Chưa cấp thì một lần popup mặc định của Zalo trong phiên này.
+ * Bấm mở giỏ. Chưa có tên/ảnh thì `authorize` chạy ngay trong cú bấm,
+ * đó là popup quyền của Zalo. Gọi sau một `await` thì Zalo không hiện hộp thoại.
  */
 export function syncCartProfile() {
   if (!inZalo) return Promise.resolve();
-  if (cartSync) return cartSync;
-  const run = refreshCartProfile()
-    .catch((e: unknown) => {
-      console.warn("syncCartProfile", e);
-    })
-    .finally(() => {
-      if (cartSync === run) cartSync = null;
-    });
-  cartSync = run;
+  const prompt = missing !== false ? askZaloPermission() : null;
+  const run = pullProfile(true, prompt).finally(() => {
+    if (tapSync === run) tapSync = null;
+  });
+  tapSync = run;
   return run;
 }
 
-async function refreshCartProfile() {
-  const status = await call<ProfileStatus>("GET", "/me/profile");
-  if (await scopeGranted()) {
-    const fresh = await readIfGranted();
-    if (fresh && (fresh.name || fresh.avatar)) {
-      const saved = await call<ProfileStatus>("POST", "/me/profile", { zaloName: fresh.name || undefined, avatar: fresh.avatar || undefined });
-      rememberProfile(saved);
+async function pullProfile(fromTap: boolean, prompt: Promise<boolean> | null) {
+  try {
+    const status = await call<ProfileStatus>("GET", "/me/profile");
+    missing = !status.hasData;
+    granted = await scopeGranted();
+    if (!missing) {
+      rememberProfile(status);
+      if (!granted) return;
+      const fresh = await readIfGranted();
+      if (fresh && (fresh.name || fresh.avatar)) await saveProfile(fresh);
       return;
     }
-    if (status.hasData) rememberProfile(status);
-    return;
+    if (!fromTap) {
+      if (!granted) return;
+      const fresh = await readIfGranted();
+      if (fresh && (fresh.name || fresh.avatar)) await saveProfile(fresh);
+      return;
+    }
+    const allowed = prompt ? await prompt : granted;
+    if (!allowed) return;
+    granted = true;
+    try {
+      const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
+      const fresh = pick(userInfo);
+      if (fresh.name || fresh.avatar) await saveProfile(fresh);
+    } catch (e) {
+      if (!denied(e)) console.warn("getUserInfo", e);
+    }
+  } catch (e) {
+    console.warn("syncCartProfile", e);
   }
-  if (status.hasData) {
-    rememberProfile(status);
-    return;
-  }
-  if (asked) return;
-  asked = true;
-  const got = await fetchProfile(true);
-  if (got.name || got.avatar) {
-    profile = got;
-    checked = true;
-    const saved = await call<ProfileStatus>("POST", "/me/profile", { zaloName: got.name || undefined, avatar: got.avatar || undefined });
-    rememberProfile(saved);
-    return;
-  }
-  checked = true;
 }
 
 export function zaloProfile(ask = false): Promise<{ name: string; avatar: string }> {
@@ -290,6 +319,7 @@ export const api = {
   zaloName,
   zaloProfile,
   rememberProfile,
+  prepareProfile,
   syncCartProfile,
   waitCartProfile,
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),

@@ -122,7 +122,7 @@ function useStoreState() {
     const onVis = () => document.visibilityState === "visible" && refreshMine();
     const start = () => {
       if (stop) return;
-      void api.syncCartProfile();
+      void api.prepareProfile();
       startPresence();
       loadCatalog();
       refreshMine();
