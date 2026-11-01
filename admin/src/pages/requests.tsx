@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
-import { Avatar, BlockCustomer, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
+import { Avatar, BlockCustomer, CancelBlock, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
 import { MAIN, MobileHead, Shell } from "@/components/shell";
 import { ago, dots, dotsInput, fmt, itemLabel, norm, parseMoney, timeOf } from "@/format";
 import { sx } from "@/sx";
@@ -20,9 +20,9 @@ function quoteText(o: Order, store: string) {
   return L.join("\n");
 }
 
-type Tab = "all" | "cho" | "xong";
-const st = (o: Order) => (o.status === "confirmed" ? "xong" : "cho");
-const LABEL = { cho: "Chờ xử lý", xong: "Đã xác nhận" };
+type Tab = "all" | "cho" | "xong" | "huy";
+const st = (o: Order) => (o.status === "confirmed" ? "xong" : o.status === "cancelled" ? "huy" : "cho");
+const LABEL = { cho: "Chờ xử lý", xong: "Đã xác nhận", huy: "Đã huỷ" };
 
 function Detail({ r, onChange, onClose, onBlocked }: { r: Order; onChange: (o: Order) => void; onClose: () => void; onBlocked: (blocked: boolean) => void }) {
   const { settings } = useApp();
@@ -93,10 +93,11 @@ function Detail({ r, onChange, onClose, onBlocked }: { r: Order; onChange: (o: O
               inputMode="numeric"
               placeholder="Nhập giá"
               value={quote}
+              disabled={s === "huy"}
               onChange={(e) => setQuote(dotsInput(e.target.value))}
               onBlur={saveQuote}
               onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-              style={sx("box-sizing: border-box; width: 100%; border: 1.5px solid #b3566f; background: #ffffff; border-radius: 12px; padding: 11px 28px 11px 12px; font: inherit; font-weight: 700; font-size: 16px; color: #a3546a")}
+              style={sx("box-sizing: border-box; width: 100%; border: 1.5px solid #b3566f; background: #ffffff; border-radius: 12px; padding: 11px 28px 11px 12px; font: inherit; font-weight: 700; font-size: 16px; color: #a3546a" + (s === "huy" ? "; opacity: 0.6" : ""))}
             />
             <span style={sx("position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7d6862; font-size: 13px")}>đ</span>
           </span>
@@ -117,7 +118,15 @@ function Detail({ r, onChange, onClose, onBlocked }: { r: Order; onChange: (o: O
       </div>
 
       <div style={sx("padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 10px")}>
-        <ConfirmBlock pending={s === "cho"} busy={busy} what="yêu cầu" onToggle={() => run(() => api.confirm(r.code, s === "cho"))} />
+        {s === "huy" ? null : <ConfirmBlock pending={s === "cho"} busy={busy} what="yêu cầu" onToggle={() => run(() => api.confirm(r.code, s === "cho"))} />}
+        <CancelBlock
+          cancelled={s === "huy"}
+          reason={r.cancelReason}
+          busy={busy}
+          what="yêu cầu"
+          onCancel={(reason) => run(() => api.cancel(r.code, reason))}
+          onRestore={() => run(() => api.restore(r.code))}
+        />
         {r.customer ? <BlockCustomer id={r.customer} blocked={r.blocked} onChange={onBlocked} /> : null}
       </div>
     </section>
@@ -149,6 +158,7 @@ export default function Requests() {
     ["all", "Tất cả", () => true],
     ["cho", "Chờ xử lý", (r) => st(r) === "cho"],
     ["xong", "Đã xác nhận", (r) => st(r) === "xong"],
+    ["huy", "Đã huỷ", (r) => st(r) === "huy"],
   ];
   const list = searched.filter(T.find((t) => t[0] === tab)![2]);
   const selR = list0.find((r) => r.code === sel);
@@ -176,7 +186,7 @@ export default function Requests() {
                   style={sx(
                     "box-sizing: border-box; display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 20px; font: inherit; color: inherit; background: rgba(255, 250, 247, 0.9); box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10); " +
                       (r.code === sel ? "border: 2px solid #b3566f" : "border: 2px solid #efd9d3") +
-                      (s === "xong" ? "; opacity: 0.75" : ""),
+                      (s === "xong" || s === "huy" ? "; opacity: 0.75" : ""),
                   )}
                 >
                   <span style={sx("display: block; position: relative; aspect-ratio: 4 / 3; border-radius: 14px; overflow: hidden; background: #ffffff")}>

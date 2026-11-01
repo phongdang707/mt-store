@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
-import { copyText, toast, useApp } from "@/app-state";
+import { toast, useApp } from "@/app-state";
 import { Avatar, CloseX, Search, Segmented } from "@/components/ui";
 import { Paper } from "@/components/paper";
 import { MAIN, MobileHead, Shell } from "@/components/shell";
@@ -22,14 +22,11 @@ const at = (iso: string) => {
   const d = new Date(iso);
   return ddmm(d) + " " + hhmm(d);
 };
-const SEND_OPTS: [InvoiceVia, string, string, string][] = [
+const SEND_OPTS: [Exclude<InvoiceVia, "link">, string, string, string][] = [
   ["zalo", "Zalo", "Gửi qua Zalo", "Gửi ảnh hoá đơn qua Zalo của khách"],
   ["messenger", "Mes", "Gửi qua Messenger", "Gửi ảnh hoá đơn qua Messenger"],
-  ["link", "Link", "Sao chép link", "Sao chép link hoá đơn để dán vào tin nhắn"],
   ["png", "PNG", "Tải ảnh hoá đơn", "Tải hoá đơn về máy dạng ảnh"],
 ];
-
-export const invoiceLink = (o: Order) => `${location.origin}/hd/${o.token}`;
 
 function download(b: Blob, name: string) {
   const u = URL.createObjectURL(b);
@@ -76,7 +73,12 @@ export default function Invoices() {
   }, [adding]);
   useEffect(() => {
     if (!menu) return;
-    const off = (e: MouseEvent) => !menuRef.current?.contains(e.target as Node) && setMenu(false);
+    const off = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (menuRef.current?.contains(t)) return;
+      if (t instanceof Element && t.closest(".send-sheet")) return;
+      setMenu(false);
+    };
     document.addEventListener("mousedown", off);
     return () => document.removeEventListener("mousedown", off);
   }, [menu]);
@@ -113,33 +115,37 @@ export default function Invoices() {
     }
   };
 
-  const send = async (via: InvoiceVia) => {
+  const send = async (via: Exclude<InvoiceVia, "link">) => {
     if (!cur) return;
     setMenu(false);
     const name = "hoa-don-" + cur.code + ".png";
-    const png = via === "link" ? null : await orderImage(cur, shop).catch(() => null);
-    const file = png ? new File([png], name, { type: "image/png" }) : null;
-    if (via === "link") copyText(invoiceLink(cur), "Đã sao chép link hoá đơn");
-    else if (via === "png") {
-      if (file) download(file, name);
-    } else {
+    const png = await orderImage(cur, shop).catch(() => null);
+    if (!png) {
+      toast("Chưa tạo được ảnh hoá đơn");
+      return;
+    }
+    const file = new File([png], name, { type: "image/png" });
+    if (via === "png") download(file, name);
+    else {
       let shared = false;
       try {
-        if (file && navigator.canShare?.({ files: [file] })) {
-          await navigator.share({ files: [file], text: "Hoá đơn " + shop.store + " #" + cur.code + "\n" + invoiceLink(cur) });
+        if (navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file] });
           shared = true;
         }
       } catch (e) {
         if ((e as Error).name === "AbortError") return;
       }
       if (!shared) {
-        if (file) download(file, name);
-        try {
-          await navigator.clipboard.writeText(invoiceLink(cur));
-        } catch {}
-        const z = zaloOf(cur.phone);
-        if (via === "zalo" && z) window.open("https://zalo.me/" + z, "_blank", "noopener");
-        toast(via === "zalo" ? "Đã tải ảnh và sao chép link · gửi cho khách trong Zalo" : "Đã tải ảnh và sao chép link · gửi cho khách qua Messenger");
+        download(file, name);
+        if (via === "zalo") {
+          const z = zaloOf(cur.phone);
+          if (z) window.open("https://zalo.me/" + z, "_blank", "noopener");
+        } else {
+          const m = settings?.messenger?.trim();
+          window.open(m && /^https?:\/\//.test(m) ? m : "https://www.messenger.com/", "_blank", "noopener");
+        }
+        toast(via === "zalo" ? "Đã tải ảnh · gửi cho khách trong Zalo" : "Đã tải ảnh · gửi cho khách qua Messenger");
       }
     }
     run(() => api.send(cur.code, via));
@@ -167,7 +173,7 @@ export default function Invoices() {
         </div>
 
         <div style={sx("display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start")}>
-          <section aria-label="Danh sách hoá đơn" style={sx("flex: 1 1 300px; max-width: 360px; min-width: 0; background: rgba(255, 250, 247, 0.85); border: 1px solid #efd9d3; border-radius: 22px; padding: 8px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10); display: flex; flex-direction: column; gap: 4px")}>
+          <section aria-label="Danh sách hoá đơn" className="inv-list" style={sx("flex: 1 1 300px; max-width: 360px; min-width: 0; background: rgba(255, 250, 247, 0.85); border: 1px solid #efd9d3; border-radius: 22px; padding: 8px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10); display: flex; flex-direction: column; gap: 4px")}>
             {list.map((o) => {
               const s = o.invoiceStatus ?? "new";
               return (
@@ -203,17 +209,18 @@ export default function Invoices() {
 
           {cur ? (
             <section aria-label="Hoá đơn" className="detail-sheet inv-sheet" style={sx("flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px")}>
-              <div style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 10px")}>
-                <span style={sx("box-sizing: border-box; font-size: 13.5px; font-weight: 600; border-radius: 12px; padding: 9px 14px; " + CH[st][1])}>{banner}</span>
-                <span style={{ flex: 1 }}></span>
-                <span className="only-mobile">
+              <div className="inv-toolbar" style={sx("display: flex; flex-wrap: wrap; align-items: center; gap: 10px")}>
+                <span className="inv-banner" style={sx("box-sizing: border-box; font-size: 13.5px; font-weight: 600; border-radius: 12px; padding: 9px 14px; " + CH[st][1])}>{banner}</span>
+                <span className="inv-spacer" style={{ flex: 1 }}></span>
+                <span className="only-mobile inv-close">
                   <CloseX label="Đóng hoá đơn" onClick={() => setSel(null)} />
                 </span>
-                <div ref={menuRef} style={sx("position: relative")}>
+                <div ref={menuRef} className="inv-send" style={sx("position: relative")}>
                   <button
+                    className="inv-send-btn"
                     onClick={() => setMenu(!menu)}
                     aria-expanded={menu}
-                    style={sx("display: inline-flex; align-items: center; gap: 8px; border: 0; background: #b3566f; color: #ffffff; border-radius: 999px; padding: 12px 20px; font-weight: 700; font-size: 15px; box-shadow: 0 8px 20px rgba(150, 90, 100, 0.22)")}
+                    style={sx("display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; background: #b3566f; color: #ffffff; border-radius: 999px; padding: 12px 20px; font-weight: 700; font-size: 15px; box-shadow: 0 8px 20px rgba(150, 90, 100, 0.22)")}
                   >
                     <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 3L10 14"></path>
@@ -224,8 +231,8 @@ export default function Invoices() {
                       <path d="M3 4.5 6 7.5l3-3" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"></path>
                     </svg>
                   </button>
-                  {menu ? (
-                    <div className="send-menu" style={sx("position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 250px; background: #ffffff; border: 1px solid #efd9d3; border-radius: 16px; box-shadow: 0 14px 30px rgba(120, 60, 75, 0.18); padding: 6px; display: flex; flex-direction: column")}>
+                  {menu && !narrow ? (
+                    <div className="send-menu" style={sx("position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 280px; background: #ffffff; border: 1px solid #efd9d3; border-radius: 16px; box-shadow: 0 14px 30px rgba(120, 60, 75, 0.18); padding: 6px; display: flex; flex-direction: column")}>
                       {SEND_OPTS.map(([via, badge, label, hint]) => (
                         <button
                           key={via}
@@ -245,6 +252,7 @@ export default function Invoices() {
                 </div>
               </div>
 
+              <div className="inv-scroll">
               <Paper
                 o={cur}
                 shop={shop}
@@ -302,9 +310,32 @@ export default function Invoices() {
                   ))}
                 </div>
               ) : null}
+              </div>
             </section>
           ) : null}
         </div>
+        {menu && narrow && cur ? (
+          <>
+            <button type="button" className="send-sheet-bg" aria-label="Đóng cách gửi" onClick={() => setMenu(false)} />
+            <div className="send-sheet" role="dialog" aria-label="Gửi ảnh hoá đơn">
+              <b className="send-sheet-title">Gửi ảnh hoá đơn</b>
+              {SEND_OPTS.map(([via, badge, label, hint]) => (
+                <button
+                  key={via}
+                  className="menu-opt"
+                  onClick={() => send(via)}
+                  style={sx("display: flex; align-items: center; gap: 12px; width: 100%; border: 0; background: transparent; border-radius: 14px; padding: 12px; text-align: left; font-size: 15px; font-weight: 600; color: #3d3530; min-height: 56px")}
+                >
+                  <span style={sx("width: 40px; height: 40px; flex: 0 0 40px; border-radius: 10px; background: #f6e1dc; color: #a3546a; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700")}>{badge}</span>
+                  <span style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column")}>
+                    <span>{label}</span>
+                    <span style={sx("font-size: 13px; font-weight: 400; color: #7d6862")}>{hint}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : null}
       </main>
     </Shell>
   );

@@ -24,7 +24,6 @@ export class UpdateProductDto {
   @IsOptional() @IsString() @IsNotEmpty() @MaxLength(160) name?: string;
   @IsOptional() @IsString() @IsNotEmpty() @MaxLength(60) cat?: string;
   @IsOptional() @IsInt() @Min(0) price?: number;
-  @IsOptional() @IsInt() @Min(0) market?: number;
   @IsOptional() @IsString() @IsNotEmpty() @MaxLength(30) country?: string;
   @IsOptional() @IsString() img?: string;
   @IsOptional() @IsArray() @ArrayMaxSize(40) @ValidateNested({ each: true }) @Type(() => VariantDto) variants?: VariantDto[];

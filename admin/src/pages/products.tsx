@@ -47,13 +47,11 @@ const FIELD = "box-sizing: border-box; width: 100%; border: 1px solid #efd9d3; b
 
 interface Draft extends Product {
   priceInput: string;
-  marketInput: string;
 }
 const toDraft = (p: Product): Draft => ({
   ...p,
   variants: p.variants.map((v) => ({ ...v })),
   priceInput: p.price ? dots(p.price) : "",
-  marketInput: p.market ? dots(p.market) : "",
 });
 
 export default function Products() {
@@ -91,9 +89,8 @@ export default function Products() {
     const n = {
       ...draft,
       price: parseMoney(draft.priceInput),
-      market: parseMoney(draft.marketInput),
     };
-    return (["name", "price", "market", "country", "cat", "img", "link", "hot", "best", "soldout"] as const).some((k) => n[k] !== p[k]) || JSON.stringify(n.variants) !== JSON.stringify(p.variants);
+    return (["name", "price", "country", "cat", "img", "link", "hot", "best", "soldout"] as const).some((k) => n[k] !== p[k]) || JSON.stringify(n.variants) !== JSON.stringify(p.variants);
   })();
 
   function pick(p: Product) {
@@ -112,7 +109,6 @@ export default function Products() {
       ? {
           ...draft,
           price: parseMoney(draft.priceInput),
-          market: parseMoney(draft.marketInput),
         }
       : p,
   );
@@ -195,7 +191,6 @@ export default function Products() {
         best,
         soldout,
         price: parseMoney(draft.priceInput),
-        market: parseMoney(draft.marketInput),
       });
       setProducts((l) => l && l.map((p) => (p.id === u.id ? u : p)));
       setDraft(toDraft(u));
@@ -473,38 +468,23 @@ export default function Products() {
                   </label>
                 ) : null}
 
+                {d.link ? null : (
+                  <label style={sx("display: flex; flex-direction: column; gap: 6px")}>
+                    <span style={sx("font-size: 13px; font-weight: 700; color: #a3546a")}>Giá bán</span>
+                    <span style={sx("position: relative; display: block")}>
+                      <input
+                        inputMode="numeric"
+                        placeholder="Nhập giá"
+                        value={d.priceInput}
+                        onChange={(e) => set({ priceInput: dotsInput(e.target.value) })}
+                        style={sx("box-sizing: border-box; width: 100%; border: 1.5px solid #b3566f; background: #ffffff; border-radius: 12px; padding: 11px 28px 11px 12px; font: inherit; font-weight: 700; font-size: 16px; color: #a3546a")}
+                      />
+                      <span style={sx("position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7d6862; font-size: 13px")}>đ</span>
+                    </span>
+                    <span style={sx("font-size: 12px; color: #7d6862")}>{priceN ? "Khách thấy: " + dots(priceN) + "đ" : "Để trống: khách thấy “Đang cập nhật”"}</span>
+                  </label>
+                )}
                 <div style={sx("display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px")}>
-                  {d.link ? null : (
-                    <>
-                      <label style={sx("display: flex; flex-direction: column; gap: 6px")}>
-                        <span style={sx(LABEL)}>Giá thị trường</span>
-                        <span style={sx("position: relative; display: block")}>
-                          <input
-                            inputMode="numeric"
-                            placeholder="vd 350.000"
-                            value={d.marketInput}
-                            onChange={(e) => set({ marketInput: dotsInput(e.target.value) })}
-                            style={sx("box-sizing: border-box; width: 100%; border: 1px solid #efd9d3; background: #ffffff; border-radius: 12px; padding: 11px 28px 11px 12px; font: inherit; color: #3d3530")}
-                          />
-                          <span style={sx("position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7d6862; font-size: 13px")}>đ</span>
-                        </span>
-                      </label>
-                      <label style={sx("display: flex; flex-direction: column; gap: 6px")}>
-                        <span style={sx("font-size: 13px; font-weight: 700; color: #a3546a")}>Giá bán</span>
-                        <span style={sx("position: relative; display: block")}>
-                          <input
-                            inputMode="numeric"
-                            placeholder="Nhập giá"
-                            value={d.priceInput}
-                            onChange={(e) => set({ priceInput: dotsInput(e.target.value) })}
-                            style={sx("box-sizing: border-box; width: 100%; border: 1.5px solid #b3566f; background: #ffffff; border-radius: 12px; padding: 11px 28px 11px 12px; font: inherit; font-weight: 700; font-size: 16px; color: #a3546a")}
-                          />
-                          <span style={sx("position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7d6862; font-size: 13px")}>đ</span>
-                        </span>
-                        <span style={sx("font-size: 12px; color: #7d6862")}>{priceN ? "Khách thấy: " + dots(priceN) + "đ" : "Để trống: khách thấy “Đang cập nhật”"}</span>
-                      </label>
-                    </>
-                  )}
                   <label style={sx("display: flex; flex-direction: column; gap: 6px")}>
                     <span style={sx(LABEL)}>Nước</span>
                     <select value={d.country} onChange={(e) => set({ country: e.target.value })} style={sx(FIELD)}>

@@ -18,7 +18,8 @@ export default function PublicInvoice() {
       .then((d) => setData(d as never))
       .catch((e) => setErr((e as Error).message));
   }, [token]);
-  const qr = useMemo(() => (data && data.order.total && !data.order.paid ? qrDataURL(vietqr(data.shop.bank, data.order.total, memoOf(data.order))) || data.shop.qr : ""), [data]);
+  const cancelled = data?.order.status === "cancelled";
+  const qr = useMemo(() => (data && data.order.status !== "cancelled" && data.order.total && !data.order.paid ? qrDataURL(vietqr(data.shop.bank, data.order.total, memoOf(data.order))) || data.shop.qr : ""), [data]);
   return (
     <div style={sx("min-height: 100vh; box-sizing: border-box; padding: 32px 16px 48px; background: linear-gradient(180deg, #fcf8f0 0%, #f8efe8 45%, #f4dfda 100%); font-family: 'Be Vietnam Pro', system-ui, sans-serif; color: #3d3530; font-size: 15px; line-height: 1.45")}>
       <div style={sx("max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px")}>
@@ -27,7 +28,9 @@ export default function PublicInvoice() {
         {data ? (
           <>
             <Paper o={data.order} shop={data.shop} />
-            {qr ? (
+            {cancelled ? (
+              <p style={sx("text-align: center; background: #efe8e6; color: #6f5a55; border-radius: 14px; padding: 12px; font-weight: 700")}>Đơn này đã được huỷ</p>
+            ) : qr ? (
               <section style={sx("align-self: center; background: #ffffff; border: 1px solid #efd9d3; border-radius: 22px; box-shadow: 0 10px 26px rgba(150, 90, 100, 0.14); padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 8px")}>
                 <b style={sx("font-family: Quicksand, sans-serif; color: #a3546a")}>Quét mã để chuyển khoản</b>
                 <img src={qr} alt="Mã QR chuyển khoản" style={sx("width: 220px; height: 220px")} />

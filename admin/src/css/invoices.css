@@ -1,14 +1,103 @@
-/* Hoá đơn trên điện thoại: tờ hoá đơn mở thành trang riêng (che danh sách), nền như thiết kế. */
+/* Hoá đơn trên điện thoại: tờ hoá đơn mở thành trang riêng, nút gửi dính đáy, menu gửi là sheet. */
 @media (max-width: 760px) {
+  .inv-list {
+    flex: 1 1 100% !important;
+    max-width: none !important;
+    width: 100%;
+  }
   .inv-sheet {
     background: linear-gradient(180deg, #fcf8f0 0%, #f8efe8 45%, #f4dfda 100%) !important;
-    padding: 16px 12px 40px !important;
+    padding: 12px 12px 0 !important;
+    box-sizing: border-box;
+    overflow: hidden !important;
+  }
+  .inv-scroll {
+    order: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-bottom: 16px;
+  }
+  .inv-toolbar {
+    order: 2;
+    position: static;
+    z-index: 5;
+    flex: none;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin: 0 -12px 0;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: #fffaf7;
+    border-top: 1px solid #efd9d3;
+    box-shadow: 0 -8px 24px rgba(120, 60, 75, 0.12);
     box-sizing: border-box;
   }
-  .inv-row.inv-edit { grid-template-columns: minmax(0, 1fr) auto auto 32px !important; }
-  .inv-pay { flex-wrap: wrap; }
-  .send-menu {
-    width: min(250px, calc(100vw - 24px)) !important;
-    max-width: calc(100vw - 24px);
+  .inv-spacer { display: none !important; }
+  .inv-banner { width: 100%; }
+  .inv-close { align-self: flex-end; }
+  .inv-send, .inv-send-btn { width: 100%; box-sizing: border-box; }
+  /* Tên món chiếm gần hết hàng đầu; số lượng và thành tiền xuống hàng dưới, không bóp chữ từng ký tự. */
+  .inv-row,
+  .inv-row.inv-edit {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px !important;
+  }
+  .inv-row > :first-child,
+  .inv-row.inv-edit > :first-child {
+    flex: 1 1 calc(100% - 48px);
+    max-width: calc(100% - 48px);
+    min-width: 0;
+  }
+  .inv-row.inv-edit > button {
+    flex: 0 0 40px;
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .inv-row.inv-edit > span:not(:first-child) button {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .inv-pay, .inv-sum {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .inv-pay { flex-wrap: wrap !important; align-items: flex-start !important; }
+  .inv-sum .inv-grand { font-size: 22px !important; overflow-wrap: anywhere; }
+  .paper { max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
+  .send-sheet-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    border: 0;
+    padding: 0;
+    background: rgba(40, 20, 25, 0.35);
+  }
+  .send-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 61;
+    background: #ffffff;
+    border-radius: 20px 20px 0 0;
+    padding: 8px 8px calc(12px + env(safe-area-inset-bottom, 0px));
+    box-shadow: 0 -12px 30px rgba(120, 60, 75, 0.2);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+  .send-sheet-title {
+    padding: 10px 12px 4px;
+    font-size: 16px;
+    color: #3d3530;
   }
 }

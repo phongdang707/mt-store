@@ -4,7 +4,7 @@ import { toJSON } from '../common/json.js';
 
 export const ORDER_KINDS = ['order', 'request'] as const;
 export type OrderKind = (typeof ORDER_KINDS)[number];
-export const ORDER_STATUSES = ['pending', 'confirmed'] as const;
+export const ORDER_STATUSES = ['pending', 'confirmed', 'cancelled'] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export const SEND_VIA = ['zalo', 'messenger', 'link', 'png'] as const;
 export type SendVia = (typeof SEND_VIA)[number];
@@ -82,6 +82,9 @@ export class Order {
   @Prop({ default: false }) paid: boolean;
   @Prop() paidAt?: Date;
   @Prop() quotedAt?: Date;
+  @Prop() cancelledAt?: Date;
+  /** Lý do huỷ. Chỉ admin thấy; API khách không trả field này. */
+  @Prop({ default: '' }) cancelReason: string;
   @Prop({ type: SchemaFactory.createForClass(Invoice), default: () => ({}) }) invoice: Invoice;
   createdAt: Date;
   updatedAt: Date;

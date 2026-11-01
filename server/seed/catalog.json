@@ -15,7 +15,6 @@
       "name": "Mỹ phẩm SK-II",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "ln_skii.jpg",
       "link": "https://www.skii.com.vn/"
@@ -25,7 +24,6 @@
       "name": "Giày Onitsuka Tiger",
       "cat": "Thời trang",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "ln_onitsuka.jpg",
       "link": "https://www.onitsukatiger.com/vn/vi-vn/"
@@ -35,7 +33,6 @@
       "name": "Thời trang Uniqlo",
       "cat": "Thời trang",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "ln_uniqlo.jpg",
       "link": "https://www.uniqlo.com/vn/vi/"
@@ -45,7 +42,6 @@
       "name": "Mỹ phẩm d'Alba",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Hàn",
       "img": "ln_dalba.jpg",
       "link": "https://www.dalba.com.vn/"
@@ -55,7 +51,6 @@
       "name": "Phấn phủ Club Suppin Powder (tặng kèm 1 mặt nạ giấy)",
       "cat": "Mỹ phẩm",
       "price": 380000,
-      "market": 0,
       "img": "p1.jpg",
       "country": "Nhật"
     },
@@ -64,7 +59,6 @@
       "name": "Mặt nạ sake Wafood Made",
       "cat": "Mỹ phẩm",
       "price": 290000,
-      "market": 0,
       "img": "p2.jpg",
       "country": "Nhật"
     },
@@ -73,7 +67,6 @@
       "name": "Mặt nạ cám gạo Keana",
       "cat": "Mỹ phẩm",
       "price": 280000,
-      "market": 0,
       "img": "p3.jpg",
       "country": "Nhật"
     },
@@ -82,7 +75,6 @@
       "name": "Chuốt mi Heroine Make Long Up",
       "cat": "Mỹ phẩm",
       "price": 257000,
-      "market": 0,
       "img": "p4.jpg",
       "country": "Nhật"
     },
@@ -91,7 +83,6 @@
       "name": "Kem dưỡng mắt Sana",
       "cat": "Mỹ phẩm",
       "price": 200000,
-      "market": 0,
       "img": "p5.jpg",
       "country": "Nhật"
     },
@@ -100,7 +91,6 @@
       "name": "Thuốc nhuộm tóc Hoyu Cielo",
       "cat": "Mỹ phẩm",
       "price": 175000,
-      "market": 0,
       "img": "p6.jpg",
       "country": "Nhật"
     },
@@ -109,7 +99,6 @@
       "name": "Kyumme Lip & Cheek Balm",
       "cat": "Mỹ phẩm",
       "price": 78000,
-      "market": 0,
       "img": "p7.jpg",
       "country": "Nhật"
     },
@@ -118,7 +107,6 @@
       "name": "Kyumme Multi Highlight Palette",
       "cat": "Mỹ phẩm",
       "price": 78000,
-      "market": 0,
       "img": "p8.jpg",
       "country": "Nhật"
     },
@@ -127,7 +115,6 @@
       "name": "Son kem que Kyumme",
       "cat": "Mỹ phẩm",
       "price": 95000,
-      "market": 0,
       "img": "ky_sonque.jpg",
       "country": "Nhật",
       "variants": [
@@ -154,7 +141,6 @@
       "name": "Son bóng có móc khoá Kyumme",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "img": "ky_gloss.jpg",
       "country": "Nhật",
       "variants": [
@@ -181,7 +167,6 @@
       "name": "Chì kẻ môi 2 đầu Kyumme",
       "cat": "Mỹ phẩm",
       "price": 95000,
-      "market": 0,
       "img": "ky_lipliner.jpg",
       "country": "Nhật",
       "variants": [
@@ -204,7 +189,6 @@
       "name": "Bảng mắt 4 ô Kyumme",
       "cat": "Mỹ phẩm",
       "price": 110000,
-      "market": 0,
       "img": "ky_eye4.jpg",
       "country": "Nhật",
       "variants": [
@@ -247,7 +231,6 @@
       "name": "Bảng mắt 7 ô Kyumme",
       "cat": "Mỹ phẩm",
       "price": 130000,
-      "market": 0,
       "img": "ky_eye7.jpg",
       "country": "Nhật",
       "variants": [
@@ -282,7 +265,6 @@
       "name": "Bảng mắt 10 ô Kyumme",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "img": "ky_eye10.jpg",
       "country": "Nhật",
       "variants": [
@@ -317,7 +299,6 @@
       "name": "Bột tán lông mày Kyumme",
       "cat": "Mỹ phẩm",
       "price": 80000,
-      "market": 0,
       "img": "ky_brow.jpg",
       "country": "Nhật",
       "variants": [
@@ -348,7 +329,6 @@
       "name": "Bảng tạo khối 4 ô Kyumme",
       "cat": "Mỹ phẩm",
       "price": 120000,
-      "market": 0,
       "img": "ky_contour.jpg",
       "country": "Nhật",
       "variants": [
@@ -367,7 +347,6 @@
       "name": "Bảng mắt 8 ô Canmake Petit Palette Eyes",
       "cat": "Mỹ phẩm",
       "price": 180000,
-      "market": 0,
       "country": "Nhật",
       "img": "cm_petit.jpg",
       "variants": [
@@ -398,7 +377,6 @@
       "name": "Bảng mắt 4 ô Canmake Silky Souffle Eyes",
       "cat": "Mỹ phẩm",
       "price": 155000,
-      "market": 0,
       "country": "Nhật",
       "img": "cm_silky.jpg",
       "variants": [
@@ -429,7 +407,6 @@
       "name": "Má hồng Canmake Glow Fleur Cheeks",
       "cat": "Mỹ phẩm",
       "price": 195000,
-      "market": 0,
       "country": "Nhật",
       "img": "cm_glow.jpg",
       "variants": [
@@ -460,7 +437,6 @@
       "name": "Má hồng kem Canmake Cream Cheek",
       "cat": "Mỹ phẩm",
       "price": 160000,
-      "market": 0,
       "country": "Nhật",
       "img": "cm_cream.jpg",
       "variants": [
@@ -507,7 +483,6 @@
       "name": "Má hồng Canmake Powder Cheeks",
       "cat": "Mỹ phẩm",
       "price": 165000,
-      "market": 0,
       "country": "Nhật",
       "img": "cm_powder.jpg",
       "variants": [
@@ -542,7 +517,6 @@
       "name": "Phấn phủ Canmake Marshmallow Finish Powder",
       "cat": "Mỹ phẩm",
       "price": 245000,
-      "market": 0,
       "country": "Nhật",
       "img": "cm_marsh.jpg",
       "variants": [
@@ -569,7 +543,6 @@
       "name": "Phấn phủ đa sắc Canmake Abloom",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "cm_abloom.jpg",
       "variants": [
@@ -592,7 +565,6 @@
       "name": "Kem chống nắng Majolica Majorca Milky Wrapping Foundation",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "mj_milky.jpg"
     },
@@ -601,7 +573,6 @@
       "name": "Kem chống nắng Skin Aqua Tone Up UV Essence (mua 1 tặng 1)",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "sa_toneup.jpg"
     },
@@ -610,7 +581,6 @@
       "name": "Kem nền KATE The Base Zero Powdery Skin Maker",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "kate_bz.jpg",
       "variants": [
@@ -645,7 +615,6 @@
       "name": "Son dưỡng DHC Lip Cream",
       "cat": "Mỹ phẩm",
       "price": 140000,
-      "market": 0,
       "country": "Nhật",
       "img": "dhc_lip.jpg"
     },
@@ -654,7 +623,6 @@
       "name": "Nhỏ mắt Smile 40 EX (xanh)",
       "cat": "Thực phẩm chức năng",
       "price": 78000,
-      "market": 0,
       "img": "p9.jpg",
       "country": "Nhật"
     },
@@ -663,7 +631,6 @@
       "name": "Nhỏ mắt Smile 40 EX (mát lạnh)",
       "cat": "Thực phẩm chức năng",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "smile_cool.jpg"
     },
@@ -672,7 +639,6 @@
       "name": "Nhỏ mắt Rohto Cool 40 (xanh)",
       "cat": "Thực phẩm chức năng",
       "price": 50000,
-      "market": 0,
       "img": "p10.jpg",
       "country": "Nhật"
     },
@@ -681,7 +647,6 @@
       "name": "Nhỏ mắt Rohto Vita 40 (cam)",
       "cat": "Thực phẩm chức năng",
       "price": 50000,
-      "market": 0,
       "img": "p11.jpg",
       "country": "Nhật"
     },
@@ -690,7 +655,6 @@
       "name": "Orihiro Squalene dầu gan cá mập 360 viên",
       "cat": "Thực phẩm chức năng",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "or_squalene.jpg"
     },
@@ -699,7 +663,6 @@
       "name": "Orihiro Glucosamine 900 viên",
       "cat": "Thực phẩm chức năng",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "or_gluco.jpg"
     },
@@ -708,7 +671,6 @@
       "name": "Orihiro Omega-3 Fish Oil 180 viên",
       "cat": "Thực phẩm chức năng",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "or_omega.jpg"
     },
@@ -717,7 +679,6 @@
       "name": "Orihiro DHA EPA 180 viên",
       "cat": "Thực phẩm chức năng",
       "price": 0,
-      "market": 0,
       "country": "Nhật",
       "img": "or_dha.jpg"
     },
@@ -726,7 +687,6 @@
       "name": "Mochi socola matcha & chuối",
       "cat": "Bánh kẹo",
       "price": 295000,
-      "market": 0,
       "img": "p12.jpg",
       "country": "Nhật"
     },
@@ -735,7 +695,6 @@
       "name": "Nama chocolate Royce matcha",
       "cat": "Bánh kẹo",
       "price": 290000,
-      "market": 0,
       "img": "p13.jpg",
       "country": "Nhật"
     },
@@ -744,7 +703,6 @@
       "name": "Nama chocolate Royce chocolate",
       "cat": "Bánh kẹo",
       "price": 290000,
-      "market": 0,
       "img": "p14.jpg",
       "country": "Nhật"
     },
@@ -753,7 +711,6 @@
       "name": "Bánh chuối Tokyo Banana",
       "cat": "Bánh kẹo",
       "price": 280000,
-      "market": 0,
       "img": "p15.jpg",
       "country": "Nhật"
     },
@@ -762,7 +719,6 @@
       "name": "KitKat Cheesecake",
       "cat": "Bánh kẹo",
       "price": 90000,
-      "market": 0,
       "img": "p16.jpg",
       "country": "Nhật"
     },
@@ -771,7 +727,6 @@
       "name": "KitKat Cacao 72%",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_cacao72.jpg",
       "country": "Nhật"
     },
@@ -780,7 +735,6 @@
       "name": "KitKat Original đậm cacao",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_original.jpg",
       "country": "Nhật"
     },
@@ -789,7 +743,6 @@
       "name": "KitKat Cacao đậm (Otona no Amasa)",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_otona_cacao.jpg",
       "country": "Nhật"
     },
@@ -798,7 +751,6 @@
       "name": "KitKat Double dâu (Yokubari)",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_dbl_dau.jpg",
       "country": "Nhật"
     },
@@ -807,7 +759,6 @@
       "name": "KitKat Matcha chocolat Itoen",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_itoen.jpg",
       "country": "Nhật"
     },
@@ -816,7 +767,6 @@
       "name": "KitKat Dâu (Otona no Amasa)",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_otona_dau.jpg",
       "country": "Nhật"
     },
@@ -825,7 +775,6 @@
       "name": "KitKat Socola cam",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_orange.jpg",
       "country": "Nhật"
     },
@@ -834,7 +783,6 @@
       "name": "KitKat Gold",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "img": "kk_gold.jpg",
       "country": "Nhật"
     },
@@ -843,7 +791,6 @@
       "name": "Bánh đồng giá (gói)",
       "cat": "Bánh kẹo",
       "price": 27000,
-      "market": 0,
       "img": "p18.jpg",
       "country": "Nhật"
     },
@@ -852,7 +799,6 @@
       "name": "Sữa chuối Binggrae",
       "cat": "Bánh kẹo",
       "price": 34500,
-      "market": 0,
       "img": "k1.jpg",
       "country": "Hàn"
     },
@@ -861,7 +807,6 @@
       "name": "Sữa dưa lưới Binggrae",
       "cat": "Bánh kẹo",
       "price": 0,
-      "market": 0,
       "country": "Hàn",
       "img": "k1_melon.jpg"
     },
@@ -870,7 +815,6 @@
       "name": "Pepero dâu Lotte",
       "cat": "Bánh kẹo",
       "price": 40000,
-      "market": 0,
       "img": "k2.jpg",
       "country": "Hàn"
     },
@@ -879,7 +823,6 @@
       "name": "Lotte Zero Crunchy Chocolate Ball",
       "cat": "Bánh kẹo",
       "price": 80000,
-      "market": 0,
       "img": "k3.jpg",
       "country": "Hàn"
     },
@@ -888,7 +831,6 @@
       "name": "Bánh gạo Milk Classic vị phô mai",
       "cat": "Bánh kẹo",
       "price": 45000,
-      "market": 0,
       "img": "k4.jpg",
       "country": "Hàn"
     },
@@ -897,7 +839,6 @@
       "name": "Hạnh nhân HBAF 210g",
       "cat": "Bánh kẹo",
       "price": 140000,
-      "market": 0,
       "img": "k5.jpg",
       "country": "Hàn"
     },
@@ -906,7 +847,6 @@
       "name": "Hạt dẻ rim CJ 240g",
       "cat": "Bánh kẹo",
       "price": 170000,
-      "market": 0,
       "img": "k6.jpg",
       "country": "Hàn"
     },
@@ -915,7 +855,6 @@
       "name": "Rong biển Dongwon (mua 1 tặng 1)",
       "cat": "Thực phẩm",
       "price": 150000,
-      "market": 0,
       "img": "k7.jpg",
       "country": "Hàn"
     },
@@ -924,7 +863,6 @@
       "name": "Bột Collagen BB Lab",
       "cat": "Thực phẩm chức năng",
       "price": 410000,
-      "market": 0,
       "img": "k8.jpg",
       "country": "Hàn"
     },
@@ -933,7 +871,6 @@
       "name": "Thạch lựu giảm cân Miss Fit Sang-A",
       "cat": "Thực phẩm chức năng",
       "price": 410000,
-      "market": 0,
       "country": "Hàn",
       "img": "kr_missfit.jpg"
     },
@@ -942,7 +879,6 @@
       "name": "Nước hồng sâm nhung hươu Hàn Quốc",
       "cat": "Thực phẩm chức năng",
       "price": 550000,
-      "market": 0,
       "country": "Hàn",
       "img": "kr_sam.jpg"
     },
@@ -951,7 +887,6 @@
       "name": "Toner pad Mediheal Madecassoside",
       "cat": "Mỹ phẩm",
       "price": 380000,
-      "market": 0,
       "img": "k9.jpg",
       "country": "Hàn"
     },
@@ -960,7 +895,6 @@
       "name": "Mặt nạ Mediheal (10+1)",
       "cat": "Mỹ phẩm",
       "price": 280000,
-      "market": 0,
       "country": "Hàn",
       "img": "mh_mask.jpg",
       "variants": [
@@ -980,7 +914,6 @@
       "name": "Dưỡng da nam IDEAL for Men Perfect All in One (1+1)",
       "cat": "Mỹ phẩm",
       "price": 280000,
-      "market": 0,
       "country": "Hàn",
       "img": "kr_ideal.jpg"
     },
@@ -989,7 +922,6 @@
       "name": "Serum Medicube PDRN Pink Peptide",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Hàn",
       "img": "kr_medicube.jpg"
     },
@@ -998,7 +930,6 @@
       "name": "Kem chống nắng AHC Masters Aqua Rich Sun Cream SPF50+",
       "cat": "Mỹ phẩm",
       "price": 0,
-      "market": 0,
       "country": "Hàn",
       "img": "ahc_sun.jpg"
     },
@@ -1007,7 +938,6 @@
       "name": "Xịt tóc Daiso",
       "cat": "Mỹ phẩm",
       "price": 115000,
-      "market": 0,
       "img": "k12.jpg",
       "country": "Hàn"
     },
@@ -1016,7 +946,6 @@
       "name": "Kem đánh răng Euthymol (mua 1 tặng 1)",
       "cat": "Đồ dùng",
       "price": 361000,
-      "market": 0,
       "img": "k13.jpg",
       "country": "Hàn"
     },
@@ -1025,7 +954,6 @@
       "name": "Túi mini Daiso",
       "cat": "Đồ dùng",
       "price": 46000,
-      "market": 0,
       "img": "k14.jpg",
       "country": "Hàn"
     }

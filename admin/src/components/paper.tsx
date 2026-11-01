@@ -114,6 +114,11 @@ export function Paper({
       </div>
 
       <div style={sx("display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; align-items: flex-end")}>
+        {o.status === "cancelled" ? (
+          <div className="inv-pay" style={sx("flex: 1 1 240px; font-size: 14px; font-weight: 700; color: #6f5a55; background: #efe8e6; border-radius: 14px; padding: 12px 14px")}>
+            Đơn này đã được huỷ
+          </div>
+        ) : (
         <div className="inv-pay" style={sx("flex: 1 1 240px; display: flex; flex-direction: " + (qr ? "row; align-items: center; gap: 12px" : "column; gap: 4px") + "; font-size: 13px; color: #6f5a55; background: #fdf6f3; border-radius: 14px; padding: 12px 14px")}>
           <div style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px")}>
             <b style={sx("color: #3d3530")}>Chuyển khoản</b>
@@ -123,7 +128,8 @@ export function Paper({
           </div>
           {qr ? <img src={qr} alt="Mã VietQR chuyển khoản" style={sx("width: 96px; height: 96px; flex: 0 0 96px; border-radius: 10px; background: #ffffff; border: 1px solid #efd9d3; padding: 4px; box-sizing: border-box")} /> : null}
         </div>
-        <div style={sx("flex: 0 1 300px; display: flex; flex-direction: column; gap: 6px")}>
+        )}
+        <div className="inv-sum" style={sx("flex: 0 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 6px")}>
           <div style={sx("display: flex; justify-content: space-between; font-size: 14px")}>
             <span style={sx("color: #6f5a55")}>Tạm tính ({count} sản phẩm)</span>
             <span>{fmt(o.subtotal)}</span>
@@ -136,7 +142,7 @@ export function Paper({
           ) : null}
           <div style={sx("display: flex; justify-content: space-between; align-items: baseline; border-top: 1.5px solid #3d3530; padding-top: 8px; margin-top: 4px")}>
             <b style={sx("font-size: 15px")}>TỔNG CỘNG</b>
-            <b style={sx("font-size: 26px; color: #a3546a")}>{fmt(o.total)}</b>
+            <b className="inv-grand" style={sx("font-size: 26px; color: #a3546a")}>{fmt(o.total)}</b>
           </div>
         </div>
       </div>

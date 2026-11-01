@@ -1,4 +1,5 @@
 import { itemName } from "@/services/order-image";
+import { track } from "@/services/track";
 import { useStore } from "@/state/store";
 import type { Order } from "@/types";
 import { fmt, nf } from "@/utils/format";
@@ -71,11 +72,23 @@ export function PickSheet() {
         </div>
         <div className="pk-f">
           <div className="step pq">
-            <button onClick={() => setPick({ ...pick, qty: Math.max(1, pick.qty - 1) })} aria-label="Bớt">
+            <button
+              onClick={() => {
+                track("view", p.id);
+                setPick({ ...pick, qty: Math.max(1, pick.qty - 1) });
+              }}
+              aria-label="Bớt"
+            >
               −
             </button>
             <span>{pick.qty}</span>
-            <button onClick={() => setPick({ ...pick, qty: Math.min(99, pick.qty + 1) })} aria-label="Thêm">
+            <button
+              onClick={() => {
+                track("view", p.id);
+                setPick({ ...pick, qty: Math.min(99, pick.qty + 1) });
+              }}
+              aria-label="Thêm"
+            >
               +
             </button>
           </div>
@@ -164,7 +177,7 @@ export function CartSheet() {
           <div className="sh-f">
             {msg ? <p className="msg">{msg}</p> : null}
             <button className="btn" id="send" disabled={sending} onClick={sendOrder}>
-              {sending ? "Đang gửi…" : "Gửi đơn cho " + D.store}
+              {sending ? "Đang gửi…" : "Xác nhận đơn"}
             </button>
             <div className="row2">
               <button className="btn ghost" id="copy" onClick={() => copyText(orderText(), "Đã sao chép đơn hàng")}>
@@ -174,7 +187,7 @@ export function CartSheet() {
                 Xoá đơn
               </button>
             </div>
-            <p className="note">Đơn gửi xong {D.store} sẽ nhắn bạn để chốt và báo cách thanh toán.</p>
+            <p className="note">Sau khi xác nhận, {D.store} sẽ liên hệ và gửi thông tin thanh toán cho bạn.</p>
           </div>
         ) : null}
       </aside>
@@ -183,6 +196,7 @@ export function CartSheet() {
 }
 
 const done = (o: Order) => o.status === "confirmed";
+const cancelled = (o: Order) => o.status === "cancelled";
 const codeOf = (o: Order) => o.code;
 const atOf = (o: Order) => new Date(o.createdAt);
 
@@ -197,7 +211,7 @@ export function OrdersSheet() {
     return (
       <div
         key={o.code}
-        className={`oc ${done(o) ? "done" : ""} ${o.paid ? "paid" : ""} ${click ? "oc-click" : ""}`}
+        className={`oc ${done(o) ? "done" : ""} ${cancelled(o) ? "cancel" : ""} ${click ? "oc-click" : ""}`}
         {...(click ? { role: "button", tabIndex: 0, "aria-label": `Xem hóa đơn đơn ${codeOf(o)}`, onClick: () => open(o), onKeyDown: (e: React.KeyboardEvent) => e.key === "Enter" && open(o) } : {})}
       >
         <div className="oc-code">Đơn #{codeOf(o)}</div>
@@ -230,19 +244,19 @@ export function OrdersSheet() {
         {o.note ? <p className="oc-n">📝 {o.note}</p> : null}
         <div className="oc-f">
           <b>{fmt(nf(o.total))}</b>
-          <span className={`oc-st ${done(o) || o.paid ? "ok" : ""}`}>{done(o) ? "Đã xử lý" : o.paid ? "Đã báo CK" : "Đang xử lý"}</span>
+          <span className={`oc-st ${done(o) ? "ok" : ""} ${cancelled(o) ? "off" : ""}`}>{done(o) ? "Đã xác nhận" : cancelled(o) ? "Đã huỷ" : "Chờ shop liên hệ"}</span>
         </div>
         {click ? (
           <div className="oc-go">
-            {!done(o) && !o.paid && nf(o.total) > 0 ? "💳 Xem hóa đơn & mã QR thanh toán" : "🧾 Xem hóa đơn"}
+            🧾 Xem hóa đơn
             <span aria-hidden="true">›</span>
           </div>
         ) : null}
       </div>
     );
   };
-  const pend = os.filter((o) => !o.paid && !done(o)),
-    pd = os.filter((o) => o.paid || done(o));
+  const pend = os.filter((o) => !done(o)),
+    pd = os.filter((o) => done(o));
   return (
     <>
       <Bg />
@@ -265,11 +279,11 @@ export function OrdersSheet() {
                 ) : null}{" "}
                 nhé.
               </p>
-              {pend.length ? pend.map(card) : <div className="empty" style={{ padding: "18px 0" }}>Không có đơn nào chờ thanh toán ♡</div>}
+              {pend.length ? pend.map(card) : <div className="empty" style={{ padding: "18px 0" }}>Không có đơn nào đang chờ shop liên hệ ♡</div>}
               {pd.length ? (
                 <>
                   <button className="more-paid" aria-expanded={showPaid} onClick={() => setShowPaid(!showPaid)}>
-                    {showPaid ? "Ẩn" : "Xem thêm"} {pd.length} đơn đã chuyển khoản / đã xử lý <span aria-hidden="true">{showPaid ? "▴" : "▾"}</span>
+                    {showPaid ? "Ẩn" : "Xem thêm"} {pd.length} đơn đã xác nhận <span aria-hidden="true">{showPaid ? "▴" : "▾"}</span>
                   </button>
                   {showPaid ? (
                     <div className="oc-minis">
@@ -283,7 +297,7 @@ export function OrdersSheet() {
                           <b>#{codeOf(o)}</b>
                           <span>{atOf(o).toLocaleDateString("vi-VN")}</span>
                           <strong>{fmt(nf(o.total))}</strong>
-                          <em>{o.paid ? "Đã CK" : "Đã xử lý"}</em>
+                          <em>Đã xác nhận</em>
                           <i aria-hidden="true">›</i>
                         </div>
                       ))}

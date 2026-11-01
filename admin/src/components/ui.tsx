@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { api } from "@/api";
 import { toast } from "@/app-state";
 import { initialOf } from "@/format";
@@ -50,6 +50,7 @@ export const CHIP = {
   xong: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #e3efe6; color: #2f6b45; white-space: nowrap",
   warn: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #fdecc8; color: #7a4f00; white-space: nowrap",
   chan: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #3d3530; color: #ffffff; white-space: nowrap",
+  huy: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #efe8e6; color: #6f5a55; white-space: nowrap",
 };
 
 export function Tabs<T extends string>({ tabs, value, onPick }: { tabs: [T, string, number][]; value: T; onPick: (t: T) => void }) {
@@ -157,6 +158,84 @@ export function ConfirmBlock({ pending, onToggle, busy, what }: { pending: boole
       <span style={sx("flex: 1; font-weight: 700; font-size: 14.5px")}>Đã xác nhận · khách đã được báo</span>
       <button onClick={onToggle} disabled={busy} style={sx("border: 0; background: transparent; color: #2f6b45; font-weight: 600; font-size: 13px; text-decoration: underline; padding: 6px 2px")}>
         Hoàn tác
+      </button>
+    </div>
+  );
+}
+
+/** Huỷ đơn hoặc yêu cầu. Lý do không bắt buộc và chỉ shop thấy. */
+export function CancelBlock({
+  cancelled,
+  reason,
+  busy,
+  what,
+  onCancel,
+  onRestore,
+}: {
+  cancelled: boolean;
+  reason?: string;
+  busy?: boolean;
+  what: "đơn" | "yêu cầu";
+  onCancel: (reason: string) => void;
+  onRestore: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  useEffect(() => {
+    if (!cancelled) return;
+    setOpen(false);
+    setText("");
+  }, [cancelled]);
+  const dim = busy ? "; opacity: 0.7" : "";
+  if (cancelled)
+    return (
+      <div style={sx("display: flex; flex-direction: column; gap: 8px; background: #efe8e6; color: #6f5a55; border-radius: 14px; padding: 12px 14px")}>
+        <span style={sx("font-weight: 700; font-size: 14.5px")}>Đã huỷ · khách thấy “Đã huỷ”</span>
+        {reason ? <span style={sx("font-size: 13px; line-height: 1.4")}>Lý do (chỉ shop thấy): {reason}</span> : null}
+        <button onClick={onRestore} disabled={busy} style={sx("align-self: flex-start; border: 0; background: transparent; color: #6f5a55; font-weight: 700; font-size: 13.5px; text-decoration: underline; padding: 4px 0" + dim)}>
+          Mở lại
+        </button>
+      </div>
+    );
+  if (!open)
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        disabled={busy}
+        style={sx("border: 1.5px solid #c9b2ac; background: #ffffff; color: #6f5a55; border-radius: 14px; padding: 12px 14px; font-weight: 700; font-size: 14.5px" + dim)}
+      >
+        Huỷ {what}
+      </button>
+    );
+  return (
+    <div style={sx("display: flex; flex-direction: column; gap: 8px; background: #fffaf7; border: 1px solid #efd9d3; border-radius: 14px; padding: 12px")}>
+      <label style={sx("display: flex; flex-direction: column; gap: 6px")}>
+        <span style={sx("font-size: 13px; font-weight: 700; color: #6f5a55")}>Lý do (không bắt buộc, chỉ shop thấy)</span>
+        <textarea
+          value={text}
+          maxLength={300}
+          rows={3}
+          placeholder="Ví dụ: hết hàng, khách đổi ý…"
+          onChange={(e) => setText(e.target.value)}
+          style={sx("box-sizing: border-box; width: 100%; border: 1.5px solid #efd9d3; background: #ffffff; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; color: #3d3530; resize: vertical")}
+        />
+      </label>
+      <button
+        onClick={() => onCancel(text.trim())}
+        disabled={busy}
+        style={sx("border: 0; background: #6f5a55; color: #ffffff; border-radius: 12px; padding: 12px; font-weight: 700; font-size: 14.5px" + dim)}
+      >
+        Huỷ {what}
+      </button>
+      <button
+        onClick={() => {
+          setOpen(false);
+          setText("");
+        }}
+        disabled={busy}
+        style={sx("border: 0; background: transparent; color: #7d6862; font-weight: 600; font-size: 13.5px; padding: 4px")}
+      >
+        Giữ lại
       </button>
     </div>
   );

@@ -100,7 +100,6 @@ async function load() {
     name: p.name,
     cat: p.cat,
     price: p.price || 0,
-    market: p.market || 0,
     country: p.country,
     img: IMG(p.img),
     variants: (p.variants || []).map((v) => ({ name: v.name, img: IMG(v.img) })),
@@ -164,6 +163,9 @@ const find = (code: string) => {
   const o = orders.find((x) => x.code === code);
   if (!o) throw new FixtureError("Không tìm thấy đơn " + code, 404);
   return o;
+};
+const assertOpen = (o: Order) => {
+  if (o.status === "cancelled") throw new FixtureError("Đơn đã huỷ, hãy mở lại trước khi sửa", 400);
 };
 const save = (o: Order) => (recompute(o), structuredClone(o));
 const ym = (iso: string) => new Date(new Date(iso).getTime() + 7 * HOUR).toISOString().slice(0, 7);
@@ -308,17 +310,36 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
   }
   if ((m = p.match(/^\/admin\/orders\/(\w+)\/(confirm|unconfirm)$/))) {
     const o = find(m[1]);
+    assertOpen(o);
     o.status = m[2] === "confirm" ? "confirmed" : "pending";
     o.confirmedAt = o.status === "confirmed" ? new Date().toISOString() : undefined;
     return R(save(o));
   }
+  if ((m = p.match(/^\/admin\/orders\/(\w+)\/cancel$/))) {
+    const o = find(m[1]);
+    if (o.status === "cancelled") throw new FixtureError("Đơn này đã huỷ rồi", 400);
+    o.status = "cancelled";
+    o.cancelledAt = new Date().toISOString();
+    o.cancelReason = String(b.reason || "").trim().slice(0, 300);
+    return R(save(o));
+  }
+  if ((m = p.match(/^\/admin\/orders\/(\w+)\/restore$/))) {
+    const o = find(m[1]);
+    if (o.status !== "cancelled") throw new FixtureError("Đơn này chưa bị huỷ", 400);
+    o.status = o.confirmedAt ? "confirmed" : "pending";
+    o.cancelledAt = undefined;
+    o.cancelReason = "";
+    return R(save(o));
+  }
   if ((m = p.match(/^\/admin\/orders\/(\w+)\/send$/))) {
     const o = find(m[1]);
+    assertOpen(o);
     o.invoice.sends.push({ version: o.invoice.version, via: b.via as InvoiceVia, at: new Date().toISOString() });
     return R(save(o));
   }
   if ((m = p.match(/^\/admin\/orders\/(\w+)\/items$/))) {
     const o = find(m[1]);
+    assertOpen(o);
     const it = item(String(b.productId), Number(b.qty) || 1, b.variant === undefined || b.variant === null ? null : Number(b.variant));
     const same = o.items.find((i) => i.productId === it.productId && i.variant === it.variant);
     if (same) {
@@ -333,6 +354,7 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
   }
   if ((m = p.match(/^\/admin\/orders\/(\w+)\/items\/(\d+)$/))) {
     const o = find(m[1]);
+    assertOpen(o);
     const idx = +m[2];
     const it = o.items[idx];
     if (!it) throw new FixtureError("Không có món này trong đơn", 404);
@@ -355,6 +377,7 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
   if ((m = p.match(/^\/admin\/orders\/(\w+)$/))) {
     const o = find(m[1]);
     if (method === "PATCH") {
+      assertOpen(o);
       if (typeof b.quoteTotal === "number") o.quoteTotal = b.quoteTotal;
       if (typeof b.shippingFee === "number") o.shippingFee = o.shipBase = b.shippingFee;
       touch(o);
@@ -364,7 +387,7 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
   }
   if (p === "/admin/products" && method === "GET") return R(products);
   if (p === "/admin/products" && method === "POST") {
-    const np: Product = { id: "p" + Date.now().toString(36), name: "", cat: settings.cats[0] || "Khác", price: 0, market: 0, country: "Nhật", img: "", variants: [], vlabel: "", link: "", hot: false, best: false, soldout: false, ...(b as Partial<Product>), updatedAt: new Date().toISOString() };
+    const np: Product = { id: "p" + Date.now().toString(36), name: "", cat: settings.cats[0] || "Khác", price: 0, country: "Nhật", img: "", variants: [], vlabel: "", link: "", hot: false, best: false, soldout: false, ...(b as Partial<Product>), updatedAt: new Date().toISOString() };
     products.unshift(np);
     return R(np);
   }
@@ -393,7 +416,8 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
   if ((m = p.match(/^\/invoices\/(\w+)$/))) {
     const o = orders.find((x) => x.token === m![1]);
     if (!o) throw new FixtureError("Không tìm thấy hoá đơn", 404);
-    return R({ order: o, shop: { store: settings.store, tagline: settings.tagline, logo: settings.logo, zalo: settings.zalo, bank: settings.bank, qr: settings.qr } });
+    const { cancelReason: _r, ...order } = o;
+    return R({ order, shop: { store: settings.store, tagline: settings.tagline, logo: settings.logo, zalo: settings.zalo, bank: settings.bank, qr: settings.qr } });
   }
   throw new FixtureError(`Fixture chưa có ${method} ${path}`, 404);
 }

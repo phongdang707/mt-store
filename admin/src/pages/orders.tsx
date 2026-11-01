@@ -2,22 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
-import { Avatar, BlockCustomer, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
+import { Avatar, BlockCustomer, CancelBlock, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
 import { MobileHead, Shell } from "@/components/shell";
 import { CN, ago, dots, dotsInput, fmt, itemLabel, norm, parseMoney, thisMonth, timeOf } from "@/format";
 import { sx } from "@/sx";
 import type { Order, OrderItem } from "@/types";
 import "@/css/orders.css";
 
-type Tab = "all" | "cho" | "xong";
+type Tab = "all" | "cho" | "xong" | "huy";
 const COUNTRIES: [string, string, string][] = [
   ["Nhật", "Nhật Bản", "#b3566f"],
   ["Hàn", "Hàn Quốc", "#d98aa0"],
   ["Úc", "Úc", "#c99a6a"],
   ["Trung", "Trung Quốc", "#c8b8b3"],
 ];
-const st = (o: Order) => (o.status === "confirmed" ? "xong" : "cho");
-const LABEL = { cho: "Chờ xử lý", xong: "Đã xác nhận" };
+const st = (o: Order) => (o.status === "confirmed" ? "xong" : o.status === "cancelled" ? "huy" : "cho");
+const LABEL = { cho: "Chờ xử lý", xong: "Đã xác nhận", huy: "Đã huỷ" };
 const ctyOf = (o: Order) => [...new Set(o.items.map((i) => i.country))];
 const summaryOf = (o: Order) => o.items.map((i) => i.name + " ×" + i.qty).join(", ");
 const monthNum = (m: string) => +m.slice(5);
@@ -36,9 +36,15 @@ export function quoteText(o: Order, store: string) {
 }
 
 /** Giá 1 dòng: bấm để báo giá / sửa giá. */
-function PriceCell({ it, onSave }: { it: OrderItem; onSave: (price: number) => Promise<void> }) {
+function PriceCell({ it, locked, onSave }: { it: OrderItem; locked?: boolean; onSave: (price: number) => Promise<void> }) {
   const [edit, setEdit] = useState(false);
   const [v, setV] = useState("");
+  if (locked)
+    return (
+      <span style={sx("flex: 0 0 auto; text-align: right; " + (it.price ? "font-weight: 700; color: #a3546a; font-size: 15px" : "font-size: 13px; font-weight: 600; color: #7d6862"))}>
+        {it.price ? fmt(it.price * it.qty) : "Chưa có giá"}
+      </span>
+    );
   if (edit)
     return (
       <span style={sx("position: relative; display: block; flex: 0 0 116px")}>
@@ -136,7 +142,7 @@ function Detail({ o, onClose, onChange, onBlocked }: { o: Order; onClose: () => 
                 {it.country} · SL {it.qty}
               </span>
             </span>
-            <PriceCell it={it} onSave={(price) => run(() => api.updateItem(o.code, k, { price }))} />
+            <PriceCell it={it} locked={s === "huy"} onSave={(price) => run(() => api.updateItem(o.code, k, { price }))} />
           </div>
         ))}
         {o.note ? <p style={sx("margin: 12px 0 0; font-size: 14px; background: #f6e1dc; color: #6e3346; border-radius: 12px; padding: 10px 12px")}>Ghi chú: {o.note}</p> : null}
@@ -153,7 +159,15 @@ function Detail({ o, onClose, onChange, onBlocked }: { o: Order; onClose: () => 
           <span style={sx("font-weight: 700")}>Tổng cộng</span>
           <span style={sx("font-size: 24px; font-weight: 700; color: #a3546a")}>{o.total ? fmt(o.total) : "—"}</span>
         </div>
-        <ConfirmBlock pending={s === "cho"} busy={busy} what="đơn" onToggle={() => run(() => api.confirm(o.code, s === "cho"))} />
+        {s === "huy" ? null : <ConfirmBlock pending={s === "cho"} busy={busy} what="đơn" onToggle={() => run(() => api.confirm(o.code, s === "cho"))} />}
+        <CancelBlock
+          cancelled={s === "huy"}
+          reason={o.cancelReason}
+          busy={busy}
+          what="đơn"
+          onCancel={(reason) => run(() => api.cancel(o.code, reason))}
+          onRestore={() => run(() => api.restore(o.code))}
+        />
         {o.customer ? <BlockCustomer id={o.customer} blocked={o.blocked} onChange={onBlocked} /> : null}
         <button
           onClick={() => copyText(quoteText(o, settings?.store || "MT store"), "Đã sao chép tin nhắn báo giá")}
@@ -176,7 +190,7 @@ function MobileCard({ o, onOpen, onToggle }: { o: Order; onOpen: () => void; onT
         <span style={sx("display: flex; align-items: center; gap: 8px; width: 100%")}>
           <span style={sx("font-size: 13px; font-weight: 800; color: #a3546a; letter-spacing: 0.4px")}>#{o.code}</span>
           <span style={sx("font-size: 12px; color: #7d6862; flex: 1")}>{ago(o.createdAt)} trước</span>
-          <span style={sx("box-sizing: border-box; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; " + (s === "cho" ? "background: #f6e1dc; color: #8f4459" : "background: #e3efe6; color: #2f6b45"))}>{LABEL[s]}</span>
+          <span style={sx("box-sizing: border-box; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; " + (s === "cho" ? "background: #f6e1dc; color: #8f4459" : s === "huy" ? "background: #efe8e6; color: #6f5a55" : "background: #e3efe6; color: #2f6b45"))}>{LABEL[s]}</span>
         </span>
         <span style={sx("display: flex; align-items: center; gap: 10px; width: 100%")}>
           <Avatar src={o.avatar} name={o.name} size={46} />
@@ -192,7 +206,7 @@ function MobileCard({ o, onOpen, onToggle }: { o: Order; onOpen: () => void; onT
         </span>
       </button>
       <div style={sx("display: flex; align-items: center; gap: 8px; border-top: 1px dashed #efd9d3; padding-top: 10px")}>
-        <span style={sx("flex: 1; font-weight: 700; color: #a3546a; font-size: 16px")}>{s === "xong" && o.total ? fmt(o.total) : ""}</span>
+        <span style={sx("flex: 1; font-weight: 700; color: #a3546a; font-size: 16px")}>{s !== "cho" && o.total ? fmt(o.total) : ""}</span>
         {tel ? (
           <a href={"tel:" + tel} aria-label="Gọi khách" style={sx("width: 44px; height: 44px; border-radius: 12px; border: 1px solid #efd9d3; background: #ffffff; display: flex; align-items: center; justify-content: center")}>
             <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -200,12 +214,16 @@ function MobileCard({ o, onOpen, onToggle }: { o: Order; onOpen: () => void; onT
             </svg>
           </a>
         ) : null}
-        <button
-          onClick={onToggle}
-          style={sx("box-sizing: border-box; height: 44px; display: flex; align-items: center; border-radius: 12px; padding: 0 16px; font-weight: 700; font-size: 14px; border: 0; " + (s === "cho" ? "background: #b3566f; color: #ffffff" : "background: #e3efe6; color: #2f6b45"))}
-        >
-          {s === "cho" ? "Xác nhận đơn" : "Đã xác nhận"}
-        </button>
+        {s === "huy" ? (
+          <span style={sx("box-sizing: border-box; height: 44px; display: flex; align-items: center; border-radius: 12px; padding: 0 16px; font-weight: 700; font-size: 14px; background: #efe8e6; color: #6f5a55")}>Đã huỷ</span>
+        ) : (
+          <button
+            onClick={onToggle}
+            style={sx("box-sizing: border-box; height: 44px; display: flex; align-items: center; border-radius: 12px; padding: 0 16px; font-weight: 700; font-size: 14px; border: 0; " + (s === "cho" ? "background: #b3566f; color: #ffffff" : "background: #e3efe6; color: #2f6b45"))}
+          >
+            {s === "cho" ? "Xác nhận đơn" : "Đã xác nhận"}
+          </button>
+        )}
       </div>
     </article>
   );
@@ -251,6 +269,7 @@ export default function Orders() {
     ["all", "Tất cả", () => true],
     ["cho", "Chờ xử lý", (o) => st(o) === "cho"],
     ["xong", "Đã xác nhận", (o) => st(o) === "xong"],
+    ["huy", "Đã huỷ", (o) => st(o) === "huy"],
   ];
   const cur = T.find((t) => t[0] === tab)!;
   const list = searched.filter(cur[2]).filter((o) => !country || ctyOf(o).includes(country));
@@ -262,7 +281,7 @@ export default function Orders() {
   const confirmed = all.filter((o) => st(o) === "xong");
   const revenue = confirmed.reduce((a, o) => a + o.total, 0);
   const byCountry = COUNTRIES.map(([key, name, col]) => {
-    const os = all.filter((o) => ctyOf(o).includes(key));
+    const os = all.filter((o) => o.status !== "cancelled" && ctyOf(o).includes(key));
     const rev = os.filter((o) => st(o) === "xong").reduce((n, o) => n + o.items.filter((i) => i.country === key).reduce((m, i) => m + i.price * i.qty, 0), 0);
     return { key, name, col, orders: os.length, rev };
   });
@@ -528,7 +547,7 @@ export default function Orders() {
                     style={sx(
                       "box-sizing: border-box; display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 14px; border-radius: 16px; font: inherit; color: inherit; " +
                         (o.code === sel ? "background: #fbe7ec; border: 1.5px solid #b3566f" : "background: transparent; border: 1.5px solid transparent") +
-                        (s === "xong" ? "; opacity: 0.72" : ""),
+                        (s === "xong" || s === "huy" ? "; opacity: 0.72" : ""),
                     )}
                   >
                     <Avatar src={o.avatar} name={o.name} size={44} />
@@ -540,7 +559,7 @@ export default function Orders() {
                       <span style={sx("font-size: 13.5px; color: #7d6862; overflow: hidden; text-overflow: ellipsis; white-space: nowrap")}>{summaryOf(o)}</span>
                     </span>
                     <span style={sx("display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: 0 0 auto")}>
-                      <b style={sx("font-size: 15px; color: #3d3530")}>{s === "xong" ? (o.total ? fmt(o.total) : "—") : ""}</b>
+                      <b style={sx("font-size: 15px; color: #3d3530")}>{s === "cho" ? "" : o.total ? fmt(o.total) : "—"}</b>
                       <span style={sx("box-sizing: border-box; " + CHIP[s])}>{LABEL[s]}</span>
                     </span>
                     <span style={sx("font-size: 12.5px; color: #7d6862; flex: 0 0 76px; text-align: right")}>{ago(o.createdAt)}</span>

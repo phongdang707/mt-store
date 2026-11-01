@@ -95,10 +95,8 @@ export interface ProfileStatus {
   avatar: string;
 }
 
-/** `null` khi chưa hỏi server. `true` khi hồ sơ cũ chưa có tên và ảnh. */
-let missing: boolean | null = null;
+/** `true` khi Zalo đã cho `scope.userInfo`. Chưa biết thì coi như chưa cấp, để cú bấm gửi đơn hỏi lại. */
 let granted = false;
-let tapSync: Promise<void> | null = null;
 
 /** Server tự lấy tên và ảnh từ Zalo. Máy khách gọi Graph bị lỗi 453 nên không dựa vào đó. */
 async function saveProfile(raw?: { name: string; avatar: string }) {
@@ -109,57 +107,52 @@ async function saveProfile(raw?: { name: string; avatar: string }) {
   if (!saved.name && !saved.avatar) return saved;
   profile = { name: saved.name, avatar: saved.avatar };
   checked = true;
-  missing = false;
   rememberProfile(saved);
   return saved;
-}
-
-/** Đợi lần sync của lần mở giỏ hiện tại, không xin quyền thêm. */
-export function waitCartProfile() {
-  return tapSync ?? Promise.resolve();
 }
 
 /** Lúc mở app, không bấm: chỉ ghi tên và ảnh nếu đã cấp quyền. Không mở popup. */
 export function prepareProfile() {
   if (!inZalo) return Promise.resolve();
-  return pullProfile(false, null);
+  return pullProfile();
+}
+
+export interface OrderPermit {
+  ok: boolean;
+  name: string;
+  avatar: string;
 }
 
 /**
- * Bấm mở giỏ. Chưa có tên/ảnh thì `authorize` chạy ngay trong cú bấm,
- * đó là popup quyền của Zalo. Gọi sau một `await` thì Zalo không hiện hộp thoại.
+ * Bấm «Xác nhận đơn». Gọi ngay trong cú bấm, trước mọi `await`.
+ * Chưa cấp quyền thì `authorize` chạy đồng bộ để Zalo hiện hộp thoại.
+ * Đã cấp thì không hỏi lại. Ngoài Zalo thì cho gửi, không có hộp thoại.
  */
-export function syncCartProfile() {
-  if (!inZalo) return Promise.resolve();
-  const prompt = missing !== false ? askZaloPermission() : null;
-  const run = pullProfile(true, prompt).finally(() => {
-    if (tapSync === run) tapSync = null;
-  });
-  tapSync = run;
-  return run;
+export function permitForOrder(): Promise<OrderPermit> {
+  if (!inZalo) return Promise.resolve({ ok: true, name: "", avatar: "" });
+  const prompt = granted ? null : askZaloPermission();
+  return (async () => {
+    if (prompt && !(await prompt)) return { ok: false, name: "", avatar: "" };
+    if (prompt) granted = true;
+    try {
+      const saved = await saveProfile();
+      return { ok: true, name: saved.name || "", avatar: saved.avatar || "" };
+    } catch (e) {
+      console.warn("permitForOrder", e);
+      return { ok: true, name: profile?.name || "", avatar: profile?.avatar || "" };
+    }
+  })();
 }
 
-async function pullProfile(fromTap: boolean, prompt: Promise<boolean> | null) {
+async function pullProfile() {
   try {
     const status = await call<ProfileStatus>("GET", "/me/profile");
-    missing = !status.hasData;
-    granted = await scopeGranted();
-    if (!missing) {
-      rememberProfile(status);
-      if (granted) await saveProfile();
-      return;
-    }
-    if (!fromTap) {
-      if (!granted) return;
-      await saveProfile();
-      return;
-    }
-    const allowed = prompt ? await prompt : granted;
-    if (!allowed) return;
-    granted = true;
+    if (await scopeGranted()) granted = true;
+    if (status.hasData) rememberProfile(status);
+    if (!granted) return;
     await saveProfile();
   } catch (e) {
-    console.warn("syncCartProfile", e);
+    console.warn("prepareProfile", e);
   }
 }
 
@@ -188,7 +181,7 @@ export function zaloProfile(ask = false): Promise<{ name: string; avatar: string
   return task;
 }
 
-/** Tên Zalo. `ask` chỉ dùng lúc khách bấm gửi đơn. */
+/** Tên Zalo đã nhớ. Nút gửi đơn không dùng hàm này để xin quyền. */
 export async function zaloName(ask = false) {
   return (await zaloProfile(ask)).name;
 }
@@ -285,8 +278,7 @@ export const api = {
   zaloProfile,
   rememberProfile,
   prepareProfile,
-  syncCartProfile,
-  waitCartProfile,
+  permitForOrder,
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
   events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
@@ -296,7 +288,6 @@ export const api = {
     call<Order>("POST", "/orders", b),
   createRequest: (b: { name?: string; avatar?: string; phone?: string; addr?: string; product: string; photos: string[] }) =>
     call<Order>("POST", "/requests", b),
-  markPaid: (code: string) => call<Order>("POST", `/orders/${encodeURIComponent(code)}/paid`),
   upload: (file: Blob) => {
     const fd = new FormData();
     fd.append("file", file, "photo.jpg");

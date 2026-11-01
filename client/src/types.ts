@@ -8,7 +8,6 @@ export interface Product {
   name: string;
   cat: string;
   price: number;
-  market: number;
   country: string;
   img: string;
   variants: Variant[];
@@ -85,7 +84,7 @@ export interface Order {
   freeShipFrom?: number;
   subtotal: number;
   total: number;
-  status: "pending" | "confirmed";
+  status: "pending" | "confirmed" | "cancelled";
   paid: boolean;
   createdAt: string;
 }

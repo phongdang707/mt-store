@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, Query, Sse, UseGuards, type MessageEvent } from '@nestjs/common';
 import { interval, map, merge, type Observable } from 'rxjs';
 import { AdminGuard } from '../auth/admin.guard.js';
-import { AddItemDto, AdminListQuery, SendInvoiceDto, UpdateItemDto, UpdateOrderDto } from './order.dto.js';
+import { AddItemDto, AdminListQuery, CancelOrderDto, SendInvoiceDto, UpdateItemDto, UpdateOrderDto } from './order.dto.js';
 import { EventsService } from './events.service.js';
 import { OrdersService } from './orders.service.js';
 
@@ -55,6 +55,16 @@ export class AdminOrdersController {
   @Post('orders/:code/unconfirm')
   unconfirm(@Param('code') code: string) {
     return this.orders.setStatus(code, false);
+  }
+
+  @Post('orders/:code/cancel')
+  cancel(@Param('code') code: string, @Body() dto: CancelOrderDto) {
+    return this.orders.cancel(code, dto.reason);
+  }
+
+  @Post('orders/:code/restore')
+  restore(@Param('code') code: string) {
+    return this.orders.restore(code);
   }
 
   @Post('orders/:code/items')

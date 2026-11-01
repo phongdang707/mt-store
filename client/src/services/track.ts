@@ -5,34 +5,8 @@ type Kind = ProductEventInput["type"];
 const seen: Record<Kind, Set<string>> = { view: new Set(), open: new Set(), cart: new Set() };
 const queue: ProductEventInput[] = [];
 let flushTimer = 0;
-let observer: IntersectionObserver | null = null;
-const ids = new WeakMap<Element, string>();
 
-function io() {
-  if (observer) return observer;
-  observer = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        const id = ids.get(e.target);
-        if (id && e.isIntersecting && e.intersectionRatio >= 0.5) track("view", id);
-      }
-    },
-    { threshold: [0.5] },
-  );
-  return observer;
-}
-
-/** Thẻ nằm hơn nửa màn hình thì tính một lượt xem trong lần mở trang này. */
-export function observe(el: HTMLElement, id: string) {
-  ids.set(el, id);
-  io().observe(el);
-  return () => {
-    io().unobserve(el);
-    ids.delete(el);
-  };
-}
-
-/** Mỗi sản phẩm, mỗi loại, một lần trong lần mở trang. */
+/** Mỗi sản phẩm, mỗi loại, một lần trong lần mở trang. Lượt xem chỉ ghi khi bấm + hoặc −. */
 export function track(type: Kind, productId: string) {
   if (!productId || seen[type].has(productId)) return;
   seen[type].add(productId);

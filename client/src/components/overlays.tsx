@@ -1,10 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { itemName } from "@/services/order-image";
 import { useStore } from "@/state/store";
 import type { Catalog, Order } from "@/types";
-import { fmt, memoOf, nf } from "@/utils/format";
-import { copyText, toast } from "@/utils/toast";
-import { bankOf, qrDataURL, vietqr } from "@/utils/vietqr";
+import { fmt, nf } from "@/utils/format";
 import { Logo } from "./catalog";
 
 /** Hoa và cánh hoa bung từ giữa rồi rơi như mưa (7 giây), như app gốc. */
@@ -83,51 +81,6 @@ function usePetals(on: boolean) {
   return ref;
 }
 
-const PayRow = ({ k, v, cp }: { k: string; v: string; cp?: string }) => (
-  <div className="pay-r">
-    <small>{k}</small>
-    <b>{v}</b>
-    {cp ? (
-      <button onClick={() => copyText(cp, "Đã sao chép")} aria-label={`Sao chép ${k}`}>
-        Sao chép
-      </button>
-    ) : null}
-  </div>
-);
-
-function Pay({ o, D }: { o: Order; D: Catalog }) {
-  const b = bankOf(D.bank),
-    qr = D.qr || "";
-  const amt = nf(o.total),
-    memo = memoOf(o);
-  const vq = vietqr(D.bank, amt, memo);
-  const src = useMemo(() => qrDataURL(vq) || qr, [vq, qr]);
-  if (!b.acc && !qr && !vq)
-    return (
-      <div className="inv-qr">
-        <span>Shop sẽ gửi thông tin thanh toán qua Zalo sau khi xác nhận đơn.</span>
-      </div>
-    );
-  return (
-    <div className="pay">
-      <h3>Thông tin chuyển khoản</h3>
-      <div className="pay-in">
-        {src ? <img src={src} alt="Mã QR thanh toán" /> : null}
-        <div className="pay-rows">
-          {b.bank ? <PayRow k="Ngân hàng" v={b.bank} /> : null}
-          {b.acc ? <PayRow k="Số tài khoản" v={b.acc} cp={b.acc} /> : null}
-          {b.name ? <PayRow k="Chủ tài khoản" v={b.name} /> : null}
-          {amt ? <PayRow k="Số tiền" v={fmt(amt)} cp={String(amt)} /> : null}
-          <PayRow k="Nội dung" v={memo} cp={memo} />
-        </div>
-      </div>
-      <p className="pay-n">
-        {vq && amt ? "Quét mã QR bằng app ngân hàng, số tiền và nội dung sẽ tự điền. " : qr || vq ? "Quét mã QR hoặc chuyển khoản theo thông tin trên. " : ""}Vui lòng ghi đúng nội dung để shop xác nhận nhanh.
-      </p>
-    </div>
-  );
-}
-
 export function Invoice({ o, D }: { o: Order; D: Catalog }) {
   const ds = new Date(o.createdAt || Date.now()).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
   return (
@@ -173,25 +126,23 @@ export function Invoice({ o, D }: { o: Order; D: Catalog }) {
         <span>Tổng cộng</span>
         <b>{fmt(nf(o.total))}</b>
       </div>
-      {o.paid ? <div className="inv-paid">✓ Bạn đã báo chuyển khoản, shop sẽ kiểm tra và xác nhận</div> : <Pay o={o} D={D} />}
+      <div className="inv-qr">
+        <span>{o.status === "cancelled" ? "Đơn này đã được huỷ." : "Shop sẽ liên hệ và gửi thông tin thanh toán cho bạn."}</span>
+      </div>
       <p className="inv-thx">Cảm ơn bạn đã ủng hộ {D.store} ♡</p>
     </div>
   );
 }
 
 function BillView({ o: o0, success }: { o: Order; success?: boolean }) {
-  const { D, MY, setOverlay, setOpen, markPaid } = useStore();
+  const { D, MY, setOverlay, setOpen } = useStore();
   const o = MY.find((x) => x.code === o0.code) ?? o0;
   const canvas = usePetals(!!success);
-  const [busy, setBusy] = useState(false);
   if (!D) return null;
-  const amt = nf(o.total),
-    unpaid = !o.paid && o.status !== "confirmed" && amt > 0;
-  const close = (t?: string) => {
+  const close = (goOrders?: boolean) => {
     setOverlay(null);
-    setOpen(null);
+    setOpen(goOrders ? "orders" : null);
     window.scrollTo({ top: 0, behavior: "smooth" });
-    if (t) toast(t);
   };
   return (
     <div className={`cel inv-mode${success ? " ok-mode" : ""}`} role="dialog" aria-label={"Hóa đơn " + o.code}>
@@ -204,27 +155,19 @@ function BillView({ o: o0, success }: { o: Order; success?: boolean }) {
             <p>
               Cảm ơn bạn đã tin tưởng {D.store} ♡
               <br />
-              Quét mã QR bên dưới để thanh toán nhé.
+              Shop sẽ liên hệ và gửi thông tin thanh toán cho bạn.
             </p>
           </div>
         ) : null}
         <Invoice o={o} D={D} />
         <div className="inv-acts">
-          {unpaid ? (
+          {success ? (
             <>
-              <button
-                className="btn"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  if (await markPaid(o)) close("Cảm ơn bạn! " + D.store + " sẽ kiểm tra và xác nhận đơn ♡");
-                  else setBusy(false);
-                }}
-              >
-                {busy ? "Đang ghi nhận…" : "✅ Tôi đã chuyển khoản"}
+              <button className="btn" onClick={() => close(true)}>
+                Xem đơn của bạn
               </button>
-              <button className="btn ghost" style={{ marginTop: 8 }} onClick={() => close("Bạn có thể thanh toán sau trong mục Đơn của bạn")}>
-                Chuyển khoản sau
+              <button className="cel-x" onClick={() => close(false)}>
+                Tiếp tục mua sắm
               </button>
             </>
           ) : (

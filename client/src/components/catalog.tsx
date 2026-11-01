@@ -1,5 +1,5 @@
-import { Fragment, useEffect, useRef } from "react";
-import { observe, track } from "@/services/track";
+import { Fragment } from "react";
+import { track } from "@/services/track";
 import LOGO from "@/static/logo.svg?raw";
 import { useStore, type Sort } from "@/state/store";
 import type { Product } from "@/types";
@@ -20,7 +20,7 @@ export function Ph({ p }: { p: Product }) {
 
 export function Header() {
   const { D, MY, setOpen } = useStore();
-  const n = MY.filter((o) => o.status !== "confirmed" && !o.paid).length;
+  const n = MY.filter((o) => o.status === "pending").length;
   return (
     <>
       <header className="bar">
@@ -74,24 +74,12 @@ const Badge = ({ p }: { p: Product }) => {
   return t.length ? <div className="tagw">{t}</div> : null;
 };
 
-/** Thẻ hiện hơn nửa màn hình thì ghi một lượt xem. */
-function useSeen(id: string) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    return observe(el, id);
-  }, [id]);
-  return ref;
-}
-
 /** Sản phẩm dạng link: xem mẫu, màu, giá tại cửa hàng chính hãng Việt Nam. */
 function LinkCard({ p }: { p: Product }) {
-  const ref = useSeen(p.id);
   const u = /^https:\/\//.test(String(p.link)) ? p.link : "#";
   const open = () => track("open", p.id);
   return (
-    <div className="card" ref={ref}>
+    <div className="card">
       <Badge p={p} />
       <a className="ph" href={u} target="_blank" rel="noopener" aria-label={`Xem ${p.name} tại cửa hàng Việt Nam`} onClick={open}>
         <Ph p={p} />
@@ -109,25 +97,19 @@ function LinkCard({ p }: { p: Product }) {
 
 function Prices({ p }: { p: Product }) {
   return (
-    <>
-      <div className="mk">Thị trường: {p.market ? <s>{fmt(p.market)}</s> : "—"}</div>
-      <div className="pr">
-        <small>Giá dự kiến bán</small>
-        {p.price ? fmt(p.price) : <span className="tbd">Đang cập nhật</span>}
-      </div>
-    </>
+    <div className="pr">
+      <small>Giá dự kiến bán</small>
+      {p.price ? fmt(p.price) : <span className="tbd">Đang cập nhật</span>}
+    </div>
   );
 }
 
 function VariantCard({ p }: { p: Product }) {
-  const ref = useSeen(p.id);
   const { prodCount, startPick } = useStore();
   const n = prodCount(p.id);
   const vs = p.variants;
-  const save = p.market > p.price && p.price ? Math.round((1 - p.price / p.market) * 100) : 0;
   return (
-    <div className={`card${p.soldout ? " soldout" : ""}`} ref={ref}>
-      {save ? <div className="save">−{save}%</div> : null}
+    <div className={`card${p.soldout ? " soldout" : ""}`}>
       <Badge p={p} />
       <button className="ph phb" disabled={p.soldout} onClick={() => startPick(p.id)} aria-label={`Xem tone màu ${p.name}`}>
         <Ph p={p} />
@@ -166,12 +148,9 @@ export function Card({ p }: { p: Product }) {
 }
 
 function SimpleCard({ p, cart, setQty }: { p: Product; cart: Record<string, number>; setQty: (id: string, n: number) => void }) {
-  const ref = useSeen(p.id);
   const q = cart[p.id] || 0;
-  const save = p.market > p.price ? Math.round((1 - p.price / p.market) * 100) : 0;
   return (
-    <div className={`card${p.soldout ? " soldout" : ""}`} ref={ref}>
-      {save ? <div className="save">−{save}%</div> : null}
+    <div className={`card${p.soldout ? " soldout" : ""}`}>
       <Badge p={p} />
       <div className="ph">
         <Ph p={p} />

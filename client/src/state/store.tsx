@@ -223,6 +223,7 @@ function useStoreState() {
     if (n <= 0) delete c[id];
     else c[id] = Math.min(n, 99);
     saveCart(c);
+    track("view", productId);
     if (n > 0 && !had) track("cart", productId);
   };
   const setCountry = (c: string) => {
@@ -248,8 +249,7 @@ function useStoreState() {
   const setOpen = (s: Sheet) => {
     setOpenState(s);
     setMsg("");
-    if (s === "cart") void api.syncCartProfile();
-    else busy.current = false;
+    if (s !== "cart") busy.current = false;
   };
   const startPick = (id: string) => {
     track("open", id);
@@ -349,7 +349,7 @@ function useStoreState() {
     }
   };
 
-  const sendOrder = async () => {
+  const sendOrder = () => {
     if (busy.current) return;
     const i = info;
     if (!i.phone.trim() || !(i.addr || "").trim()) {
@@ -363,12 +363,24 @@ function useStoreState() {
     if (!items.length) return;
     draft.current = { phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim(), items };
     busy.current = true;
-    try {
-      await api.waitCartProfile();
-      await finishOrder(() => api.zaloProfile(false));
-    } catch {
-      await finishOrder(async () => ({ name: "", avatar: "" }));
-    }
+    const permit = api.permitForOrder();
+    void (async () => {
+      try {
+        const who = await permit;
+        if (!who.ok) {
+          draft.current = null;
+          busy.current = false;
+          setMsg("Bạn cần cho phép tên và ảnh Zalo thì mới gửi được đơn.");
+          return;
+        }
+        await finishOrder(async () => ({ name: who.name, avatar: who.avatar }));
+      } catch {
+        draft.current = null;
+        busy.current = false;
+        setSending(false);
+        setMsg("Chưa gửi được đơn, bạn thử lại nhé.");
+      }
+    })();
   };
 
   const addPhotos = (fs: File[]) => {
@@ -421,17 +433,6 @@ function useStoreState() {
     }
   };
 
-  const markPaid = async (o: Order) => {
-    try {
-      const u = await api.markPaid(o.code);
-      setMY((l) => l.map((x) => (x.code === o.code ? u : x)));
-      return true;
-    } catch {
-      toast("Chưa ghi nhận được, bạn thử lại nhé");
-      return false;
-    }
-  };
-
   // Cuộn nội dung sheet không đẩy trang phía sau.
   const scrollY = useRef(0);
   useEffect(() => {
@@ -447,7 +448,7 @@ function useStoreState() {
     remember, setRemember, info, setInfo,
     open, setOpen, pick, setPick, startPick, addPick,
     msg, sending, sendOrder,
-    showPaid, setShowPaid, MY, myReady, refreshMine, markPaid,
+    showPaid, setShowPaid, MY, myReady, refreshMine,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
     overlay, setOverlay, blocked,
   };

@@ -65,3 +65,7 @@ export class UpdateOrderDto {
 export class SendInvoiceDto {
   @IsIn(SEND_VIA) via: SendVia;
 }
+
+export class CancelOrderDto {
+  @IsOptional() @IsString() @MaxLength(300) reason?: string;
+}

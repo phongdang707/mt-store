@@ -19,8 +19,6 @@ export class Product {
   @Prop({ required: true, index: true }) cat: string;
   /** Giá bán (VND). 0 = khách thấy "Đang cập nhật". */
   @Prop({ default: 0, min: 0 }) price: number;
-  /** Giá thị trường (VND), 0 nếu không có. */
-  @Prop({ default: 0, min: 0 }) market: number;
   @Prop({ default: 'Nhật', index: true }) country: string;
   @Prop({ default: '' }) img: string;
   @Prop({ type: [SchemaFactory.createForClass(Variant)], default: [] }) variants: Variant[];

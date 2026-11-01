@@ -59,20 +59,22 @@ export class OrdersService {
     return doc;
   }
 
-  mine(c: CustomerDocument) {
-    return this.orders.find({ customer: c._id }).sort({ createdAt: -1 }).limit(30).exec();
+  async mine(c: CustomerDocument) {
+    const rows = await this.orders.find({ customer: c._id }).sort({ createdAt: -1 }).limit(30).exec();
+    return rows.map((o) => this.forCustomer(o));
   }
 
   async markPaid(c: CustomerDocument, code: string) {
     const o = await this.byCode(code);
     if (!o.customer.equals(c._id)) throw new ForbiddenException();
+    this.assertOpen(o);
     if (!o.paid) {
       o.paid = true;
       o.paidAt = new Date();
       await o.save();
       this.events.emit({ type: 'order', code, kind: o.kind, action: 'paid' });
     }
-    return o;
+    return this.forCustomer(o);
   }
 
   /** Hoá đơn công khai qua link chia sẻ. */
@@ -80,7 +82,7 @@ export class OrdersService {
     const o = await this.orders.findOne({ token }).exec();
     if (!o) throw new NotFoundException('Không tìm thấy hoá đơn');
     const s = await this.settings.get();
-    const { customer: _c, invoice: _i, token: _t, ...order } = o.toJSON() as unknown as Record<string, unknown>;
+    const { customer: _c, invoice: _i, token: _t, cancelReason: _r, ...order } = o.toJSON() as unknown as Record<string, unknown>;
     return { order, shop: { store: s.store, tagline: s.tagline, logo: s.logo, zalo: s.zalo, bank: s.bank, qr: s.qr } };
   }
 
@@ -134,13 +136,33 @@ export class OrdersService {
 
   async setStatus(code: string, confirmed: boolean) {
     const o = await this.byCode(code);
+    this.assertOpen(o);
     o.status = confirmed ? 'confirmed' : 'pending';
     o.confirmedAt = confirmed ? new Date() : undefined;
     return this.commit(o);
   }
 
+  async cancel(code: string, reason?: string) {
+    const o = await this.byCode(code);
+    if (o.status === 'cancelled') throw new BadRequestException('Đơn này đã huỷ rồi');
+    o.status = 'cancelled';
+    o.cancelledAt = new Date();
+    o.cancelReason = (reason ?? '').trim().slice(0, 300);
+    return this.commit(o);
+  }
+
+  async restore(code: string) {
+    const o = await this.byCode(code);
+    if (o.status !== 'cancelled') throw new BadRequestException('Đơn này chưa bị huỷ');
+    o.status = o.confirmedAt ? 'confirmed' : 'pending';
+    o.cancelledAt = undefined;
+    o.cancelReason = '';
+    return this.commit(o);
+  }
+
   async update(code: string, dto: UpdateOrderDto) {
     const o = await this.byCode(code);
+    this.assertOpen(o);
     if (dto.quoteTotal !== undefined) {
       o.quoteTotal = dto.quoteTotal;
       o.quotedAt = new Date();
@@ -152,6 +174,7 @@ export class OrdersService {
 
   async addItem(code: string, dto: AddItemDto) {
     const o = await this.byCode(code);
+    this.assertOpen(o);
     const [item] = await this.buildItems([dto], true);
     const same = o.items.find((i) => i.productId === item.productId && i.variant === item.variant);
     if (same) {
@@ -167,6 +190,7 @@ export class OrdersService {
 
   async updateItem(code: string, idx: number, dto: UpdateItemDto) {
     const o = await this.byCode(code);
+    this.assertOpen(o);
     const it = o.items[idx];
     if (!it) throw new NotFoundException('Không có món này trong đơn');
     if (dto.price !== undefined && dto.price !== it.price) {
@@ -184,6 +208,7 @@ export class OrdersService {
 
   async removeItem(code: string, idx: number, loaded?: OrderDocument) {
     const o = loaded ?? (await this.byCode(code));
+    this.assertOpen(o);
     const it = o.items[idx];
     if (!it) throw new NotFoundException('Không có món này trong đơn');
     if (o.items.length === 1) throw new BadRequestException('Đơn phải còn ít nhất 1 món');
@@ -194,6 +219,7 @@ export class OrdersService {
 
   async send(code: string, dto: SendInvoiceDto) {
     const o = await this.byCode(code);
+    this.assertOpen(o);
     o.invoice.sends.push({ version: o.invoice.version, via: dto.via, at: new Date() });
     return this.commit(o);
   }
@@ -204,6 +230,17 @@ export class OrdersService {
     const o = await this.orders.findOne({ code }).exec();
     if (!o) throw new NotFoundException(`Không tìm thấy đơn ${code}`);
     return o;
+  }
+
+  private assertOpen(o: OrderDocument) {
+    if (o.status === 'cancelled') throw new BadRequestException('Đơn đã huỷ, hãy mở lại trước khi sửa');
+  }
+
+  /** Bản khách không kèm lý do huỷ. */
+  private forCustomer(o: OrderDocument) {
+    const row = o.toJSON() as unknown as Record<string, unknown>;
+    delete row.cancelReason;
+    return row;
   }
 
   private async insert(kind: OrderKind, c: CustomerDocument, data: Partial<Order>) {
