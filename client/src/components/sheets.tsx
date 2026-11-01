@@ -95,7 +95,7 @@ export function PickSheet() {
 }
 
 export function CartSheet() {
-  const { D, entries, ck, setQty, cartTotal, pendingCount, info, setInfo, remember, setRemember, msg, sending, sendOrder, askProfile, allowProfile, skipProfile, orderText, clearCart } = useStore();
+  const { D, entries, ck, setQty, cartTotal, pendingCount, info, setInfo, remember, setRemember, msg, sending, sendOrder, orderText, clearCart } = useStore();
   if (!D) return null;
   return (
     <>
@@ -178,21 +178,6 @@ export function CartSheet() {
           </div>
         ) : null}
       </aside>
-      {askProfile ? (
-        <>
-          <div className="perm-bg" />
-          <div className="perm" role="dialog" aria-modal="true" aria-labelledby="perm-title">
-            <h2 id="perm-title">Tên và ảnh Zalo</h2>
-            <p>Cho phép dùng tên và ảnh đại diện để gắn vào đơn. Số điện thoại và địa chỉ bạn tự điền, ứng dụng không xin hai thông tin này.</p>
-            <button className="btn" type="button" disabled={sending} onClick={allowProfile}>
-              Cho phép
-            </button>
-            <button className="btn ghost" type="button" disabled={sending} onClick={skipProfile}>
-              Để sau
-            </button>
-          </div>
-        </>
-      ) : null}
     </>
   );
 }

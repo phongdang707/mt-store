@@ -23,6 +23,20 @@ export class CustomersService {
       .exec();
   }
 
+  /** Tên hoặc ảnh Zalo đã lưu thì không xin quyền nữa. */
+  profileOf(customer: { zaloName?: string; avatar?: string }) {
+    const name = customer.zaloName?.trim() || '';
+    const avatar = customer.avatar?.trim() || '';
+    return { hasData: !!(name || avatar), name, avatar };
+  }
+
+  /** Ghi tên và ảnh mới. Trường trống không xoá dữ liệu đang có. */
+  async syncProfile(id: unknown, info: { zaloName?: string; avatar?: string }) {
+    await this.remember(id, { zaloName: info.zaloName, avatar: info.avatar });
+    const customer = await this.customers.findById(id).select('zaloName avatar').lean().exec();
+    return this.profileOf(customer ?? {});
+  }
+
   /** Lưu tên Zalo, ảnh, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */
   remember(id: unknown, info: { name?: string; zaloName?: string; avatar?: string; phone?: string; addr?: string }) {
     const set: Record<string, string> = {};

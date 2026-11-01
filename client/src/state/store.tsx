@@ -129,6 +129,7 @@ function useStoreState() {
       listening = true;
     };
     const bindAccount = (profile: MeProfile) => {
+      api.rememberProfile({ name: profile.name, avatar: profile.avatar });
       const id = profile.id?.trim() ?? "";
       if (!id || userId.current === id) return;
       userId.current = id;
@@ -229,7 +230,6 @@ function useStoreState() {
     storage.set("mt_country", c);
     setQ("");
   };
-  const [askProfile, setAskProfile] = useState(false);
   const busy = useRef(false);
   const placing = useRef(false);
   const draft = useRef<{ phone: string; addr: string; note: string; items: CartLineInput[] } | null>(null);
@@ -247,10 +247,8 @@ function useStoreState() {
   const setOpen = (s: Sheet) => {
     setOpenState(s);
     setMsg("");
-    if (s !== "cart") {
-      setAskProfile(false);
-      busy.current = false;
-    }
+    if (s === "cart") void api.syncCartProfile();
+    else busy.current = false;
   };
   const startPick = (id: string) => {
     track("open", id);
@@ -311,7 +309,6 @@ function useStoreState() {
       return;
     }
     placing.current = true;
-    setAskProfile(false);
     setSending(true);
     setMsg("");
     try {
@@ -366,16 +363,12 @@ function useStoreState() {
     draft.current = { phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim(), items };
     busy.current = true;
     try {
-      const known = (await api.zaloName(false)).trim();
-      if (known) await finishOrder(() => api.zaloProfile(false));
-      else setAskProfile(true);
+      await api.waitCartProfile();
+      await finishOrder(() => api.zaloProfile(false));
     } catch {
-      setAskProfile(true);
+      await finishOrder(async () => ({ name: "", avatar: "" }));
     }
   };
-
-  const allowProfile = () => finishOrder(() => api.zaloProfile(true));
-  const skipProfile = () => finishOrder(async () => ({ name: "", avatar: "" }));
 
   const addPhotos = (fs: File[]) => {
     const room = 6 - phFiles.length;
@@ -452,7 +445,7 @@ function useStoreState() {
     cart, entries, cartCount, cartTotal, pendingCount, prodCount, setQty, clearCart, orderText,
     remember, setRemember, info, setInfo,
     open, setOpen, pick, setPick, startPick, addPick,
-    msg, sending, sendOrder, askProfile, allowProfile, skipProfile,
+    msg, sending, sendOrder,
     showPaid, setShowPaid, MY, myReady, refreshMine, markPaid,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
     overlay, setOverlay, blocked,

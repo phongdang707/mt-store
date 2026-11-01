@@ -51,6 +51,8 @@ Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, 
 | | POST | `/zalo/webhook` | sự kiện Zalo Open API, chữ ký `X-ZEvent-Signature` |
 | | GET | `/invoices/:token` | hoá đơn qua link chia sẻ |
 | khách | GET | `/me` | SĐT/địa chỉ lần trước |
+| | GET | `/me/profile` | đã có tên hoặc ảnh Zalo chưa |
+| | POST | `/me/profile` | `{ zaloName?, avatar? }` ghi hồ sơ mới |
 | | POST | `/me/visit` | hồ sơ, máy, số giây app đang hiện |
 | | POST | `/me/events` | `{ events: [{ type: view\|open\|cart, productId }] }` |
 | | POST | `/orders` | `{ phone, addr, name?, note?, items: [{ productId, variant?, qty }] }`, giá lấy từ DB |

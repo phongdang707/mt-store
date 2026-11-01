@@ -48,9 +48,61 @@ function pick(userInfo?: { id?: string; name?: string; avatar?: string } | null)
   return { name, avatar };
 }
 
-/** Đã cấp `scope.userInfo` thì đọc hồ sơ, không hiện hộp thoại. */
-export async function userInfoGranted() {
-  if (profile?.name || profile?.avatar) return true;
+/** Ghi tên và ảnh đã có (từ `/me` hoặc lần đọc trước) để lần sau không xin quyền nữa. */
+export function rememberProfile(raw: { name?: string; avatar?: string }) {
+  const got = pick({ name: raw.name, avatar: raw.avatar });
+  if (!got.name && !got.avatar) return;
+  profile = {
+    name: profile?.name || got.name,
+    avatar: profile?.avatar || got.avatar,
+  };
+  checked = true;
+}
+
+/** `scope.userInfo` đã bật thì đọc hồ sơ, không mở hộp thoại. `null` khi chưa cấp quyền. */
+async function readIfGranted() {
+  try {
+    const { authSetting } = await getSetting();
+    if (authSetting["scope.userInfo"] !== true) return null;
+  } catch (e) {
+    console.warn("getSetting", e);
+    return null;
+  }
+  try {
+    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
+    return pick(userInfo);
+  } catch (e) {
+    if (!denied(e)) console.warn("getUserInfo", e);
+    return EMPTY_PROFILE;
+  }
+}
+
+/**
+ * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID;
+ * hai trường này cần khách cấp `scope.userInfo`. Server ở ngoài Việt Nam xin Graph API sẽ bị -501.
+ * `ask` chỉ gọi `authorize` một lần khi chưa cấp quyền và chưa có hồ sơ. Không xin số điện thoại hay vị trí.
+ */
+async function fetchProfile(ask: boolean) {
+  const silent = await readIfGranted();
+  if (silent) return silent;
+  if (!ask) return EMPTY_PROFILE;
+  try {
+    const scopes = await authorize({ scopes: ["scope.userInfo"] });
+    if (scopes["scope.userInfo"] === false) return EMPTY_PROFILE;
+  } catch (e) {
+    if (denied(e)) return EMPTY_PROFILE;
+    console.warn("authorize", e);
+  }
+  try {
+    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
+    return pick(userInfo);
+  } catch (e) {
+    if (denied(e)) return EMPTY_PROFILE;
+    throw e;
+  }
+}
+
+async function scopeGranted() {
   try {
     const { authSetting } = await getSetting();
     return authSetting["scope.userInfo"] === true;
@@ -60,60 +112,76 @@ export async function userInfoGranted() {
   }
 }
 
-/**
- * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID;
- * hai trường này cần khách cấp `scope.userInfo`. Server ở ngoài Việt Nam xin Graph API sẽ bị -501.
- * `ask` chỉ bật từ nút Cho phép lúc gửi đơn. Không xin số điện thoại hay vị trí.
- */
-async function loadUser(autoRequest: boolean) {
-  const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: autoRequest });
-  return pick(userInfo);
+export interface ProfileStatus {
+  hasData: boolean;
+  name: string;
+  avatar: string;
 }
 
-async function fetchProfile(ask: boolean) {
-  if (!ask) {
-    let allowed = false;
-    try {
-      const { authSetting } = await getSetting();
-      allowed = authSetting["scope.userInfo"] === true;
-    } catch (e) {
-      console.warn("getSetting", e);
+let cartSync: Promise<void> | null = null;
+
+/** Đợi lần sync của lần mở giỏ hiện tại, không xin quyền thêm. */
+export function waitCartProfile() {
+  return cartSync ?? Promise.resolve();
+}
+
+/**
+ * Mỗi lần mở giỏ: hỏi server đã có tên hoặc ảnh chưa.
+ * Chưa có và chưa cấp quyền thì xin một lần. Đã có quyền thì đọc Zalo và ghi vào DB.
+ */
+export function syncCartProfile() {
+  if (!inZalo) return Promise.resolve();
+  if (cartSync) return cartSync;
+  const run = refreshCartProfile()
+    .catch((e: unknown) => {
+      console.warn("syncCartProfile", e);
+    })
+    .finally(() => {
+      if (cartSync === run) cartSync = null;
+    });
+  cartSync = run;
+  return run;
+}
+
+async function refreshCartProfile() {
+  const status = await call<ProfileStatus>("GET", "/me/profile");
+  if (await scopeGranted()) {
+    const fresh = await readIfGranted();
+    if (fresh && (fresh.name || fresh.avatar)) {
+      const saved = await call<ProfileStatus>("POST", "/me/profile", { zaloName: fresh.name || undefined, avatar: fresh.avatar || undefined });
+      rememberProfile(saved);
+      return;
     }
-    if (!allowed) return EMPTY_PROFILE;
-    try {
-      return await loadUser(false);
-    } catch (e) {
-      if (!denied(e)) console.warn("getUserInfo", e);
-      return EMPTY_PROFILE;
-    }
+    if (status.hasData) rememberProfile(status);
+    return;
   }
-  try {
-    const scopes = await authorize({ scopes: ["scope.userInfo"] });
-    if (scopes["scope.userInfo"] === false) return EMPTY_PROFILE;
-  } catch (e) {
-    if (denied(e)) return EMPTY_PROFILE;
-    console.warn("authorize", e);
+  if (status.hasData) {
+    rememberProfile(status);
+    return;
   }
-  try {
-    return await loadUser(true);
-  } catch (e) {
-    if (denied(e)) return EMPTY_PROFILE;
-    throw e;
+  const got = await fetchProfile(true);
+  if (got.name || got.avatar) {
+    profile = got;
+    checked = true;
+    const saved = await call<ProfileStatus>("POST", "/me/profile", { zaloName: got.name || undefined, avatar: got.avatar || undefined });
+    rememberProfile(saved);
+    return;
   }
+  checked = true;
 }
 
 export function zaloProfile(ask = false): Promise<{ name: string; avatar: string }> {
   if (!inZalo) return Promise.resolve(EMPTY_PROFILE);
-  if (profile?.name) return Promise.resolve(profile);
+  if (profile?.name || profile?.avatar) return Promise.resolve(profile);
   if (profileTask && !ask) return profileTask;
   if (!ask && checked) return Promise.resolve(profile ?? EMPTY_PROFILE);
   const task = fetchProfile(ask)
     .then((got) => {
-      if (got.name) {
+      if (got.name || got.avatar) {
         profile = got;
         checked = true;
       } else if (ask) checked = true;
-      return got.name ? got : (profile ?? got);
+      return got.name || got.avatar ? got : (profile ?? got);
     })
     .catch((e: unknown) => {
       console.warn("getUserInfo", e);
@@ -222,7 +290,9 @@ export interface MeProfile {
 export const api = {
   zaloName,
   zaloProfile,
-  userInfoGranted,
+  rememberProfile,
+  syncCartProfile,
+  waitCartProfile,
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
   events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
