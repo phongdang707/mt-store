@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { monthRange, norm } from '../common/json.js';
 import type { CustomerDocument } from '../customers/customer.schema.js';
-import { CustomersService } from '../customers/customers.service.js';
+import { avatarUrl, CustomersService } from '../customers/customers.service.js';
 import { ProductsService } from '../products/products.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type { AddItemDto, AdminListQuery, CartItemDto, CreateOrderDto, CreateRequestDto, SendInvoiceDto, UpdateItemDto, UpdateOrderDto } from './order.dto.js';
@@ -32,12 +32,13 @@ export class OrdersService {
     if (closed) throw new BadRequestException(`Hàng ${closed.country} đang tạm khoá đặt, bạn bỏ ${closed.name} khỏi giỏ nhé`);
     const doc = await this.insert('order', c, {
       name: dto.name?.trim() || c.name,
+      avatar: avatarUrl(dto.avatar) || c.avatar,
       phone: dto.phone.trim(),
       addr: dto.addr.trim(),
       note: dto.note?.trim() ?? '',
       items,
     });
-    await this.customers.remember(c._id, { name: doc.name, phone: doc.phone, addr: doc.addr });
+    await this.customers.remember(c._id, { name: doc.name, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
     return doc;
   }
 
@@ -45,13 +46,14 @@ export class OrdersService {
     if (!dto.photos.every(allowedPhoto)) throw new BadRequestException('Ảnh không hợp lệ');
     const doc = await this.insert('request', c, {
       name: dto.name?.trim() || c.name,
+      avatar: avatarUrl(dto.avatar) || c.avatar,
       phone: dto.phone?.trim() || c.phone,
       addr: dto.addr?.trim() || c.addr,
       note: dto.note?.trim() ?? '',
       product: dto.product.trim(),
       photos: dto.photos,
     });
-    await this.customers.remember(c._id, { name: doc.name, phone: doc.phone, addr: doc.addr });
+    await this.customers.remember(c._id, { name: doc.name, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
     return doc;
   }
 
@@ -203,7 +205,15 @@ export class OrdersService {
 
   private async insert(kind: OrderKind, c: CustomerDocument, data: Partial<Order>) {
     const s = await this.settings.get();
-    const doc = new this.orders({ ...data, kind, customer: c._id, avatar: c.avatar, shippingFee: s.shippingFee, shipBase: s.shippingFee, freeShipFrom: s.freeShipFrom });
+    const doc = new this.orders({
+      ...data,
+      kind,
+      customer: c._id,
+      avatar: avatarUrl(data.avatar) || c.avatar,
+      shippingFee: s.shippingFee,
+      shipBase: s.shippingFee,
+      freeShipFrom: s.freeShipFrom,
+    });
     recompute(doc);
     for (let tries = 0; ; tries++) {
       doc.code = kind === 'order' ? 'MT' + randomInt(100000, 1000000) : 'TH' + randomInt(1000, 10000);

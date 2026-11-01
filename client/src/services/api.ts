@@ -19,7 +19,8 @@ async function authHeaders(fresh = false): Promise<Record<string, string>> {
         console.warn("getAccessToken", e);
       }
     }
-    if (zaloToken) return { "x-zalo-token": zaloToken.value };
+    if (!zaloToken) throw new ApiError("Chưa lấy được phiên Zalo. Bạn mở lại Mini App rồi thử lại nhé.", 401);
+    return { "x-zalo-token": zaloToken.value };
   }
   let id = storage.get<string>("mt_dev_user", "");
   if (!id) storage.set("mt_dev_user", (id = "u" + Math.random().toString(36).slice(2, 14)));
@@ -202,9 +203,9 @@ export const api = {
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
   me: () => call<{ name: string; phone: string; addr: string }>("GET", "/me"),
   mine: () => call<Order[]>("GET", "/orders/mine"),
-  createOrder: (b: { name?: string; phone: string; addr: string; note?: string; items: CartLineInput[] }) =>
+  createOrder: (b: { name?: string; avatar?: string; phone: string; addr: string; note?: string; items: CartLineInput[] }) =>
     call<Order>("POST", "/orders", b),
-  createRequest: (b: { name?: string; phone?: string; addr?: string; product: string; photos: string[] }) =>
+  createRequest: (b: { name?: string; avatar?: string; phone?: string; addr?: string; product: string; photos: string[] }) =>
     call<Order>("POST", "/requests", b),
   markPaid: (code: string) => call<Order>("POST", `/orders/${encodeURIComponent(code)}/paid`),
   upload: (file: Blob) => {

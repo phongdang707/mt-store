@@ -148,6 +148,8 @@ export function CartSheet() {
                 )
               ) : null}
               {D.orderNote ? <p className="pend">{D.orderNote}</p> : null}
+              <label>Tên Zalo</label>
+              <p className="pend" style={{ marginTop: 0 }}>{info.name || "Tên Zalo sẽ được lấy khi bạn gửi đơn."}</p>
               <label htmlFor="o-phone">Số điện thoại</label>
               <input className="f" id="o-phone" inputMode="tel" value={info.phone} onChange={(e) => setInfo("phone", e.target.value)} placeholder="+84 9xx xxx xxx" />
               <label htmlFor="o-addr">Địa chỉ nhận hàng</label>

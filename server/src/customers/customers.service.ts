@@ -4,6 +4,14 @@ import { Types, type Model } from 'mongoose';
 import { Customer } from './customer.schema.js';
 import type { ZaloUser } from './zalo.service.js';
 
+/** Ảnh Zalo là URL https. `//` được đổi thành https. Chuỗi khác bỏ. */
+export function avatarUrl(v: string | undefined) {
+  let s = v?.trim() ?? '';
+  if (s.length > 2000) s = s.slice(0, 2000);
+  if (s.startsWith('//')) s = 'https:' + s;
+  return /^https:\/\//i.test(s) ? s : '';
+}
+
 @Injectable()
 export class CustomersService {
   constructor(@InjectModel(Customer.name) private readonly customers: Model<Customer>) {}
@@ -15,13 +23,15 @@ export class CustomersService {
       .exec();
   }
 
-  /** Lưu tên, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */
-  remember(id: unknown, info: { name?: string; phone?: string; addr?: string }) {
+  /** Lưu tên, ảnh, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */
+  remember(id: unknown, info: { name?: string; avatar?: string; phone?: string; addr?: string }) {
     const set: Record<string, string> = {};
     for (const key of ['name', 'phone', 'addr'] as const) {
       const value = info[key]?.trim();
       if (value) set[key] = value;
     }
+    const avatar = avatarUrl(info.avatar);
+    if (avatar) set.avatar = avatar;
     if (!Object.keys(set).length) return Promise.resolve();
     return this.customers.updateOne({ _id: id }, { $set: set }).exec();
   }

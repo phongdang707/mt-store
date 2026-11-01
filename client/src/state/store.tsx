@@ -78,7 +78,7 @@ function useStoreState() {
       api.zaloName(false).then((name) => {
         if (!name || stop) return;
         setInfoState((i) => {
-          if (i.name) return i;
+          if (i.name === name) return i;
           const next = { ...i, name };
           if (storage.get("mt_remember", true)) storage.set("mt_info", next);
           return next;
@@ -166,9 +166,20 @@ function useStoreState() {
     storage.set("mt_country", c);
     setQ("");
   };
+  const keepZaloName = (name: string) => {
+    const nextName = name.trim();
+    if (!nextName) return;
+    setInfoState((i) => {
+      if (i.name === nextName) return i;
+      const next = { ...i, name: nextName };
+      if (storage.get("mt_remember", true)) storage.set("mt_info", next);
+      return next;
+    });
+  };
   const setOpen = (s: Sheet) => {
     setOpenState(s);
     setMsg("");
+    if (s === "cart") void api.zaloProfile(false).then((who) => keepZaloName(who.name));
   };
   const startPick = (id: string) => {
     track("open", id);
@@ -272,9 +283,13 @@ function useStoreState() {
     try {
       const photos: string[] = [];
       for (const f of phFiles) photos.push((await api.upload(await shrink(f.file))).url);
-      const name = info.name.trim() || (await api.zaloName(false));
+      const who = await api.zaloProfile(true);
+      const name = who.name.trim();
+      const avatar = who.avatar.trim();
+      keepZaloName(name);
       const r = await api.createRequest({
         name: name || undefined,
+        avatar: avatar || undefined,
         phone: info.phone.trim() || undefined,
         addr: info.addr.trim() || undefined,
         product: phName.trim(),
