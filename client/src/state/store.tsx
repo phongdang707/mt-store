@@ -369,12 +369,6 @@ function useStoreState() {
     void (async () => {
       try {
         const who = await permit;
-        if (!who.ok) {
-          draft.current = null;
-          busy.current = false;
-          setMsg("Bạn cần cho phép tên và ảnh Zalo thì mới gửi được đơn.");
-          return;
-        }
         await finishOrder(async () => ({ name: who.name, avatar: who.avatar }));
       } catch {
         draft.current = null;

@@ -126,6 +126,7 @@ export interface OrderPermit {
 /**
  * Bấm «Xác nhận đơn». Gọi ngay trong cú bấm, trước mọi `await`.
  * Chưa cấp quyền thì `authorize` chạy đồng bộ để Zalo hiện hộp thoại.
+ * Từ chối thì `ok` là false, tên và ảnh trống — đơn vẫn gửi được.
  * Đã cấp thì không hỏi lại. Ngoài Zalo thì cho gửi, không có hộp thoại.
  */
 export function permitForOrder(): Promise<OrderPermit> {
