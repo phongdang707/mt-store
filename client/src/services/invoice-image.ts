@@ -6,6 +6,15 @@ import { bankOf, qrDataURL, vietqr } from "@/utils/vietqr";
 const itemName = (i: { name: string; variantName?: string }) => (i.variantName ? `${i.name} – ${i.variantName}` : i.name);
 const freeShip = (o: { shipBase?: number | null; shippingFee: number }) => !!o.shipBase && o.shipBase > 0 && o.shippingFee === 0;
 
+const W = 1200;
+const M = 36;
+const PAD = 48;
+const L = M + PAD;
+const R = W - M - PAD;
+const CW = R - L;
+const F = "'Be Vietnam Pro', system-ui, sans-serif";
+const Q = "Quicksand, 'Be Vietnam Pro', sans-serif";
+
 function loadImg(src: string): Promise<HTMLImageElement | null> {
   return new Promise((r) => {
     if (!src) return r(null);
@@ -17,12 +26,74 @@ function loadImg(src: string): Promise<HTMLImageElement | null> {
   });
 }
 
-/** Ảnh hoá đơn PNG có VietQR, cùng bố cục tờ bill trang quản lý gửi khách. */
-export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "store" | "logo" | "qr" | "bank">): Promise<Blob | null> {
-  const W = 900;
-  const P = 56;
-  const F = "'Be Vietnam Pro',system-ui,sans-serif";
-  const Q = "'Quicksand','Be Vietnam Pro',sans-serif";
+async function readyFonts() {
+  try {
+    await Promise.all([
+      document.fonts.load("700 40px Quicksand"),
+      document.fonts.load("700 28px 'Be Vietnam Pro'"),
+      document.fonts.load("600 22px 'Be Vietnam Pro'"),
+    ]);
+    await document.fonts.ready;
+  } catch {
+    /* Ảnh vẫn vẽ được bằng font hệ thống. */
+  }
+}
+
+type Ctx = CanvasRenderingContext2D;
+
+function rounded(x: Ctx, X: number, Y: number, w: number, h: number, r: number) {
+  const rad = Math.min(r, w / 2, h / 2);
+  x.beginPath();
+  x.moveTo(X + rad, Y);
+  x.arcTo(X + w, Y, X + w, Y + h, rad);
+  x.arcTo(X + w, Y + h, X, Y + h, rad);
+  x.arcTo(X, Y + h, X, Y, rad);
+  x.arcTo(X, Y, X + w, Y, rad);
+  x.closePath();
+}
+
+function wrap(x: Ctx, t: string, max: number, lines: number) {
+  const words = String(t || "").split(/\s+/).filter(Boolean);
+  const out: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const next = line ? line + " " + word : word;
+    if (x.measureText(next).width > max && line) {
+      out.push(line);
+      line = word;
+      if (out.length === lines) break;
+    } else line = next;
+  }
+  if (line && out.length < lines) out.push(line);
+  if (!out.length) out.push("");
+  if (words.length && out.length === lines) {
+    const used = out.join(" ").split(/\s+/).length;
+    if (used < words.length) {
+      let last = out[lines - 1];
+      while (last.length > 1 && x.measureText(last + "…").width > max) last = last.slice(0, -1);
+      out[lines - 1] = last.replace(/[.,;: ]+$/, "") + "…";
+    }
+  }
+  return out;
+}
+
+function tracked(x: Ctx, text: string, px: number, py: number, gap: number, align: "left" | "right" | "center") {
+  const chars = [...text];
+  const widths = chars.map((ch) => x.measureText(ch).width);
+  const total = widths.reduce((n, w) => n + w, 0) + gap * Math.max(0, chars.length - 1);
+  let cx = align === "right" ? px - total : align === "center" ? px - total / 2 : px;
+  const prev = x.textAlign;
+  x.textAlign = "left";
+  chars.forEach((ch, i) => {
+    x.fillText(ch, cx, py);
+    cx += widths[i] + gap;
+  });
+  x.textAlign = prev;
+}
+
+/** Ảnh hoá đơn PNG theo tờ trên trang quản lý: đầu trang, bảng món, chuyển khoản cạnh tổng. */
+export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "store" | "tagline" | "logo" | "qr" | "bank">): Promise<Blob | null> {
+  await readyFonts();
   const rows = o.items;
   let logo: HTMLImageElement | null = shop.logo ? await loadImg(shop.logo) : null;
   if (!logo) {
@@ -36,221 +107,284 @@ export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "s
       logo = null;
     }
   }
-  let qr: HTMLImageElement | null = null;
-  const payload = qrDataURL(vietqr(shop.bank, nf(o.total), memoOf(o)));
-  if (payload) qr = await loadImg(payload);
+  const memo = memoOf(o);
+  const payload = qrDataURL(vietqr(shop.bank, nf(o.total), memo));
+  let qr: HTMLImageElement | null = payload ? await loadImg(payload) : null;
   if (!qr && shop.qr) qr = await loadImg(shop.qr);
+  const thumbs = await Promise.all(rows.map((it) => (it.img ? loadImg(it.img) : Promise.resolve(null))));
 
-  const H = 1100 + rows.length * 150;
-  const c = document.createElement("canvas");
-  c.width = W;
-  c.height = H;
-  const x = c.getContext("2d");
+  const layer = document.createElement("canvas");
+  layer.width = W;
+  layer.height = 980 + rows.length * 160;
+  const x = layer.getContext("2d");
   if (!x) return null;
-  const g = x.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, "#fcf8f0");
-  g.addColorStop(0.3, "#fbf5ec");
-  g.addColorStop(0.65, "#f8ebe4");
-  g.addColorStop(1, "#f2d5d3");
-  x.fillStyle = g;
-  x.fillRect(0, 0, W, H);
-  x.strokeStyle = "#e2b3bf";
-  x.lineWidth = 3;
-  x.strokeRect(14, 14, W - 28, H - 28);
+  x.textBaseline = "top";
 
-  let y = 50;
-  if (logo) {
-    const lw = 380;
-    const lh = lw * (logo.height / logo.width || 0.57);
-    x.drawImage(logo, (W - lw) / 2, y, lw, lh);
-    y += lh + 30;
-  } else {
-    x.font = `700 70px ${Q}`;
-    x.fillStyle = "#a3546a";
-    x.textAlign = "center";
-    x.fillText(shop.store || "MT store", W / 2, y + 70);
-    x.textAlign = "left";
-    y += 110;
+  const font = (weight: number, size: number, quick = false) => {
+    x.font = `${weight} ${size}px ${quick ? Q : F}`;
+  };
+
+  let y = L;
+
+  const logoW = 168;
+  const logoH = logo ? logoW * (logo.height / logo.width || 0.61) : 0;
+  const headH = Math.max(logoH, 108);
+  if (logo) x.drawImage(logo, L, y + (headH - logoH) / 2, logoW, logoH);
+  const nameX = L + (logo ? logoW + 22 : 0);
+  font(700, 34, true);
+  x.fillStyle = "#a3546a";
+  x.fillText(shop.store || "MT store", nameX, y + 18);
+  if (shop.tagline) {
+    font(500, 22);
+    x.fillStyle = "#7d6862";
+    x.fillText(shop.tagline, nameX, y + 62);
   }
-  x.textAlign = "center";
+  const date = new Date(o.createdAt || Date.now()).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  font(700, 40, true);
   x.fillStyle = "#3d3530";
-  x.font = `500 34px ${F}`;
-  x.fillText("HÓA ĐƠN", W / 2, y + 20);
-  x.textAlign = "left";
-  y += 70;
-
-  const ds = new Date(o.createdAt || Date.now()).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
-  x.font = `600 18px ${F}`;
-  x.fillStyle = "#9a8580";
-  x.fillText("KHÁCH HÀNG", P, y);
+  tracked(x, "HOÁ ĐƠN", R, y + 8, 5, "right");
+  font(700, 24);
+  x.fillStyle = "#a3546a";
   x.textAlign = "right";
-  x.fillText("NGÀY", W - P, y);
-  x.font = `700 28px ${F}`;
-  x.fillStyle = "#3d3530";
-  x.fillText(ds, W - P, y + 40);
-  x.font = `500 20px ${F}`;
-  x.fillStyle = "#7a6a66";
-  x.fillText("#" + o.code, W - P, y + 72);
+  x.fillText("HĐ-" + o.code, R, y + 58);
+  font(500, 22);
+  x.fillStyle = "#7d6862";
+  x.fillText("Ngày " + date, R, y + 90);
   x.textAlign = "left";
-  x.font = `700 28px ${F}`;
+  y += headH + 32;
+
+  const colW = (CW - 28) / 2;
+  font(700, 28);
+  const who = wrap(x, o.name || "Khách", colW, 2);
+  font(500, 22);
+  const addr = wrap(x, o.addr || "—", colW, 3);
+  const infoH = 24 + Math.max(who.length * 36 + (o.phone ? 32 : 0), addr.length * 32 + 30) + 36;
+  x.fillStyle = "#fdf6f3";
+  rounded(x, L, y, CW, infoH, 20);
+  x.fill();
+  const iy = y + 20;
+  font(700, 18);
+  x.fillStyle = "#7d6862";
+  tracked(x, "KHÁCH HÀNG", L + 24, iy, 1.2, "left");
+  tracked(x, "GIAO ĐẾN", L + colW + 28, iy, 1.2, "left");
+  font(700, 28);
   x.fillStyle = "#3d3530";
-  x.fillText((o.name || "Khách").slice(0, 28), P, y + 40);
-  x.font = `500 20px ${F}`;
-  x.fillStyle = "#7a6a66";
-  x.fillText([o.phone, o.addr].filter(Boolean).join(" · ").slice(0, 42), P, y + 72);
-  y += 110;
-  x.strokeStyle = "#d9c6c0";
-  x.lineWidth = 2;
+  who.forEach((line, i) => x.fillText(line, L + 24, iy + 30 + i * 36));
+  if (o.phone) {
+    font(500, 24);
+    x.fillStyle = "#3d3530";
+    x.fillText(o.phone, L + 24, iy + 30 + who.length * 36);
+  }
+  font(500, 24);
+  x.fillStyle = "#3d3530";
+  addr.forEach((line, i) => x.fillText(line, L + colW + 28, iy + 30 + i * 32));
+  font(500, 20);
+  x.fillStyle = "#7d6862";
+  x.fillText("Từ đơn #" + o.code, L + colW + 28, iy + 30 + addr.length * 32 + 6);
+  y += infoH + 32;
+
+  const qtyW = 150;
+  const unitW = 200;
+  const amtW = 210;
+  const prodW = CW - qtyW - unitW - amtW;
+  const qtyX = L + prodW;
+  const unitX = qtyX + qtyW;
+  const amtX = unitX + unitW;
+  font(700, 18);
+  x.fillStyle = "#6f5a55";
+  tracked(x, "SẢN PHẨM", L, y, 0.8, "left");
+  tracked(x, "SỐ LƯỢNG", qtyX + qtyW / 2, y, 0.8, "center");
+  tracked(x, "ĐƠN GIÁ", unitX + unitW - 8, y, 0.8, "right");
+  tracked(x, "THÀNH TIỀN", R, y, 0.8, "right");
+  y += 32;
+  x.strokeStyle = "#3d3530";
+  x.lineWidth = 2.5;
   x.beginPath();
-  x.moveTo(P, y);
-  x.lineTo(W - P, y);
+  x.moveTo(L, y);
+  x.lineTo(R, y);
   x.stroke();
-  y += 20;
+  y += 8;
 
-  const wrap = (t: string, mx: number) => {
-    const words = String(t).split(" ");
-    let line = "";
-    const out: string[] = [];
-    for (const word of words) {
-      const next = line ? line + " " + word : word;
-      if (x.measureText(next).width > mx && line) {
-        out.push(line);
-        line = word;
-      } else line = next;
-    }
-    if (line) out.push(line);
-    return out;
-  };
-  const rr = (X: number, Y: number, w: number, h: number, r: number) => {
-    x.beginPath();
-    x.moveTo(X + r, Y);
-    x.arcTo(X + w, Y, X + w, Y + h, r);
-    x.arcTo(X + w, Y + h, X, Y + h, r);
-    x.arcTo(X, Y + h, X, Y, r);
-    x.arcTo(X, Y, X + w, Y, r);
-    x.closePath();
-  };
-
-  for (const it of rows) {
-    const im = it.img ? await loadImg(it.img) : null;
-    x.save();
-    x.shadowColor = "rgba(150,90,100,.18)";
-    x.shadowBlur = 14;
-    x.shadowOffsetY = 4;
+  rows.forEach((it, k) => {
+    font(600, 26);
+    const nameLines = wrap(x, itemName(it), prodW - 108, 2);
+    const rowH = Math.max(104, 28 + nameLines.length * 34);
+    const im = thumbs[k];
+    const box = 72;
+    const by = y + (rowH - box) / 2;
     x.fillStyle = "#fff";
-    rr(P, y + 10, 104, 104, 18);
+    x.strokeStyle = "#efd9d3";
+    x.lineWidth = 2;
+    rounded(x, L, by, box, box, 14);
     x.fill();
-    x.restore();
+    x.stroke();
     if (im) {
       x.save();
-      rr(P, y + 10, 104, 104, 18);
+      rounded(x, L + 4, by + 4, box - 8, box - 8, 10);
       x.clip();
-      const sc = Math.min(96 / im.width, 96 / im.height);
+      const sc = Math.min((box - 12) / im.width, (box - 12) / im.height);
       const w = im.width * sc;
       const h = im.height * sc;
-      x.drawImage(im, P + 52 - w / 2, y + 62 - h / 2, w, h);
+      x.drawImage(im, L + box / 2 - w / 2, by + box / 2 - h / 2, w, h);
       x.restore();
     }
-    x.font = `700 26px ${F}`;
+    const textH = nameLines.length * 34;
+    const textY = y + (rowH - textH) / 2;
+    font(600, 26);
     x.fillStyle = "#3d3530";
-    const lines = wrap(itemName(it), W - P * 2 - 300).slice(0, 2);
-    lines.forEach((l, k) => x.fillText(l, P + 130, y + 48 + k * 32));
-    const py = y + 48 + lines.length * 32 + 4;
-    x.font = `700 20px ${F}`;
-    const qty = "× " + it.qty;
-    const qw = x.measureText(qty).width + 20;
-    x.fillStyle = "#f3dfe0";
-    rr(P + 130, py - 22, qw, 32, 9);
-    x.fill();
-    x.fillStyle = "#7f3d52";
-    x.fillText(qty, P + 140, py);
-    x.font = `500 20px ${F}`;
-    x.fillStyle = "#9a8580";
-    x.fillText(it.price ? fmt(it.price) : "chờ báo giá", P + 140 + qw, py);
-    x.font = `700 26px ${F}`;
-    x.fillStyle = "#3d3530";
+    nameLines.forEach((line, i) => x.fillText(line, L + box + 16, textY + i * 34));
+    font(700, 26);
+    x.textAlign = "center";
+    x.fillText("× " + it.qty, qtyX + qtyW / 2, y + (rowH - 32) / 2);
     x.textAlign = "right";
-    x.fillText(it.price ? fmt(it.price * it.qty) : "—", W - P, y + 70);
+    font(500, 24);
+    x.fillStyle = "#3d3530";
+    x.fillText(it.price ? fmt(it.price) : "Chờ báo giá", unitX + unitW - 8, y + (rowH - 30) / 2);
+    font(700, 26);
+    x.fillText(it.price ? fmt(it.price * it.qty) : "—", R, y + (rowH - 32) / 2);
     x.textAlign = "left";
-    y += 130;
-    x.setLineDash([6, 6]);
-    x.strokeStyle = "#e2c4c2";
+    y += rowH;
+    x.setLineDash([7, 7]);
+    x.strokeStyle = "#efd9d3";
+    x.lineWidth = 2;
     x.beginPath();
-    x.moveTo(P, y);
-    x.lineTo(W - P, y);
+    x.moveTo(L, y);
+    x.lineTo(R, y);
     x.stroke();
     x.setLineDash([]);
-  }
+  });
 
-  if ((o.shippingFee || freeShip(o)) && o.subtotal) {
-    y += 40;
-    x.font = `600 22px ${F}`;
-    x.fillStyle = "#7a6a66";
-    x.fillText("Phí giao hàng", P, y);
-    x.textAlign = "right";
-    x.fillText(o.shippingFee ? fmt(o.shippingFee) : "Miễn phí", W - P, y);
-    x.textAlign = "left";
-  }
-  y += 60;
-  x.font = `700 28px ${F}`;
-  x.fillStyle = "#3d3530";
-  x.fillText("Tổng cộng", P, y);
-  x.font = `700 54px ${Q}`;
-  x.fillStyle = "#c2677f";
-  x.textAlign = "right";
-  x.fillText(fmt(nf(o.total)), W - P, y + 6);
-  x.textAlign = "left";
-  y += 50;
-
+  y += 28;
   const bk = bankOf(shop.bank);
-  const memo = memoOf(o);
-  const bl: [string, string][] = [];
-  if (bk.bank) bl.push(["Ngân hàng", bk.bank]);
-  if (bk.acc) bl.push(["Số tài khoản", bk.acc]);
-  if (bk.name) bl.push(["Chủ tài khoản", bk.name]);
-  if (bk.acc || qr) {
-    bl.push(["Số tiền", fmt(nf(o.total))]);
-    bl.push(["Nội dung", memo]);
-  }
-  const bh = bl.length ? Math.max(qr ? 230 : 0, 40 + bl.length * 58) : 100;
-  x.fillStyle = "rgba(255,255,255,.72)";
-  rr(P, y, W - P * 2, bh, 24);
-  x.fill();
-  x.strokeStyle = "#e9c9cc";
-  x.lineWidth = 2;
-  x.stroke();
-  if (bl.length) {
-    let tx = P + 28;
-    if (qr) {
-      x.fillStyle = "#fff";
-      rr(P + 24, y + 20, 190, 190, 16);
-      x.fill();
-      x.drawImage(qr, P + 34, y + 30, 170, 170);
-      tx = P + 240;
-    }
-    bl.forEach((row, k) => {
-      x.font = `600 18px ${F}`;
-      x.fillStyle = "#9a8580";
-      x.fillText(row[0], tx, y + 40 + k * 58);
-      x.font = `700 25px ${F}`;
-      x.fillStyle = "#3d3530";
-      x.fillText(row[1], tx, y + 68 + k * 58);
-    });
-  }
-  y += bh + 60;
-  x.textAlign = "center";
-  x.font = `700 26px ${F}`;
-  x.fillStyle = "#c2677f";
-  x.fillText("Cảm ơn bạn đã ủng hộ " + (shop.store || "shop") + " ♡", W / 2, y);
+  const bankLine = [bk.bank, bk.acc].filter(Boolean).join(" · ") || "Shop gửi thông tin chuyển khoản qua Zalo";
+  const sumW = 440;
+  const payW = CW - sumW - 28;
+  const qrSize = qr ? 156 : 0;
+  const textMax = payW - 44 - (qr ? qrSize + 20 : 0);
+  font(700, 26);
+  const payTitle = 32;
+  font(500, 22);
+  const bankLines = wrap(x, bankLine, textMax, 2);
+  const nameLines = bk.name ? wrap(x, bk.name, textMax, 1) : [];
+  const memoLines = wrap(x, "Nội dung: " + memo, textMax, 2);
+  const textH = payTitle + 8 + bankLines.length * 32 + (nameLines.length ? nameLines.length * 30 + 4 : 0) + memoLines.length * 32;
+  const payH = Math.max(textH, qrSize) + 40;
+  const count = rows.reduce((n, it) => n + it.qty, 0);
+  const showShip = !!((o.shippingFee || freeShip(o)) && o.subtotal);
+  const sumH = 44 + (showShip ? 40 : 0) + 78;
+  const blockH = Math.max(payH, sumH);
+  const payY = y + blockH - payH;
+  const sumY = y + blockH - sumH;
 
+  x.fillStyle = "#fdf6f3";
+  rounded(x, L, payY, payW, payH, 18);
+  x.fill();
+  let ty = payY + 20;
+  font(700, 26);
+  x.fillStyle = "#3d3530";
+  x.fillText("Chuyển khoản", L + 22, ty);
+  ty += payTitle + 6;
+  font(500, 22);
+  x.fillStyle = "#6f5a55";
+  bankLines.forEach((line) => {
+    x.fillText(line, L + 22, ty);
+    ty += 32;
+  });
+  nameLines.forEach((line) => {
+    x.fillText(line, L + 22, ty);
+    ty += 30;
+  });
+  memoLines.forEach((line) => {
+    x.fillText(line, L + 22, ty);
+    ty += 32;
+  });
+  if (qr) {
+    const qx = L + payW - 20 - qrSize;
+    const qy = payY + (payH - qrSize) / 2;
+    x.fillStyle = "#fff";
+    x.strokeStyle = "#efd9d3";
+    x.lineWidth = 2;
+    rounded(x, qx, qy, qrSize, qrSize, 14);
+    x.fill();
+    x.stroke();
+    x.drawImage(qr, qx + 10, qy + 10, qrSize - 20, qrSize - 20);
+  }
+
+  const sx = L + payW + 28;
+  let sy = sumY;
+  const rowPair = (label: string, value: string, valueColor = "#3d3530") => {
+    font(500, 24);
+    x.fillStyle = "#6f5a55";
+    x.textAlign = "left";
+    x.fillText(label, sx, sy);
+    x.fillStyle = valueColor;
+    x.textAlign = "right";
+    x.fillText(value, R, sy);
+    x.textAlign = "left";
+    sy += 40;
+  };
+  rowPair("Tạm tính (" + count + " sản phẩm)", fmt(nf(o.subtotal)));
+  if (showShip) rowPair("Phí giao hàng", o.shippingFee ? fmt(o.shippingFee) : "Miễn phí", o.shippingFee ? "#3d3530" : "#2f6b45");
+  sy += 8;
+  x.strokeStyle = "#3d3530";
+  x.lineWidth = 2.5;
+  x.beginPath();
+  x.moveTo(sx, sy);
+  x.lineTo(R, sy);
+  x.stroke();
+  sy += 16;
+  font(700, 26);
+  x.fillStyle = "#3d3530";
+  x.fillText("TỔNG CỘNG", sx, sy + 10);
+  font(700, 46, true);
+  x.fillStyle = "#a3546a";
+  x.textAlign = "right";
+  x.fillText(fmt(nf(o.total)), R, sy);
+  x.textAlign = "left";
+
+  y += blockH + 32;
+  x.setLineDash([7, 7]);
+  x.strokeStyle = "#efd9d3";
+  x.lineWidth = 2;
+  x.beginPath();
+  x.moveTo(L, y);
+  x.lineTo(R, y);
+  x.stroke();
+  x.setLineDash([]);
+  y += 22;
+  font(500, 22);
+  x.fillStyle = "#7d6862";
+  const thanks = wrap(x, "Cảm ơn bạn đã tin tưởng " + (shop.store || "shop") + ". Hẹn gặp lại bạn ở đơn sau!", CW - 40, 2);
+  thanks.forEach((line) => {
+    x.textAlign = "center";
+    x.fillText(line, W / 2, y);
+    y += 32;
+    x.textAlign = "left";
+  });
+
+  const pageH = y + PAD + M;
   const out = document.createElement("canvas");
   out.width = W;
-  out.height = Math.min(H, y + 50);
+  out.height = Math.ceil(pageH);
   const o2 = out.getContext("2d");
   if (!o2) return null;
-  o2.drawImage(c, 0, 0);
-  o2.strokeStyle = "#e2b3bf";
-  o2.lineWidth = 3;
-  o2.strokeRect(14, 14, W - 28, out.height - 28);
-  return new Promise((r) => out.toBlob((b) => r(b), "image/png"));
+  const g = o2.createLinearGradient(0, 0, 0, out.height);
+  g.addColorStop(0, "#fcf8f0");
+  g.addColorStop(1, "#f8efe8");
+  o2.fillStyle = g;
+  o2.fillRect(0, 0, W, out.height);
+  o2.save();
+  o2.shadowColor = "rgba(150,90,100,0.16)";
+  o2.shadowBlur = 28;
+  o2.shadowOffsetY = 10;
+  o2.fillStyle = "#ffffff";
+  rounded(o2, M, M, W - M * 2, out.height - M * 2, 28);
+  o2.fill();
+  o2.restore();
+  o2.strokeStyle = "#efd9d3";
+  o2.lineWidth = 2;
+  rounded(o2, M, M, W - M * 2, out.height - M * 2, 28);
+  o2.stroke();
+  o2.drawImage(layer, 0, 0);
+  return new Promise((res) => out.toBlob((b) => res(b), "image/png"));
 }
