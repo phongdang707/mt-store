@@ -236,7 +236,12 @@ function List() {
             <Fragment key={c}>
               <div className="sec-t">
                 <i></i>
-                {FLAG[c] || ""} {LABEL[c] || c}
+                <span>
+                  <b className="ci" aria-hidden="true">
+                    {FLAG[c] || "🌸"}
+                  </b>
+                  {LABEL[c] || c} <small>{g.length} món</small>
+                </span>
                 <i></i>
               </div>
               <Grid ps={g} />
