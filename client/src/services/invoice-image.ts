@@ -266,9 +266,9 @@ export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "s
   y += 28;
   const bk = bankOf(shop.bank);
   const bankLine = [bk.bank, bk.acc].filter(Boolean).join(" · ") || "Shop gửi thông tin chuyển khoản qua Zalo";
-  const sumW = 440;
+  const sumW = 400;
   const payW = CW - sumW - 28;
-  const qrSize = qr ? 156 : 0;
+  const qrSize = qr ? 132 : 0;
   const textMax = payW - 44 - (qr ? qrSize + 20 : 0);
   font(700, 26);
   const payTitle = 32;
