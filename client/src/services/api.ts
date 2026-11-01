@@ -1,4 +1,4 @@
-import { authorize, getAccessToken, getSetting, getSystemInfo, getUserInfo } from "zmp-sdk/apis";
+import { authorize, getAccessToken, getSetting, getSystemInfo } from "zmp-sdk/apis";
 import type { Catalog, Order } from "@/types";
 import { storage } from "@/utils/storage";
 
@@ -59,24 +59,6 @@ export function rememberProfile(raw: { name?: string; avatar?: string }) {
   checked = true;
 }
 
-/** `scope.userInfo` đã bật thì đọc hồ sơ, không mở hộp thoại. `null` khi chưa cấp quyền. */
-async function readIfGranted() {
-  try {
-    const { authSetting } = await getSetting();
-    if (authSetting["scope.userInfo"] !== true) return null;
-  } catch (e) {
-    console.warn("getSetting", e);
-    return null;
-  }
-  try {
-    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
-    return pick(userInfo);
-  } catch (e) {
-    if (!denied(e)) console.warn("getUserInfo", e);
-    return EMPTY_PROFILE;
-  }
-}
-
 /** Popup quyền của Zalo (`MP_USER_AUTHORIZE`). Gọi ngay trong cú bấm, trước mọi `await`. */
 function askZaloPermission() {
   return authorize({ scopes: ["scope.userInfo"] })
@@ -88,23 +70,13 @@ function askZaloPermission() {
 }
 
 /**
- * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID.
- * Đã cấp `scope.userInfo` thì đọc im. Chưa cấp thì không tự mở popup ở đây.
- * Không xin số điện thoại hay vị trí.
+ * Máy khách không gọi Graph (`getUserInfo`). SDK không có khóa bí mật nên Zalo trả 453.
+ * Tên và ảnh do server lấy sau `POST /me/profile`.
  */
 async function fetchProfile(ask: boolean) {
-  const silent = await readIfGranted();
-  if (silent && (silent.name || silent.avatar || !ask)) return silent;
   if (!ask) return EMPTY_PROFILE;
   if (!(await askZaloPermission())) return EMPTY_PROFILE;
-  try {
-    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
-    return pick(userInfo);
-  } catch (e) {
-    if (denied(e)) return EMPTY_PROFILE;
-    console.warn("getUserInfo", e);
-    return EMPTY_PROFILE;
-  }
+  return EMPTY_PROFILE;
 }
 
 async function scopeGranted() {
@@ -128,16 +100,18 @@ let missing: boolean | null = null;
 let granted = false;
 let tapSync: Promise<void> | null = null;
 
-async function saveProfile(raw: { name: string; avatar: string }) {
-  if (!raw.name && !raw.avatar) return;
-  profile = raw;
+/** Server tự lấy tên và ảnh từ Zalo. Máy khách gọi Graph bị lỗi 453 nên không dựa vào đó. */
+async function saveProfile(raw?: { name: string; avatar: string }) {
+  const saved = await call<ProfileStatus>("POST", "/me/profile", {
+    zaloName: raw?.name || undefined,
+    avatar: raw?.avatar || undefined,
+  });
+  if (!saved.name && !saved.avatar) return saved;
+  profile = { name: saved.name, avatar: saved.avatar };
   checked = true;
   missing = false;
-  const saved = await call<ProfileStatus>("POST", "/me/profile", {
-    zaloName: raw.name || undefined,
-    avatar: raw.avatar || undefined,
-  });
   rememberProfile(saved);
+  return saved;
 }
 
 /** Đợi lần sync của lần mở giỏ hiện tại, không xin quyền thêm. */
@@ -172,27 +146,18 @@ async function pullProfile(fromTap: boolean, prompt: Promise<boolean> | null) {
     granted = await scopeGranted();
     if (!missing) {
       rememberProfile(status);
-      if (!granted) return;
-      const fresh = await readIfGranted();
-      if (fresh && (fresh.name || fresh.avatar)) await saveProfile(fresh);
+      if (granted) await saveProfile();
       return;
     }
     if (!fromTap) {
       if (!granted) return;
-      const fresh = await readIfGranted();
-      if (fresh && (fresh.name || fresh.avatar)) await saveProfile(fresh);
+      await saveProfile();
       return;
     }
     const allowed = prompt ? await prompt : granted;
     if (!allowed) return;
     granted = true;
-    try {
-      const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
-      const fresh = pick(userInfo);
-      if (fresh.name || fresh.avatar) await saveProfile(fresh);
-    } catch (e) {
-      if (!denied(e)) console.warn("getUserInfo", e);
-    }
+    await saveProfile();
   } catch (e) {
     console.warn("syncCartProfile", e);
   }
@@ -212,7 +177,7 @@ export function zaloProfile(ask = false): Promise<{ name: string; avatar: string
       return got.name || got.avatar ? got : (profile ?? got);
     })
     .catch((e: unknown) => {
-      console.warn("getUserInfo", e);
+      console.warn("hồ sơ Zalo", e);
       if (denied(e)) checked = true;
       return profile ?? EMPTY_PROFILE;
     })
