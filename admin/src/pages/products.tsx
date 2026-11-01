@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { toast, useApp } from "@/app-state";
 import { CloseX, Search } from "@/components/ui";
@@ -68,16 +69,21 @@ export default function Products() {
   const [uploading, setUploading] = useState(0);
   const mainFile = useRef<HTMLInputElement>(null);
   const toneFile = useRef<HTMLInputElement>(null);
+  const narrow = useNarrow();
 
   useEffect(() => {
     api
       .products()
-      .then((l) => {
-        setProducts(l);
-        if (!sel && l.length && !matchMedia("(max-width: 760px)").matches) pick(l[0]);
-      })
+      .then(setProducts)
       .catch((e) => toast((e as Error).message));
   }, [tick]);
+  useEffect(() => {
+    if (narrow || sel || !products?.length) return;
+    const p = products[0];
+    setSel(p.id);
+    setDraft(toDraft(p));
+    setSure(false);
+  }, [narrow, products, sel]);
 
   const dirty = (() => {
     const p = products?.find((x) => x.id === draft?.id);
@@ -548,7 +554,7 @@ export default function Products() {
                   </div>
                 )}
               </div>
-              <div style={sx("padding: 14px 20px 20px; border-top: 1px solid #efd9d3; display: flex; gap: 10px; align-items: center")}>
+              <div style={sx("padding: 14px 20px 20px; border-top: 1px solid #efd9d3; display: flex; flex-wrap: wrap; gap: 10px; align-items: center")}>
                 <button
                   onClick={remove}
                   onBlur={() => setSure(false)}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
 import { Avatar, CloseX, Search, Segmented } from "@/components/ui";
@@ -58,16 +59,18 @@ export default function Invoices() {
   const [pq, setPq] = useState("");
   const [busy, setBusy] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const narrow = useNarrow();
 
   useEffect(() => {
     api
       .orders({ kind: "order", status: "confirmed" })
-      .then((l) => {
-        setAll(l);
-        if (!sel && l.length && !matchMedia("(max-width: 760px)").matches) setSel(l[0].code);
-      })
+      .then(setAll)
       .catch((e) => toast((e as Error).message));
   }, [tick]);
+  useEffect(() => {
+    if (narrow || sel || !all?.length) return;
+    setSel(all[0].code);
+  }, [narrow, all, sel]);
   useEffect(() => {
     if (adding && !products) api.products().then(setProducts).catch(() => {});
   }, [adding]);
@@ -222,7 +225,7 @@ export default function Invoices() {
                     </svg>
                   </button>
                   {menu ? (
-                    <div style={sx("position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 250px; background: #ffffff; border: 1px solid #efd9d3; border-radius: 16px; box-shadow: 0 14px 30px rgba(120, 60, 75, 0.18); padding: 6px; display: flex; flex-direction: column")}>
+                    <div className="send-menu" style={sx("position: absolute; right: 0; top: calc(100% + 8px); z-index: 5; width: 250px; background: #ffffff; border: 1px solid #efd9d3; border-radius: 16px; box-shadow: 0 14px 30px rgba(120, 60, 75, 0.18); padding: 6px; display: flex; flex-direction: column")}>
                       {SEND_OPTS.map(([via, badge, label, hint]) => (
                         <button
                           key={via}

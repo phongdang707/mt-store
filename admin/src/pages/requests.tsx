@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNarrow } from "@/use-narrow";
 import { api } from "@/api";
 import { copyText, toast, useApp } from "@/app-state";
 import { Avatar, CHIP, CloseX, ConfirmBlock, ContactPills, PinIcon, Search, Tabs } from "@/components/ui";
@@ -125,16 +126,18 @@ export default function Requests() {
   const [tab, setTab] = useState<Tab>("all");
   const [sel, setSel] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const narrow = useNarrow();
 
   useEffect(() => {
     api
       .orders({ kind: "request" })
-      .then((l) => {
-        setAll(l);
-        if (!sel && l.length && !matchMedia("(max-width: 760px)").matches) setSel(l[0].code);
-      })
+      .then(setAll)
       .catch((e) => toast((e as Error).message));
   }, [tick]);
+  useEffect(() => {
+    if (narrow || sel || !all?.length) return;
+    setSel(all[0].code);
+  }, [narrow, all, sel]);
 
   const list0 = all ?? [];
   const searched = q ? list0.filter((r) => norm([r.code, r.name, r.phone, r.product, r.note].join(" ")).includes(norm(q))) : list0;
