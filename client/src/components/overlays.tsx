@@ -194,7 +194,7 @@ function BillView({ o: o0, success }: { o: Order; success?: boolean }) {
     if (t) toast(t);
   };
   return (
-    <div className="cel inv-mode" role="dialog" aria-label={"Hóa đơn " + o.code}>
+    <div className={`cel inv-mode${success ? " ok-mode" : ""}`} role="dialog" aria-label={"Hóa đơn " + o.code}>
       {success ? <canvas ref={canvas} aria-hidden="true"></canvas> : null}
       <div className="inv-wrap">
         {success ? (
@@ -202,8 +202,9 @@ function BillView({ o: o0, success }: { o: Order; success?: boolean }) {
             <div className="cel-ic">🌸</div>
             <h2>{D.store} đã nhận được đơn hàng!</h2>
             <p>
-              Cảm ơn bạn đã tin tưởng {D.store} ♡<br />
-              Bạn xem lại hóa đơn và quét mã QR bên dưới để thanh toán nhé.
+              Cảm ơn bạn đã tin tưởng {D.store} ♡
+              <br />
+              Quét mã QR bên dưới để thanh toán nhé.
             </p>
           </div>
         ) : null}
@@ -257,7 +258,7 @@ function Celebrate({ code, ord }: { code: string; ord: Order }) {
   const isInv = ord.items.length > 0;
   return (
     <div
-      className={`cel${isInv ? " inv-mode" : ""}${out ? " out" : ""}`}
+      className={`cel${isInv ? " inv-mode ok-mode" : ""}${out ? " out" : ""}`}
       role="dialog"
       aria-label="Đặt hàng thành công"
       onClick={(e) => {

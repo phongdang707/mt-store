@@ -413,3 +413,37 @@ html body{height:auto;overflow:visible}
 /* Dòng phí giao hàng (cài trong trang quản lý), nằm trên Tổng cộng */
 .inv-tot.inv-ship{padding:14px 0 0}.inv-tot.inv-ship span{font-weight:600;font-size:14px;color:var(--muted)}.inv-tot.inv-ship b{font-family:inherit;font-size:16px;color:var(--ink)}
 .inv-tot.inv-ship+.inv-tot{padding-top:8px}
+/* Trang nhận đơn: gọn lại để mã QR và nút thanh toán kịp hiện trên một màn điện thoại */
+.ok-mode.cel{padding:10px 12px 12px}
+.in-zalo .ok-mode.cel{padding-top:calc(var(--sat) + 40px)}
+.ok-mode .inv-wrap{margin:0 auto}
+.ok-mode .ok-hd{padding:10px 14px;margin-bottom:8px;border-radius:18px;box-shadow:0 8px 22px rgba(120,50,70,.22)}
+.ok-mode .ok-hd .cel-ic{font-size:28px;margin-bottom:0}
+.ok-mode .ok-hd h2{font-size:17px}
+.ok-mode .ok-hd p{font-size:13px;line-height:1.35;margin-top:2px}
+.ok-mode .inv{padding:12px 14px 10px;border-radius:20px;box-shadow:0 12px 28px rgba(120,50,70,.22)}
+.ok-mode .inv-logo{width:120px}
+.ok-mode .inv-t{margin:0 0 8px;font-size:14px;letter-spacing:4px}
+.ok-mode .inv-meta{padding-bottom:8px;gap:8px}
+.ok-mode .inv-meta b{font-size:14.5px}
+.ok-mode .inv-row{padding:8px 0;gap:10px}
+.ok-mode .inv-ph{width:48px;height:48px;border-radius:10px}
+.ok-mode .inv-nm{gap:2px}
+.ok-mode .inv-nm b{font-size:13.5px}
+.ok-mode .inv-tot{padding:8px 0 4px}
+.ok-mode .inv-tot b{font-size:24px}
+.ok-mode .inv-thx{display:none}
+.ok-mode .pay{padding:8px 10px 6px}
+.ok-mode .pay h3{margin-bottom:6px;font-size:11.5px;letter-spacing:1.2px}
+.ok-mode .pay-in{flex-direction:row;align-items:center;gap:10px}
+.ok-mode .pay-in img{width:112px;height:112px;padding:4px}
+.ok-mode .pay-rows{gap:4px}
+.ok-mode .pay-r b{font-size:13px;white-space:normal}
+.ok-mode .pay-n{display:none}
+.ok-mode .inv-acts{margin-top:8px;padding:10px;border-radius:16px}
+.ok-mode .inv-acts .btn{padding:11px}
+.ok-mode .inv-tot.inv-ship{padding-top:8px}
+/* Nút ✕ của sheet đè lên cụm ··· ✕ của Zalo → chuyển sang trái, chừa góc phải */
+.in-zalo .sh-h{justify-content:flex-start;gap:12px;padding-right:100px}
+.in-zalo .sh-h .x{order:-1;flex-shrink:0}
+.in-zalo .sh-h h2{letter-spacing:1.2px;font-size:17px;min-width:0}
