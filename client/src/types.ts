@@ -104,7 +104,8 @@ export interface SupportInvoice {
   name: string;
   avatar: string;
   phone: string;
-  items: { name: string; variantName: string; qty: number; price: number }[];
+  addr: string;
+  items: { name: string; variantName: string; img: string; qty: number; price: number }[];
   subtotal: number;
   shippingFee: number;
   shipBase: number | null;
@@ -116,6 +117,9 @@ export interface SupportInvoice {
 
 export interface SupportDesk {
   store: string;
-  bank: { bank: string; acc: string; name: string };
+  logo: string;
+  /** Ảnh QR tĩnh của shop, chỉ dùng khi không tạo được VietQR. */
+  qr: string;
+  bank: Bank;
   invoices: SupportInvoice[];
 }

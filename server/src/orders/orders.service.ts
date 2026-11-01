@@ -233,7 +233,9 @@ export class OrdersService {
     const people = await this.customers.peopleOf(list.map((o) => o.customer));
     return {
       store: s.store,
-      bank: { bank: s.bank?.bank || '', acc: s.bank?.acc || '', name: s.bank?.name || '' },
+      logo: s.logo || '',
+      qr: s.qr || '',
+      bank: { bank: s.bank?.bank || '', bin: s.bank?.bin || '', acc: s.bank?.acc || '', name: s.bank?.name || '' },
       invoices: list.map((o) => {
         const person = people.get(String(o.customer));
         return {
@@ -241,9 +243,11 @@ export class OrdersService {
           name: person?.name || o.name || '',
           avatar: person?.avatar || o.avatar || '',
           phone: o.phone || person?.phone || '',
+          addr: o.addr || '',
           items: o.items.map((i) => ({
             name: i.name,
             variantName: i.variantName || '',
+            img: i.img || '',
             qty: i.qty,
             price: i.price,
           })),

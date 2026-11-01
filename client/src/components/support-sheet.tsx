@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { openChat } from "zmp-sdk/apis";
-import { billMessage } from "@/services/bill";
+import { openChat, saveImageToGallery } from "zmp-sdk/apis";
+import { invoiceImage } from "@/services/invoice-image";
 import { ApiError, api, inZalo } from "@/services/api";
 import { useStore } from "@/state/store";
 import type { InvoiceStatus, SupportDesk, SupportInvoice } from "@/types";
+import { blobToBase64 } from "@/utils/image";
 import { fmt, norm } from "@/utils/format";
 import { toast } from "@/utils/toast";
 
@@ -13,14 +14,21 @@ const STATUS: Record<InvoiceStatus, string> = {
   sent: "Đã gửi",
 };
 
-const itemName = (i: { name: string; variantName?: string }) => (i.variantName ? `${i.name} – ${i.variantName}` : i.name);
-
 function Bg() {
   const { setOpen } = useStore();
   return <div className="sheet-bg" onClick={() => setOpen(null)}></div>;
 }
 
-async function openZalo(id: string, message?: string) {
+function download(file: Blob, name: string) {
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+async function openZalo(id: string) {
   if (!inZalo) {
     toast("Mở trong Zalo để nhắn khách");
     return false;
@@ -30,7 +38,7 @@ async function openZalo(id: string, message?: string) {
     return false;
   }
   try {
-    await openChat(message ? { type: "user", id, message } : { type: "user", id });
+    await openChat({ type: "user", id });
     return true;
   } catch (e) {
     toast((e as Error).message || "Chưa mở được cuộc chat Zalo");
@@ -46,6 +54,8 @@ export function SupportSheet() {
   const [filter, setFilter] = useState<"todo" | "sent">("todo");
   const [code, setCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState("");
+  const [png, setPng] = useState<Blob | null>(null);
 
   const load = () => {
     setErr("");
@@ -73,24 +83,80 @@ export function SupportSheet() {
   const cur = desk?.invoices.find((o) => o.code === code) ?? null;
   const todo = desk?.invoices.filter((o) => o.invoiceStatus !== "sent").length ?? 0;
   const sent = desk?.invoices.filter((o) => o.invoiceStatus === "sent").length ?? 0;
+  const billKey = cur
+    ? [cur.code, cur.name, cur.phone, cur.addr, cur.total, cur.shippingFee, cur.shipBase, desk?.store, desk?.logo, desk?.qr, desk?.bank.bin, desk?.bank.acc, desk?.bank.bank, desk?.bank.name, cur.items.map((i) => [i.name, i.variantName, i.qty, i.price, i.img].join(":")).join("|")].join("\n")
+    : "";
 
-  const talk = async (o: SupportInvoice, withBill: boolean) => {
+  useEffect(() => {
+    if (!cur || !desk) {
+      setPreview("");
+      setPng(null);
+      return;
+    }
+    let stop = false;
+    let url = "";
+    setPreview("");
+    setPng(null);
+    invoiceImage(cur, desk)
+      .then((file) => {
+        if (stop) return;
+        if (!file) {
+          toast("Chưa tạo được ảnh hoá đơn");
+          return;
+        }
+        url = URL.createObjectURL(file);
+        setPng(file);
+        setPreview(url);
+      })
+      .catch(() => {
+        if (!stop) toast("Chưa tạo được ảnh hoá đơn");
+      });
+    return () => {
+      stop = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [billKey]);
+
+  const markSent = async (o: SupportInvoice) => {
+    const r = await api.supportSend(o.code);
+    setDesk((d) =>
+      d ? { ...d, invoices: d.invoices.map((i) => (i.code === o.code ? { ...i, invoiceStatus: r.invoiceStatus } : i)) } : d,
+    );
+  };
+
+  const sendBill = async (o: SupportInvoice) => {
+    if (busy || !desk) return;
+    if (!o.zaloUserId) return toast("Chưa có Zalo id của khách");
+    setBusy(true);
+    try {
+      const file = png ?? (await invoiceImage(o, desk));
+      if (!file) {
+        toast("Chưa tạo được ảnh hoá đơn");
+        return;
+      }
+      const name = "hoa-don-" + o.code + ".png";
+      if (!inZalo) {
+        download(file, name);
+        toast("Đã tải ảnh hoá đơn. Mở trong Zalo để gửi cho khách.");
+        return;
+      }
+      await saveImageToGallery({ imageBase64Data: await blobToBase64(file) });
+      const opened = await openZalo(o.zaloUserId);
+      if (!opened) return;
+      await markSent(o);
+      toast("Đã lưu ảnh hoá đơn. Gửi ảnh đó trong cuộc chat.");
+    } catch (e) {
+      toast((e as Error).message || "Chưa lưu được ảnh hoá đơn");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const talk = async (o: SupportInvoice) => {
     if (busy) return;
     if (!o.zaloUserId) return toast("Chưa có Zalo id của khách");
     setBusy(true);
-    const opened = await openZalo(o.zaloUserId, withBill && desk ? billMessage(o, desk) : undefined);
-    if (opened && withBill) {
-      try {
-        const r = await api.supportSend(o.code);
-        setDesk((d) =>
-          d
-            ? { ...d, invoices: d.invoices.map((i) => (i.code === o.code ? { ...i, invoiceStatus: r.invoiceStatus } : i)) }
-            : d,
-        );
-      } catch (e) {
-        toast((e as Error).message);
-      }
-    }
+    await openZalo(o.zaloUserId);
     setBusy(false);
   };
 
@@ -115,41 +181,14 @@ export function SupportSheet() {
                 {cur.phone ? <span>{cur.phone}</span> : null}
                 <span className={`oc-st ${cur.invoiceStatus === "sent" ? "ok" : ""}`}>{STATUS[cur.invoiceStatus]}</span>
               </p>
-              <ul className="cs-lines">
-                {cur.items.map((it, i) => (
-                  <li key={i}>
-                    <span>
-                      {itemName(it)} <em>× {it.qty}</em>
-                    </span>
-                    <b>{it.price ? fmt(it.price * it.qty) : "chờ báo giá"}</b>
-                  </li>
-                ))}
-              </ul>
-              <div className="cs-sum">
-                <span>Tạm tính</span>
-                <b>{fmt(cur.subtotal)}</b>
-                {cur.shippingFee || (!!cur.shipBase && cur.shippingFee === 0) ? (
-                  <>
-                    <span>Phí giao</span>
-                    <b>{cur.shippingFee ? fmt(cur.shippingFee) : "Miễn phí"}</b>
-                  </>
-                ) : null}
-                <span>Tổng cộng</span>
-                <b>{fmt(cur.total)}</b>
-              </div>
-              <div className="cs-bank">
-                <b>Chuyển khoản</b>
-                <span>{[desk.bank.bank, desk.bank.acc].filter(Boolean).join(" · ") || "Shop chưa nhập ngân hàng"}</span>
-                {desk.bank.name ? <span>{desk.bank.name}</span> : null}
-                <span>Nội dung: {cur.code} {cur.phone.replace(/\D/g, "")}</span>
-              </div>
+              {preview ? <img className="cs-bill" src={preview} alt={"Hoá đơn " + cur.code} /> : <div className="empty">Đang tạo hoá đơn…</div>}
               {!cur.zaloUserId ? <p className="lock">Chưa có Zalo id của khách này.</p> : null}
             </div>
             <div className="sh-f cs-acts">
-              <button className="btn" disabled={busy || !cur.zaloUserId} onClick={() => talk(cur, true)}>
+              <button className="btn" disabled={busy || !cur.zaloUserId || !png} onClick={() => sendBill(cur)}>
                 Gửi hoá đơn
               </button>
-              <button className="btn ghost" disabled={busy || !cur.zaloUserId} onClick={() => talk(cur, false)}>
+              <button className="btn ghost" disabled={busy || !cur.zaloUserId} onClick={() => talk(cur)}>
                 Nhắn tin
               </button>
             </div>

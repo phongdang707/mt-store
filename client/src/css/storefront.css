@@ -261,8 +261,7 @@ textarea.f{min-height:70px;resize:vertical}
 .cs-lines em{color:var(--muted);font-style:normal}
 .cs-sum{display:grid;grid-template-columns:1fr auto;gap:6px 12px;padding:12px 0;font-size:14px}
 .cs-sum b:last-child{font-size:20px;color:var(--accent)}
-.cs-bank{display:flex;flex-direction:column;gap:2px;background:var(--chip);border-radius:14px;padding:12px 14px;font-size:13.5px;color:var(--muted);margin-top:8px}
-.cs-bank b{color:var(--ink)}
+.cs-bill{display:block;width:100%;height:auto;border-radius:16px;border:1px solid var(--line);background:#fff}
 .cs-acts{display:flex;flex-direction:column;gap:8px}
 .cs-acts .btn.ghost{margin-top:0}
 .cs-acts .btn:disabled{opacity:.55}
