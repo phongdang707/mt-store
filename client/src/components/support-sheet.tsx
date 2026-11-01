@@ -84,7 +84,7 @@ export function SupportSheet() {
   const todo = desk?.invoices.filter((o) => o.invoiceStatus !== "sent").length ?? 0;
   const sent = desk?.invoices.filter((o) => o.invoiceStatus === "sent").length ?? 0;
   const billKey = cur
-    ? [cur.code, cur.name, cur.phone, cur.addr, cur.total, cur.shippingFee, cur.shipBase, desk?.store, desk?.logo, desk?.qr, desk?.bank.bin, desk?.bank.acc, desk?.bank.bank, desk?.bank.name, cur.items.map((i) => [i.name, i.variantName, i.qty, i.price, i.img].join(":")).join("|")].join("\n")
+    ? [cur.code, cur.name, cur.phone, cur.addr, cur.subtotal, cur.total, cur.shippingFee, cur.shipBase, desk?.store, desk?.tagline, desk?.logo, desk?.qr, desk?.bank.bin, desk?.bank.acc, desk?.bank.bank, desk?.bank.name, cur.items.map((i) => [i.name, i.variantName, i.qty, i.price, i.img].join(":")).join("|")].join("\n")
     : "";
 
   useEffect(() => {

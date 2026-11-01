@@ -233,6 +233,7 @@ export class OrdersService {
     const people = await this.customers.peopleOf(list.map((o) => o.customer));
     return {
       store: s.store,
+      tagline: s.tagline || '',
       logo: s.logo || '',
       qr: s.qr || '',
       bank: { bank: s.bank?.bank || '', bin: s.bank?.bin || '', acc: s.bank?.acc || '', name: s.bank?.name || '' },

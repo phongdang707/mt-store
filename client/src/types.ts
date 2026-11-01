@@ -117,6 +117,7 @@ export interface SupportInvoice {
 
 export interface SupportDesk {
   store: string;
+  tagline: string;
   logo: string;
   /** Ảnh QR tĩnh của shop, chỉ dùng khi không tạo được VietQR. */
   qr: string;
