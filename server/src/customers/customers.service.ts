@@ -16,10 +16,10 @@ export function avatarUrl(v: string | undefined) {
 export class CustomersService {
   constructor(@InjectModel(Customer.name) private readonly customers: Model<Customer>) {}
 
-  /** Tạo khách theo Zalo user ID nếu chưa có. Tên Zalo ghi ở `zaloName` khi mở app. */
+  /** Tạo khách theo zaloUserId nếu chưa có. Tên Zalo ghi ở `zaloName` khi mở app. */
   upsert(u: ZaloUser) {
     return this.customers
-      .findOneAndUpdate({ zaloId: u.id }, { $setOnInsert: { zaloId: u.id } }, { new: true, upsert: true })
+      .findOneAndUpdate({ zaloUserId: u.id }, { $setOnInsert: { zaloUserId: u.id } }, { new: true, upsert: true })
       .exec();
   }
 

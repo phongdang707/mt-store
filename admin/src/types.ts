@@ -187,6 +187,6 @@ export interface AnalyticsUserDetail {
     createdAt: string;
     blocked: boolean;
   };
-  visits: { startedAt: string; durationSec: number; platform: string; model: string }[];
+  activity: { date: string; visits: number; durationSec: number }[];
   products: { id: string; name: string; img: string; views: number; opens: number; carts: number }[];
 }

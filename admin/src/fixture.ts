@@ -242,9 +242,9 @@ function sampleUser(id: string, days: number): AnalyticsUserDetail {
       createdAt: new Date(Date.now() - 12 * DAY).toISOString(),
       blocked: !!row.blocked,
     },
-    visits: [
-      { startedAt: row.lastSeenAt || new Date().toISOString(), durationSec: row.durationSec, platform: row.platform, model: row.model },
-      { startedAt: new Date(Date.now() - 2 * DAY).toISOString(), durationSec: 300, platform: row.platform, model: row.model },
+    activity: [
+      { date: (row.lastSeenAt || new Date().toISOString()).slice(0, 10), visits: row.visits, durationSec: row.durationSec },
+      { date: new Date(Date.now() - 2 * DAY).toISOString().slice(0, 10), visits: 1, durationSec: 300 },
     ],
     products: picks.map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 4 - i, opens: i === 0 ? 2 : 0, carts: i === 0 ? 1 : 0 })),
   };

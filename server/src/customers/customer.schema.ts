@@ -2,10 +2,22 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import type { HydratedDocument } from 'mongoose';
 import { toJSON } from '../common/json.js';
 
-/** Khách mua hàng, nhận diện bằng Zalo user ID (theo Mini App). */
+/** Một ngày mở app, theo giờ Việt Nam. */
+@Schema({ _id: false })
+export class ActivityDay {
+  /** `YYYY-MM-DD`. */
+  @Prop({ required: true }) date: string;
+  @Prop({ default: 0, min: 0 }) visits: number;
+  /** Giây app đang hiện trên màn hình. */
+  @Prop({ default: 0, min: 0 }) durationSec: number;
+}
+
+export const ActivityDaySchema = SchemaFactory.createForClass(ActivityDay);
+
+/** Khách mua hàng, nhận diện bằng zaloUserId của Zalo Mini App. */
 @Schema({ timestamps: true, toJSON })
 export class Customer {
-  @Prop({ required: true, unique: true }) zaloId: string;
+  @Prop({ required: true, unique: true }) zaloUserId: string;
   /** Tên trên đơn gần nhất. Form không có ô tên, nên đây là tên Zalo lúc gửi. */
   @Prop({ default: '' }) name: string;
   /** Tên hiển thị trên Zalo, từ `getUserInfo` lúc mở app. */
@@ -20,6 +32,12 @@ export class Customer {
   @Prop({ default: '' }) zaloVersion: string;
   @Prop({ default: '' }) language: string;
   @Prop() lastSeenAt?: Date;
+  /** Mốc nhịp gần nhất. Phiên mới khi cách hơn 30 phút. */
+  @Prop() lastBeatAt?: Date;
+  /** Ngày phiên đang mở bắt đầu, `YYYY-MM-DD` giờ Việt Nam. */
+  @Prop({ default: '' }) sessionDate: string;
+  /** Lượt vào và số giây, giữ 90 ngày. */
+  @Prop({ type: [ActivityDaySchema], default: [] }) activity: ActivityDay[];
   @Prop({ default: 0, min: 0 }) visitCount: number;
   /** Admin chặn: khách không đặt hàng, gửi tìm hộ, hay gọi API mini app. */
   @Prop({ default: false }) blocked: boolean;
@@ -30,3 +48,4 @@ export class Customer {
 
 export type CustomerDocument = HydratedDocument<Customer>;
 export const CustomerSchema = SchemaFactory.createForClass(Customer);
+CustomerSchema.index({ 'activity.date': 1 });

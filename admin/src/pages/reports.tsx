@@ -128,16 +128,16 @@ function Detail({ id, days, onClose, onDeleted, onBlocked }: { id: string; days:
       {d ? (
         <div style={sx("padding: 8px 20px 18px; display: flex; flex-direction: column; gap: 16px")}>
           <div>
-            <h3 style={sx(H2 + "; font-size: 16px; margin-bottom: 8px")}>Phiên trong {d.days} ngày</h3>
-            {d.visits.length ? (
-              d.visits.map((v, i) => (
-                <div key={v.startedAt + i} style={sx("display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px dashed #efd9d3; font-size: 14px")}>
-                  <span>{timeOf(v.startedAt)}</span>
-                  <b style={sx("color: #a3546a")}>{duration(v.durationSec)}</b>
+            <h3 style={sx(H2 + "; font-size: 16px; margin-bottom: 8px")}>Theo ngày trong {d.days} ngày</h3>
+            {d.activity.length ? (
+              d.activity.map((row) => (
+                <div key={row.date} style={sx("display: flex; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px dashed #efd9d3; font-size: 14px")}>
+                  <span>{dayLabel(row.date)} · {row.visits} lần</span>
+                  <b style={sx("color: #a3546a")}>{duration(row.durationSec)}</b>
                 </div>
               ))
             ) : (
-              <p style={sx("margin: 0; " + MUTED)}>Chưa có phiên trong khoảng này.</p>
+              <p style={sx("margin: 0; " + MUTED)}>Chưa mở app trong khoảng này.</p>
             )}
           </div>
           <div>
