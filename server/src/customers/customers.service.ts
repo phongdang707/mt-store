@@ -28,7 +28,7 @@ export class CustomersService {
     const set: Record<string, string> = {};
     for (const key of ['name', 'phone', 'addr'] as const) {
       const value = info[key]?.trim();
-      if (value) set[key] = value.slice(0, key === 'name' ? 120 : key === 'phone' ? 30 : 300);
+      if (value) set[key] = value;
     }
     const zaloName = info.zaloName?.trim();
     if (zaloName) set.zaloName = zaloName.slice(0, 120);

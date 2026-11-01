@@ -25,7 +25,7 @@ export class CartItemDto {
 }
 
 class ContactDto {
-  @IsOptional() @IsString() @MaxLength(100) name?: string;
+  @IsOptional() @IsString() @MaxLength(120) name?: string;
   @IsOptional() @IsString() @MaxLength(2000) avatar?: string;
   @IsOptional() @IsString() @MaxLength(500) note?: string;
 }
