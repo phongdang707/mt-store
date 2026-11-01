@@ -20,6 +20,7 @@ const text = (v: string | undefined, max: number) => {
 function avatarUrl(v: string | undefined) {
   let s = text(v, 2000);
   if (s.startsWith('//')) s = 'https:' + s;
+  if (/^http:\/\//i.test(s)) s = 'https://' + s.slice('http://'.length);
   return /^https:\/\//i.test(s) ? s : '';
 }
 
@@ -242,10 +243,22 @@ export class AnalyticsService implements OnModuleInit {
       .sort((a, b) => b.views - a.views || b.opens - a.opens || b.carts - a.carts)
       .slice(0, 30);
 
+    const seenIds = active.map((c) => c._id);
+    const named = await this.customers
+      .find({
+        lastSeenAt: span,
+        ...(seenIds.length ? { _id: { $nin: seenIds } } : {}),
+        $or: [{ zaloName: { $nin: [null, ''] } }, { name: { $nin: [null, ''] } }, { avatar: { $nin: [null, ''] } }],
+      })
+      .select('name zaloName avatar phone platform model lastSeenAt blocked')
+      .sort({ lastSeenAt: -1 })
+      .limit(200)
+      .exec();
     const ranked = [...active].sort((a, b) => +new Date(b.lastSeenAt ?? 0) - +new Date(a.lastSeenAt ?? 0)).slice(0, 200);
     const userIds = ranked.map((r) => r._id);
+    const listed = [...userIds, ...named.map((c) => c._id)];
     const [blockedAway, previews] = await Promise.all([
-      this.customers.find(userIds.length ? { blocked: true, _id: { $nin: userIds } } : { blocked: true }).exec(),
+      this.customers.find(listed.length ? { blocked: true, _id: { $nin: listed } } : { blocked: true }).exec(),
       this.events.aggregate<{ _id: Types.ObjectId; products: { productId: string; views: number }[] }>([
         { $match: { at: span, type: 'view', customer: { $in: userIds } } },
         { $group: { _id: { customer: '$customer', productId: '$productId' }, views: { $sum: 1 } } },
@@ -309,6 +322,20 @@ export class AnalyticsService implements OnModuleInit {
             products: seen.map((p) => ({ id: p.productId, name: names.get(p.productId)?.name || p.productId, views: p.views })),
           };
         }),
+        ...named.map((c) => ({
+          id: String(c._id),
+          name: c.name || '',
+          zaloName: c.zaloName || '',
+          avatar: c.avatar || '',
+          phone: c.phone || '',
+          platform: c.platform || '',
+          model: c.model || '',
+          lastSeenAt: c.lastSeenAt?.toISOString() ?? null,
+          visits: 0,
+          durationSec: 0,
+          blocked: !!c.blocked,
+          products: [],
+        })),
         ...blockedAway.map((c) => ({
           id: String(c._id),
           name: c.name || '',

@@ -4,11 +4,12 @@ import { Types, type Model } from 'mongoose';
 import { Customer } from './customer.schema.js';
 import type { ZaloUser } from './zalo.service.js';
 
-/** Ảnh Zalo là URL https. `//` được đổi thành https. Chuỗi khác bỏ. */
+/** Ảnh Zalo là URL http(s). `//` và `http` được đổi thành https. Chuỗi khác bỏ. */
 export function avatarUrl(v: string | undefined) {
   let s = v?.trim() ?? '';
   if (s.length > 2000) s = s.slice(0, 2000);
   if (s.startsWith('//')) s = 'https:' + s;
+  if (/^http:\/\//i.test(s)) s = 'https://' + s.slice('http://'.length);
   return /^https:\/\//i.test(s) ? s : '';
 }
 
@@ -32,9 +33,25 @@ export class CustomersService {
 
   /** Ghi tên và ảnh mới. Trường trống không xoá dữ liệu đang có. */
   async syncProfile(id: unknown, info: { zaloName?: string; avatar?: string }) {
-    await this.remember(id, { zaloName: info.zaloName, avatar: info.avatar });
-    const customer = await this.customers.findById(id).select('zaloName avatar').lean().exec();
+    const zaloName = info.zaloName?.trim();
+    await this.remember(id, { name: zaloName, zaloName, avatar: info.avatar });
+    if (zaloName || avatarUrl(info.avatar)) {
+      await this.customers.updateOne({ _id: id }, { $set: { lastSeenAt: new Date() } }).exec();
+    }
+    const customer = await this.customers.findById(id).select('zaloName name avatar').lean().exec();
     return this.profileOf(customer ?? {});
+  }
+
+  /** Tên và ảnh đang hiện trên trang quản lý. Ưu tiên tên Zalo. */
+  async profilesOf(ids: unknown[]) {
+    const unique = [...new Set(ids.map((id) => String(id ?? '')).filter((id) => Types.ObjectId.isValid(id)))];
+    const map = new Map<string, { name: string; avatar: string }>();
+    if (!unique.length) return map;
+    const rows = await this.customers.find({ _id: { $in: unique } }).select('zaloName name avatar').lean().exec();
+    for (const row of rows) {
+      map.set(String(row._id), { name: row.zaloName?.trim() || row.name?.trim() || '', avatar: row.avatar?.trim() || '' });
+    }
+    return map;
   }
 
   /** Lưu tên Zalo, ảnh, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */

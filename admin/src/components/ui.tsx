@@ -33,7 +33,7 @@ export function Search({ label, placeholder, value, onChange, flex = "0 1 340px"
 export function Avatar({ src, name, size, ring = true, font }: { src?: string; name: string; size: number; ring?: boolean; font?: number }) {
   const ringCss = ring ? "border: 2px solid #ffffff; box-shadow: 0 0 0 1px #efd9d3" : "box-shadow: 0 0 0 1px #efd9d3";
   return src ? (
-    <img src={src} alt="" style={sx(`width: ${size}px; height: ${size}px; flex: 0 0 ${size}px; border-radius: 50%; object-fit: cover; ${ringCss}`)} />
+    <img src={src} alt="" referrerPolicy="no-referrer" style={sx(`width: ${size}px; height: ${size}px; flex: 0 0 ${size}px; border-radius: 50%; object-fit: cover; ${ringCss}`)} />
   ) : (
     <span
       style={sx(

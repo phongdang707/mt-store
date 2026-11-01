@@ -95,14 +95,16 @@ export class OrdersService {
       f.createdAt = { $gte: a, $lt: b };
     }
     let list = await this.orders.find(f).sort({ createdAt: -1 }).limit(q.month ? 0 : 500).exec();
+    const ids = list.map((o) => o.customer);
+    const [flags, people] = await Promise.all([this.customers.blockedOf(ids), this.customers.profilesOf(ids)]);
     if (q.q) {
       const k = norm(q.q);
-      list = list.filter((o) =>
-        norm([o.code, o.name, o.phone, o.addr, o.product, o.note, ...o.items.map((i) => i.name)].join(' ')).includes(k),
-      );
+      list = list.filter((o) => {
+        const person = people.get(String(o.customer));
+        return norm([o.code, person?.name, o.name, o.phone, o.addr, o.product, o.note, ...o.items.map((i) => i.name)].join(' ')).includes(k);
+      });
     }
-    const flags = await this.customers.blockedOf(list.map((o) => o.customer));
-    return list.map((o) => this.adminView(o, flags.get(String(o.customer)) ?? false));
+    return list.map((o) => this.adminView(o, flags.get(String(o.customer)) ?? false, people.get(String(o.customer))));
   }
 
   /** Các tháng có đơn (mới nhất trước), luôn gồm tháng hiện tại. */
@@ -127,8 +129,7 @@ export class OrdersService {
   }
 
   async adminGet(code: string) {
-    const o = await this.byCode(code);
-    return this.adminView(o, await this.customers.isBlocked(o.customer));
+    return this.viewOf(await this.byCode(code));
   }
 
   async setStatus(code: string, confirmed: boolean) {
@@ -274,12 +275,22 @@ export class OrdersService {
     recompute(o);
     await o.save();
     this.events.emit({ type: 'order', code: o.code, kind: o.kind, action: 'updated' });
-    return this.adminView(o, await this.customers.isBlocked(o.customer));
+    return this.viewOf(o);
   }
 
-  private adminView(o: OrderDocument, blocked: boolean) {
+  private async viewOf(o: OrderDocument) {
+    const id = String(o.customer);
+    const [blocked, people] = await Promise.all([this.customers.isBlocked(id), this.customers.profilesOf([id])]);
+    return this.adminView(o, blocked, people.get(id));
+  }
+
+  /** Tên và ảnh lấy từ hồ sơ khách vừa sync, đơn chỉ giữ bản cũ khi hồ sơ còn trống. */
+  private adminView(o: OrderDocument, blocked: boolean, person?: { name: string; avatar: string }) {
+    const row = o.toJSON() as { name?: string; avatar?: string };
     return {
-      ...(o.toJSON() as object),
+      ...row,
+      name: person?.name || row.name || '',
+      avatar: person?.avatar || row.avatar || '',
       customer: String(o.customer),
       blocked,
       invoiceStatus: o.status === 'confirmed' ? invoiceStatus(o) : null,
