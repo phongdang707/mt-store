@@ -71,30 +71,28 @@ async function loadUser(autoRequest: boolean) {
 }
 
 async function fetchProfile(ask: boolean) {
-  let allowed = false;
-  try {
-    const { authSetting } = await getSetting();
-    allowed = authSetting["scope.userInfo"] === true;
-  } catch (e) {
-    console.warn("getSetting", e);
-  }
-  if (!allowed && !ask) return EMPTY_PROFILE;
-  if (!allowed) {
+  if (!ask) {
+    let allowed = false;
     try {
-      const scopes = await authorize({ scopes: ["scope.userInfo"] });
-      if (scopes["scope.userInfo"] === false) return EMPTY_PROFILE;
-      allowed = scopes["scope.userInfo"] === true;
+      const { authSetting } = await getSetting();
+      allowed = authSetting["scope.userInfo"] === true;
     } catch (e) {
-      if (denied(e)) return EMPTY_PROFILE;
-      console.warn("authorize", e);
+      console.warn("getSetting", e);
+    }
+    if (!allowed) return EMPTY_PROFILE;
+    try {
+      return await loadUser(false);
+    } catch (e) {
+      if (!denied(e)) console.warn("getUserInfo", e);
+      return EMPTY_PROFILE;
     }
   }
   try {
-    const got = await loadUser(ask && !allowed);
-    if (got.name || !ask || !allowed) return got;
+    const scopes = await authorize({ scopes: ["scope.userInfo"] });
+    if (scopes["scope.userInfo"] === false) return EMPTY_PROFILE;
   } catch (e) {
-    if (denied(e) || !ask) return EMPTY_PROFILE;
-    console.warn("getUserInfo", e);
+    if (denied(e)) return EMPTY_PROFILE;
+    console.warn("authorize", e);
   }
   try {
     return await loadUser(true);
