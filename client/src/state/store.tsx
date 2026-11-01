@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiError, api, deviceInfo, type CartLineInput } from "@/services/api";
+import { ApiError, api, deviceInfo, type CartLineInput, type MeProfile } from "@/services/api";
 import { startPresence, track } from "@/services/track";
 import type { Catalog, CustomerInfo, Order, Product, Variant } from "@/types";
 import { shrink } from "@/utils/image";
@@ -21,6 +21,39 @@ export type Overlay = { type: "bill"; o: Order; success?: boolean } | { type: "c
 
 const EMPTY_INFO: CustomerInfo = { name: "", phone: "", note: "", addr: "" };
 
+const cartKey = (id: string) => `mt_cart_${id}`;
+const infoKey = (id: string) => `mt_info_${id}`;
+const rememberKey = (id: string) => `mt_remember_${id}`;
+
+/** Bản cũ không gắn user. Không đọc sang tài khoản đang mở. */
+function dropSharedProfile() {
+  storage.remove("mt_cart");
+  storage.remove("mt_info");
+  storage.remove("mt_remember");
+}
+
+function storedCart(id: string): Record<string, number> {
+  const raw = storage.get<unknown>(cartKey(id), {});
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [key, qty] of Object.entries(raw)) {
+    if (!key || typeof qty !== "number" || !Number.isFinite(qty) || qty <= 0) continue;
+    out[key] = Math.min(99, Math.floor(qty));
+  }
+  return out;
+}
+
+function storedInfo(id: string): CustomerInfo | null {
+  const raw = storage.get<Partial<CustomerInfo> | null>(infoKey(id), null);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return {
+    name: String(raw.name || ""),
+    phone: String(raw.phone || ""),
+    note: String(raw.note || ""),
+    addr: String(raw.addr || ""),
+  };
+}
+
 function useStoreState() {
   const [D, setD] = useState<Catalog | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -28,9 +61,26 @@ function useStoreState() {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Tất cả");
   const [sort, setSort] = useState<Sort>("default");
-  const [cart, setCart] = useState<Record<string, number>>(() => storage.get("mt_cart", {}));
-  const [remember, setRememberState] = useState<boolean>(() => storage.get("mt_remember", true));
-  const [info, setInfoState] = useState<CustomerInfo>(() => ({ ...EMPTY_INFO, ...storage.get("mt_info", EMPTY_INFO) }));
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [remember, setRememberState] = useState(true);
+  const [info, setInfoState] = useState<CustomerInfo>(EMPTY_INFO);
+  const userId = useRef("");
+  const cartRef = useRef(cart);
+  const infoRef = useRef(info);
+  const rememberRef = useRef(remember);
+  const dirtyCart = useRef(false);
+  const dirtyInfo = useRef(false);
+  cartRef.current = cart;
+  infoRef.current = info;
+  rememberRef.current = remember;
+
+  const saveCart = useCallback((c: Record<string, number>) => {
+    dirtyCart.current = true;
+    cartRef.current = c;
+    setCart(c);
+    const id = userId.current;
+    if (id) storage.set(cartKey(id), c);
+  }, []);
   const [open, setOpenState] = useState<Sheet>(null);
   const [pick, setPick] = useState<Pick | null>(null);
   const [msg, setMsg] = useState("");
@@ -78,11 +128,40 @@ function useStoreState() {
       document.addEventListener("visibilitychange", onVis);
       listening = true;
     };
+    const bindAccount = (profile: MeProfile) => {
+      const id = profile.id?.trim() ?? "";
+      if (!id || userId.current === id) return;
+      userId.current = id;
+      if (dirtyCart.current) storage.set(cartKey(id), cartRef.current);
+      else {
+        const loaded = storedCart(id);
+        cartRef.current = loaded;
+        setCart(loaded);
+      }
+      if (dirtyInfo.current) {
+        storage.set(rememberKey(id), rememberRef.current);
+        if (rememberRef.current) storage.set(infoKey(id), infoRef.current);
+        else storage.remove(infoKey(id));
+        return;
+      }
+      const rememberOn = storage.get(rememberKey(id), true);
+      rememberRef.current = rememberOn;
+      setRememberState(rememberOn);
+      const saved = rememberOn ? storedInfo(id) : null;
+      if (!rememberOn) storage.remove(infoKey(id));
+      const next = saved ?? (rememberOn ? { ...EMPTY_INFO, phone: profile.phone || "", addr: profile.addr || "" } : EMPTY_INFO);
+      infoRef.current = next;
+      setInfoState(next);
+    };
+    // Giỏ chung của máy không biết của ai. Xoá, không gán cho người vừa vào.
+    dropSharedProfile();
     // Hồ sơ 403: cửa hàng đã chặn, không mở bảng giá.
     api
       .me()
-      .then(() => {
-        if (!stop) start();
+      .then((profile) => {
+        if (stop) return;
+        bindAccount(profile);
+        start();
       })
       .catch((e) => {
         if (stop) return;
@@ -125,10 +204,9 @@ function useStoreState() {
     if (!gone.length) return;
     const c = { ...cart };
     gone.forEach((k) => delete c[k]);
-    setCart(c);
-    storage.set("mt_cart", c);
+    saveCart(c);
     toast(`Đã bỏ ${gone.length} món đang tạm ngừng nhận đặt khỏi giỏ`);
-  }, [D]);
+  }, [D, cart, ck, saveCart]);
 
   const entries = useMemo(() => Object.entries(cart).filter(([k]) => ck(k)), [cart, ck]);
   const cartCount = entries.reduce((a, [, n]) => a + n, 0);
@@ -136,10 +214,6 @@ function useStoreState() {
   const pendingCount = entries.reduce((a, [k, n]) => a + (ck(k)!.p.price ? 0 : n), 0);
   const prodCount = (id: string) => entries.reduce((a, [k, n]) => a + (k.split("::")[0] === id ? n : 0), 0);
 
-  const saveCart = (c: Record<string, number>) => {
-    setCart(c);
-    storage.set("mt_cart", c);
-  };
   const setQty = (id: string, n: number) => {
     const productId = id.split("::")[0];
     const had = prodCount(productId) > 0;
@@ -162,13 +236,13 @@ function useStoreState() {
 
   const keepZaloName = (name: string) => {
     const nextName = name.trim();
-    if (!nextName) return;
-    setInfoState((i) => {
-      if (i.name === nextName) return i;
-      const next = { ...i, name: nextName };
-      if (storage.get("mt_remember", true)) storage.set("mt_info", next);
-      return next;
-    });
+    if (!nextName || infoRef.current.name === nextName) return;
+    const next = { ...infoRef.current, name: nextName };
+    dirtyInfo.current = true;
+    infoRef.current = next;
+    setInfoState(next);
+    const id = userId.current;
+    if (id && rememberRef.current) storage.set(infoKey(id), next);
   };
   const setOpen = (s: Sheet) => {
     setOpenState(s);
@@ -196,17 +270,22 @@ function useStoreState() {
     toast((p.price ? "Đã thêm tone " : "Đã lưu tone ") + vn + " vào giỏ");
   };
   const setInfo = (k: keyof CustomerInfo, v: string) => {
-    setInfoState((i) => {
-      const n = { ...i, [k]: v };
-      if (remember) storage.set("mt_info", n);
-      return n;
-    });
+    dirtyInfo.current = true;
+    const next = { ...infoRef.current, [k]: v };
+    infoRef.current = next;
+    setInfoState(next);
+    const id = userId.current;
+    if (id && rememberRef.current) storage.set(infoKey(id), next);
   };
   const setRemember = (v: boolean) => {
+    dirtyInfo.current = true;
+    rememberRef.current = v;
     setRememberState(v);
-    storage.set("mt_remember", v);
-    if (v) storage.set("mt_info", info);
-    else storage.remove("mt_info");
+    const id = userId.current;
+    if (!id) return;
+    storage.set(rememberKey(id), v);
+    if (v) storage.set(infoKey(id), infoRef.current);
+    else storage.remove(infoKey(id));
   };
   const clearCart = () => {
     saveCart({});
@@ -255,7 +334,10 @@ function useStoreState() {
       });
       setMY((l) => [order, ...l]);
       saveCart({});
-      if (!remember) setInfoState(EMPTY_INFO);
+      if (!remember) {
+        infoRef.current = EMPTY_INFO;
+        setInfoState(EMPTY_INFO);
+      }
       setOpenState(null);
       setOverlay({ type: "bill", o: order, success: true });
       draft.current = null;

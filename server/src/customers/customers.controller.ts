@@ -7,11 +7,11 @@ import { CustomersService } from './customers.service.js';
 @Controller('me')
 @UseGuards(CustomerGuard)
 export class CustomersController {
-  /** Thông tin khách để điền sẵn SĐT/địa chỉ. */
+  /** Id khách để tách giỏ trên máy, cùng SĐT/địa chỉ của đúng người đó. */
   @Get()
   me(@Req() req: CustomerRequest) {
     const c = req.customer;
-    return { name: c.zaloName || c.name, avatar: c.avatar, phone: c.phone, addr: c.addr };
+    return { id: String(c._id), name: c.zaloName || c.name, avatar: c.avatar, phone: c.phone, addr: c.addr };
   }
 }
 

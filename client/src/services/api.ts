@@ -204,6 +204,14 @@ export interface ProductEventInput {
   productId: string;
 }
 
+export interface MeProfile {
+  id: string;
+  name: string;
+  avatar: string;
+  phone: string;
+  addr: string;
+}
+
 export const api = {
   zaloName,
   zaloProfile,
@@ -211,7 +219,7 @@ export const api = {
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
   events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
-  me: () => call<{ name: string; phone: string; addr: string }>("GET", "/me"),
+  me: () => call<MeProfile>("GET", "/me"),
   mine: () => call<Order[]>("GET", "/orders/mine"),
   createOrder: (b: { name?: string; avatar?: string; phone: string; addr: string; note?: string; items: CartLineInput[] }) =>
     call<Order>("POST", "/orders", b),
