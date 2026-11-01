@@ -224,6 +224,52 @@ export class OrdersService {
     return this.commit(o);
   }
 
+  /** Hoá đơn đã xác nhận cho customer support. Không kèm token hay đường link. */
+  async supportList() {
+    const [s, list] = await Promise.all([
+      this.settings.get(),
+      this.orders.find({ kind: 'order', status: 'confirmed' }).sort({ createdAt: -1 }).limit(500).exec(),
+    ]);
+    const people = await this.customers.peopleOf(list.map((o) => o.customer));
+    return {
+      store: s.store,
+      bank: { bank: s.bank?.bank || '', acc: s.bank?.acc || '', name: s.bank?.name || '' },
+      invoices: list.map((o) => {
+        const person = people.get(String(o.customer));
+        return {
+          code: o.code,
+          name: person?.name || o.name || '',
+          avatar: person?.avatar || o.avatar || '',
+          phone: o.phone || person?.phone || '',
+          items: o.items.map((i) => ({
+            name: i.name,
+            variantName: i.variantName || '',
+            qty: i.qty,
+            price: i.price,
+          })),
+          subtotal: o.subtotal,
+          shippingFee: o.shippingFee,
+          shipBase: o.shipBase ?? null,
+          total: o.total,
+          createdAt: o.createdAt.toISOString(),
+          invoiceStatus: invoiceStatus(o),
+          zaloUserId: person?.zaloUserId || '',
+        };
+      }),
+    };
+  }
+
+  /** Ghi đã gửi bản hoá đơn hiện tại qua Zalo. Không trả token. */
+  async supportSend(code: string) {
+    const o = await this.byCode(code);
+    if (o.kind !== 'order' || o.status !== 'confirmed') throw new BadRequestException('Chỉ gửi hoá đơn của đơn đã xác nhận');
+    o.invoice.sends.push({ version: o.invoice.version, via: 'zalo', at: new Date() });
+    recompute(o);
+    await o.save();
+    this.events.emit({ type: 'order', code: o.code, kind: o.kind, action: 'updated' });
+    return { code: o.code, invoiceStatus: invoiceStatus(o) };
+  }
+
   /* ---------- Nội bộ ---------- */
 
   private async byCode(code: string) {

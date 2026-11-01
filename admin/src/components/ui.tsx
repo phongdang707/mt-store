@@ -50,6 +50,7 @@ export const CHIP = {
   xong: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #e3efe6; color: #2f6b45; white-space: nowrap",
   warn: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #fdecc8; color: #7a4f00; white-space: nowrap",
   chan: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #3d3530; color: #ffffff; white-space: nowrap",
+  cs: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #b3566f; color: #ffffff; white-space: nowrap",
   huy: "font-size: 12px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: #efe8e6; color: #6f5a55; white-space: nowrap",
 };
 
@@ -271,6 +272,46 @@ export function BlockCustomer({ id, blocked, onChange }: { id: string; blocked?:
       )}
     >
       {on ? "Bỏ chặn" : "Chặn người dùng"}
+    </button>
+  );
+}
+
+/** Gán hoặc gỡ quyền customer support. Hỏi lại trước khi gọi API. */
+export function SupportCustomer({ id, support, onChange }: { id: string; support?: boolean; onChange: (support: boolean) => void }) {
+  const [busy, setBusy] = useState(false);
+  const on = !!support;
+  const run = async () => {
+    const next = !on;
+    const ask = next
+      ? "Gán quyền customer support? Người này mở Zalo sẽ thấy mục chăm sóc khách hàng."
+      : "Gỡ quyền customer support? Người này chỉ còn mua hàng như khách.";
+    if (!confirm(ask)) return;
+    setBusy(true);
+    try {
+      const r = await api.setSupport(id, next);
+      onChange(r.role === "support");
+      toast(r.role === "support" ? "Đã gán customer support" : "Đã gỡ customer support");
+    } catch (e) {
+      toast((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={run}
+      disabled={busy}
+      style={sx(
+        "border: 1.5px solid #b3566f; background: " +
+          (on ? "#b3566f" : "#ffffff") +
+          "; color: " +
+          (on ? "#ffffff" : "#a3546a") +
+          "; border-radius: 14px; padding: 12px 14px; font-weight: 700; font-size: 14.5px" +
+          (busy ? "; opacity: 0.7" : ""),
+      )}
+    >
+      {on ? "Gỡ customer support" : "Gán customer support"}
     </button>
   );
 }

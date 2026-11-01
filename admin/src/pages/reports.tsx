@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/api";
 import { toast } from "@/app-state";
 import { MAIN, MobileHead, Shell } from "@/components/shell";
-import { Avatar, BlockCustomer, CHIP, CloseX, ContactPills, H1, Search, Segmented } from "@/components/ui";
+import { Avatar, BlockCustomer, CHIP, CloseX, ContactPills, H1, Search, Segmented, SupportCustomer } from "@/components/ui";
 import { ago, duration, norm, timeOf } from "@/format";
 import { sx } from "@/sx";
 import type { Analytics, AnalyticsUserDetail } from "@/types";
@@ -39,7 +39,7 @@ function Bars({ rows, value }: { rows: { label: string; n: number; hint?: string
   );
 }
 
-function Detail({ id, days, onClose, onDeleted, onBlocked }: { id: string; days: number; onClose: () => void; onDeleted: () => void; onBlocked: (id: string, blocked: boolean) => void }) {
+function Detail({ id, days, onClose, onDeleted, onBlocked, onSupport }: { id: string; days: number; onClose: () => void; onDeleted: () => void; onBlocked: (id: string, blocked: boolean) => void; onSupport: (id: string, support: boolean) => void }) {
   const [d, setD] = useState<AnalyticsUserDetail | null>(null);
   const [sure, setSure] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -86,6 +86,7 @@ function Detail({ id, days, onClose, onDeleted, onBlocked }: { id: string; days:
               <span style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column")}>
                 <span style={sx("display: flex; align-items: center; gap: 8px; flex-wrap: wrap")}>
                   <b style={sx("font-family: Quicksand, sans-serif; font-size: 20px")}>{labelOf(u)}</b>
+                  {u.support ? <span style={sx(CHIP.cs)}>CS</span> : null}
                   {u.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
                 </span>
                 <span style={sx(MUTED)}>{machine(u.model, u.platform)}{u.zaloVersion ? " · Zalo " + u.zaloVersion : ""}</span>
@@ -93,6 +94,10 @@ function Detail({ id, days, onClose, onDeleted, onBlocked }: { id: string; days:
             </div>
             {u.zaloName && u.name && u.name !== u.zaloName ? <span style={sx(MUTED)}>Tên đặt hàng: {u.name}</span> : null}
             <ContactPills phone={u.phone} />
+            <SupportCustomer id={u.id} support={u.support} onChange={(support) => {
+              setD((cur) => (cur ? { ...cur, user: { ...cur.user, support } } : cur));
+              onSupport(u.id, support);
+            }} />
             <BlockCustomer id={u.id} blocked={u.blocked} onChange={(blocked) => {
               setD((cur) => (cur ? { ...cur, user: { ...cur.user, blocked } } : cur));
               onBlocked(u.id, blocked);
@@ -298,6 +303,7 @@ export default function Reports() {
                       <span style={sx("flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px")}>
                         <span style={sx("display: flex; align-items: center; gap: 8px; min-width: 0")}>
                           <b style={sx("font-size: 15px")}>{labelOf(u)}</b>
+                          {u.support ? <span style={sx(CHIP.cs)}>CS</span> : null}
                           {u.blocked ? <span style={sx(CHIP.chan)}>Đã chặn</span> : null}
                         </span>
                         <span style={sx("font-size: 13.5px; color: #7d6862; overflow: hidden; text-overflow: ellipsis; white-space: nowrap")}>
@@ -327,6 +333,7 @@ export default function Reports() {
                     setReload((n) => n + 1);
                   }}
                   onBlocked={(id, blocked) => setData((cur) => (cur ? { ...cur, users: cur.users.map((u) => (u.id === id ? { ...u, blocked } : u)) } : cur))}
+                  onSupport={(id, support) => setData((cur) => (cur ? { ...cur, users: cur.users.map((u) => (u.id === id ? { ...u, support } : u)) } : cur))}
                 />
               ) : null}
             </div>

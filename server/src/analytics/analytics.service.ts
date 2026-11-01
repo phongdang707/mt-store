@@ -61,6 +61,7 @@ type ActiveRow = {
   model?: string;
   lastSeenAt?: Date;
   blocked?: boolean;
+  role?: string;
   activity: DayStat[];
 };
 
@@ -162,6 +163,7 @@ export class AnalyticsService implements OnModuleInit {
               model: 1,
               lastSeenAt: 1,
               blocked: 1,
+              role: 1,
               activity: {
                 $filter: {
                   input: { $ifNull: ['$activity', []] },
@@ -250,15 +252,19 @@ export class AnalyticsService implements OnModuleInit {
         ...(seenIds.length ? { _id: { $nin: seenIds } } : {}),
         $or: [{ zaloName: { $nin: [null, ''] } }, { name: { $nin: [null, ''] } }, { avatar: { $nin: [null, ''] } }],
       })
-      .select('name zaloName avatar phone platform model lastSeenAt blocked')
+      .select('name zaloName avatar phone platform model lastSeenAt blocked role')
       .sort({ lastSeenAt: -1 })
       .limit(200)
       .exec();
     const ranked = [...active].sort((a, b) => +new Date(b.lastSeenAt ?? 0) - +new Date(a.lastSeenAt ?? 0)).slice(0, 200);
     const userIds = ranked.map((r) => r._id);
     const listed = [...userIds, ...named.map((c) => c._id)];
-    const [blockedAway, previews] = await Promise.all([
-      this.customers.find(listed.length ? { blocked: true, _id: { $nin: listed } } : { blocked: true }).exec(),
+    const awayFilter = {
+      ...(listed.length ? { _id: { $nin: listed } } : {}),
+      $or: [{ blocked: true }, { role: 'support' as const }],
+    };
+    const [away, previews] = await Promise.all([
+      this.customers.find(awayFilter).select('name zaloName avatar phone platform model lastSeenAt blocked role').exec(),
       this.events.aggregate<{ _id: Types.ObjectId; products: { productId: string; views: number }[] }>([
         { $match: { at: span, type: 'view', customer: { $in: userIds } } },
         { $group: { _id: { customer: '$customer', productId: '$productId' }, views: { $sum: 1 } } },
@@ -319,6 +325,7 @@ export class AnalyticsService implements OnModuleInit {
             visits: totals.visits,
             durationSec: totals.duration,
             blocked: !!c.blocked,
+            support: c.role === 'support',
             products: seen.map((p) => ({ id: p.productId, name: names.get(p.productId)?.name || p.productId, views: p.views })),
           };
         }),
@@ -334,9 +341,10 @@ export class AnalyticsService implements OnModuleInit {
           visits: 0,
           durationSec: 0,
           blocked: !!c.blocked,
+          support: c.role === 'support',
           products: [],
         })),
-        ...blockedAway.map((c) => ({
+        ...away.map((c) => ({
           id: String(c._id),
           name: c.name || '',
           zaloName: c.zaloName || '',
@@ -347,7 +355,8 @@ export class AnalyticsService implements OnModuleInit {
           lastSeenAt: c.lastSeenAt?.toISOString() ?? null,
           visits: 0,
           durationSec: 0,
-          blocked: true,
+          blocked: !!c.blocked,
+          support: c.role === 'support',
           products: [],
         })),
       ],
@@ -400,6 +409,7 @@ export class AnalyticsService implements OnModuleInit {
         visitCount: customer.visitCount || 0,
         createdAt: customer.createdAt.toISOString(),
         blocked: !!customer.blocked,
+        support: customer.role === 'support',
       },
       activity: (customer.activity ?? [])
         .filter((day) => day.date >= start && day.date <= end)

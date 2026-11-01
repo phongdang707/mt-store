@@ -157,6 +157,7 @@ export interface AnalyticsUser {
   visits: number;
   durationSec: number;
   blocked: boolean;
+  support: boolean;
   products: { id: string; name: string; views: number }[];
 }
 
@@ -188,6 +189,7 @@ export interface AnalyticsUserDetail {
     visitCount: number;
     createdAt: string;
     blocked: boolean;
+    support: boolean;
   };
   activity: { date: string; visits: number; durationSec: number }[];
   products: { id: string; name: string; img: string; views: number; opens: number; carts: number }[];

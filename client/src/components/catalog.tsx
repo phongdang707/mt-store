@@ -19,23 +19,29 @@ export function Ph({ p }: { p: Product }) {
 }
 
 export function Header() {
-  const { D, MY, setOpen } = useStore();
+  const { D, MY, setOpen, support } = useStore();
   const n = MY.filter((o) => o.status === "pending").length;
   return (
     <>
       <header className="bar">
         <div className="bar-in">
-          <button className="ordbtn" onClick={() => setOpen("orders")}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
-              <path d="M9 8h6M9 12h6" />
-            </svg>
-            Đơn của bạn
-            <b id="ocnt" hidden={!n}>
-              {n}
-            </b>
-          </button>
-          <div style={{ flex: 1 }} />
+          <div className="bar-acts">
+            <button className="ordbtn" onClick={() => setOpen("orders")}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+                <path d="M9 8h6M9 12h6" />
+              </svg>
+              Đơn của bạn
+              <b id="ocnt" hidden={!n}>
+                {n}
+              </b>
+            </button>
+            {support ? (
+              <button className="ordbtn" onClick={() => setOpen("support")}>
+                Chăm sóc khách hàng
+              </button>
+            ) : null}
+          </div>
         </div>
       </header>
       <div className="wrap top-wrap">

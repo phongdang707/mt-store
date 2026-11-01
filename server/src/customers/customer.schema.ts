@@ -14,6 +14,9 @@ export class ActivityDay {
 
 export const ActivityDaySchema = SchemaFactory.createForClass(ActivityDay);
 
+export const CUSTOMER_ROLES = ['customer', 'support'] as const;
+export type CustomerRole = (typeof CUSTOMER_ROLES)[number];
+
 /** Khách mua hàng, nhận diện bằng zaloUserId của Zalo Mini App. */
 @Schema({ timestamps: true, toJSON })
 export class Customer {
@@ -41,6 +44,8 @@ export class Customer {
   @Prop({ default: 0, min: 0 }) visitCount: number;
   /** Admin chặn: khách không đặt hàng, gửi tìm hộ, hay gọi API mini app. */
   @Prop({ default: false }) blocked: boolean;
+  /** `support`: mở Mini App thì thấy mục chăm sóc khách hàng. */
+  @Prop({ type: String, enum: CUSTOMER_ROLES, default: 'customer' }) role: CustomerRole;
   @Prop() blockedAt?: Date;
   createdAt: Date;
   updatedAt: Date;

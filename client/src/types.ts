@@ -95,3 +95,27 @@ export interface CustomerInfo {
   note: string;
   addr: string;
 }
+
+export type InvoiceStatus = "new" | "changed" | "sent";
+
+/** Hoá đơn customer support xem trong Mini App. Không có token hay link. */
+export interface SupportInvoice {
+  code: string;
+  name: string;
+  avatar: string;
+  phone: string;
+  items: { name: string; variantName: string; qty: number; price: number }[];
+  subtotal: number;
+  shippingFee: number;
+  shipBase: number | null;
+  total: number;
+  createdAt: string;
+  invoiceStatus: InvoiceStatus;
+  zaloUserId: string;
+}
+
+export interface SupportDesk {
+  store: string;
+  bank: { bank: string; acc: string; name: string };
+  invoices: SupportInvoice[];
+}

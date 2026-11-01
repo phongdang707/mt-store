@@ -6,7 +6,7 @@ import { shrink } from "@/utils/image";
 import { storage } from "@/utils/storage";
 import { toast } from "@/utils/toast";
 
-export type Sheet = "cart" | "pick" | "orders" | "photo" | null;
+export type Sheet = "cart" | "pick" | "orders" | "photo" | "support" | null;
 export type Sort = "default" | "asc" | "best" | "hot" | "desc";
 export interface Pick {
   id: string;
@@ -94,6 +94,7 @@ function useStoreState() {
   const [phMsg, setPhMsg] = useState("");
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [blocked, setBlocked] = useState(false);
+  const [support, setSupport] = useState(false);
 
   const loadCatalog = useCallback(() => {
     setLoadError("");
@@ -162,6 +163,7 @@ function useStoreState() {
       .me()
       .then((profile) => {
         if (stop) return;
+        setSupport(profile.role === "support");
         bindAccount(profile);
         start();
       })
@@ -450,7 +452,7 @@ function useStoreState() {
     msg, sending, sendOrder,
     showPaid, setShowPaid, MY, myReady, refreshMine,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
-    overlay, setOverlay, blocked,
+    overlay, setOverlay, blocked, support,
   };
 }
 

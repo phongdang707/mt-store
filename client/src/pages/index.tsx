@@ -4,6 +4,7 @@ import { Page } from "zmp-ui";
 import { Catalog, Dock, Header } from "@/components/catalog";
 import { Overlays } from "@/components/overlays";
 import { CartSheet, OrdersSheet, PhotoSheet, PickSheet } from "@/components/sheets";
+import { SupportSheet } from "@/components/support-sheet";
 import { useStore } from "@/state/store";
 
 export default function HomePage() {
@@ -64,6 +65,7 @@ export default function HomePage() {
           {open === "cart" && <CartSheet />}
           {open === "pick" && <PickSheet />}
           {open === "orders" && <OrdersSheet />}
+          {open === "support" && <SupportSheet />}
           {open === "photo" && <PhotoSheet />}
           <Overlays />
         </>,

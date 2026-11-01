@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Types, type Model } from 'mongoose';
-import { Customer } from './customer.schema.js';
+import { Customer, type CustomerRole } from './customer.schema.js';
 import type { ZaloUser } from './zalo.service.js';
 
 /** Ảnh Zalo là URL http(s). `//` và `http` được đổi thành https. Chuỗi khác bỏ. */
@@ -69,18 +69,43 @@ export class CustomersService {
     return this.customers.updateOne({ _id: id }, { $set: set }).exec();
   }
 
-  /** Bật hoặc tắt chặn. `blockedAt` chỉ giữ lúc đang chặn. */
-  async setBlocked(id: string, on: boolean) {
+  /** Bật hoặc tắt chặn, và/hoặc gán role customer support. */
+  async updateAdmin(id: string, dto: { blocked?: boolean; role?: CustomerRole }) {
+    if (dto.blocked === undefined && !dto.role) throw new BadRequestException('Chưa có gì để cập nhật');
     if (!Types.ObjectId.isValid(id)) throw new NotFoundException('Không tìm thấy người dùng');
-    const customer = await this.customers
-      .findByIdAndUpdate(
-        id,
-        on ? { $set: { blocked: true, blockedAt: new Date() } } : { $set: { blocked: false }, $unset: { blockedAt: 1 } },
-        { new: true },
-      )
-      .exec();
+    const set: Record<string, unknown> = {};
+    const unset: Record<string, 1> = {};
+    if (dto.blocked === true) {
+      set.blocked = true;
+      set.blockedAt = new Date();
+    } else if (dto.blocked === false) {
+      set.blocked = false;
+      unset.blockedAt = 1;
+    }
+    if (dto.role) set.role = dto.role;
+    const update: Record<string, unknown> = {};
+    if (Object.keys(set).length) update.$set = set;
+    if (Object.keys(unset).length) update.$unset = unset;
+    const customer = await this.customers.findByIdAndUpdate(id, update, { new: true }).exec();
     if (!customer) throw new NotFoundException('Không tìm thấy người dùng');
-    return { id: String(customer._id), blocked: customer.blocked };
+    return { id: String(customer._id), blocked: !!customer.blocked, role: customer.role === 'support' ? 'support' : 'customer' };
+  }
+
+  /** Tên, ảnh, SĐT và Zalo id để customer support mở đúng cuộc chat của hoá đơn. */
+  async peopleOf(ids: unknown[]) {
+    const unique = [...new Set(ids.map((id) => String(id ?? '')).filter((id) => Types.ObjectId.isValid(id)))];
+    const map = new Map<string, { zaloUserId: string; name: string; avatar: string; phone: string }>();
+    if (!unique.length) return map;
+    const rows = await this.customers.find({ _id: { $in: unique } }).select('zaloUserId zaloName name avatar phone').lean().exec();
+    for (const row of rows) {
+      map.set(String(row._id), {
+        zaloUserId: row.zaloUserId || '',
+        name: row.zaloName?.trim() || row.name?.trim() || '',
+        avatar: row.avatar?.trim() || '',
+        phone: row.phone?.trim() || '',
+      });
+    }
+    return map;
   }
 
   async isBlocked(id: unknown) {

@@ -7,10 +7,11 @@ import { EventsService } from './events.service.js';
 import { Order, OrderSchema } from './order.schema.js';
 import { OrdersController } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
+import { SupportInvoicesController } from './support-invoices.controller.js';
 
 @Module({
   imports: [MongooseModule.forFeature([{ name: Order.name, schema: OrderSchema }]), ProductsModule],
-  controllers: [OrdersController, AdminOrdersController, UploadsController],
+  controllers: [OrdersController, AdminOrdersController, SupportInvoicesController, UploadsController],
   providers: [OrdersService, EventsService],
   exports: [MongooseModule],
 })

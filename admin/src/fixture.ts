@@ -42,6 +42,7 @@ function item(id: string, qty: number, variant: number | null = null, price?: nu
 
 const KNOWN_CUSTOMER: Record<string, string> = { "Ngọc Anh": "u1", "Thu Hà": "u2", "Bảo Trâm": "u3" };
 const blockedCustomers = new Map<string, boolean>();
+const supportCustomers = new Set<string>();
 
 function customerOf(name: string) {
   return (
@@ -206,16 +207,18 @@ function sampleAnalytics(days: number): Analytics {
     products: picks.map((p, i) => ({ id: p.id, name: p.name, img: p.img, views: 40 - i * 6, viewers: 8 - i, opens: Math.max(1, 6 - i), carts: Math.max(0, 3 - (i % 3)), orders: i === 0 ? 4 : 1 })),
     users: (() => {
       const base = [
-        { id: "u1", name: "Ngọc Anh", zaloName: "Ngọc", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, blocked: !!blockedCustomers.get("u1"), products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },
-        { id: "u2", name: "Thu Hà", zaloName: "Thu Hà", avatar: "", phone: "0987112233", platform: "android", model: "Pixel 7", lastSeenAt: new Date(Date.now() - 2 * HOUR).toISOString(), visits: 2, durationSec: 1800, blocked: !!blockedCustomers.get("u2"), products: picks.slice(1, 3).map((p) => ({ id: p.id, name: p.name, views: 2 })) },
-        { id: "u3", name: "Bảo Trâm", zaloName: "Trâm", avatar: "", phone: "0938667120", platform: "ios", model: "iPhone", lastSeenAt: new Date(Date.now() - DAY).toISOString(), visits: 1, durationSec: 420, blocked: !!blockedCustomers.get("u3"), products: picks.slice(0, 1).map((p) => ({ id: p.id, name: p.name, views: 1 })) },
+        { id: "u1", name: "Ngọc Anh", zaloName: "Ngọc", avatar: "", phone: "0912345678", platform: "ios", model: "iPhone", lastSeenAt: now, visits: 4, durationSec: 5400, blocked: !!blockedCustomers.get("u1"), support: supportCustomers.has("u1"), products: picks.slice(0, 2).map((p) => ({ id: p.id, name: p.name, views: 3 })) },
+        { id: "u2", name: "Thu Hà", zaloName: "Thu Hà", avatar: "", phone: "0987112233", platform: "android", model: "Pixel 7", lastSeenAt: new Date(Date.now() - 2 * HOUR).toISOString(), visits: 2, durationSec: 1800, blocked: !!blockedCustomers.get("u2"), support: supportCustomers.has("u2"), products: picks.slice(1, 3).map((p) => ({ id: p.id, name: p.name, views: 2 })) },
+        { id: "u3", name: "Bảo Trâm", zaloName: "Trâm", avatar: "", phone: "0938667120", platform: "ios", model: "iPhone", lastSeenAt: new Date(Date.now() - DAY).toISOString(), visits: 1, durationSec: 420, blocked: !!blockedCustomers.get("u3"), support: supportCustomers.has("u3"), products: picks.slice(0, 1).map((p) => ({ id: p.id, name: p.name, views: 1 })) },
       ].filter((u) => !removedUsers.has(u.id));
       const have = new Set(base.map((u) => u.id));
-      const extra = [...blockedCustomers.entries()]
-        .filter(([id, on]) => on && !have.has(id) && !removedUsers.has(id))
-        .map(([id]) => {
+      const extraIds = new Set<string>([...blockedCustomers.entries()].filter(([, on]) => on).map(([id]) => id));
+      for (const id of supportCustomers) extraIds.add(id);
+      const extra = [...extraIds]
+        .filter((id) => !have.has(id) && !removedUsers.has(id))
+        .map((id) => {
           const o = orders.find((x) => x.customer === id);
-          return { id, name: o?.name || "", zaloName: "", avatar: "", phone: o?.phone || "", platform: "", model: "", lastSeenAt: null, visits: 0, durationSec: 0, blocked: true, products: [] as { id: string; name: string; views: number }[] };
+          return { id, name: o?.name || "", zaloName: "", avatar: "", phone: o?.phone || "", platform: "", model: "", lastSeenAt: null, visits: 0, durationSec: 0, blocked: !!blockedCustomers.get(id), support: supportCustomers.has(id), products: [] as { id: string; name: string; views: number }[] };
         });
       return [...base, ...extra];
     })(),
@@ -243,6 +246,7 @@ function sampleUser(id: string, days: number): AnalyticsUserDetail {
       visitCount: row.visits + 2,
       createdAt: new Date(Date.now() - 12 * DAY).toISOString(),
       blocked: !!row.blocked,
+      support: !!row.support,
     },
     activity: [
       { date: (row.lastSeenAt || new Date().toISOString()).slice(0, 10), visits: row.visits, durationSec: row.durationSec },
@@ -271,11 +275,17 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
   if ((m = p.match(/^\/admin\/customers\/([^/]+)$/)) && method === "PATCH") {
     const id = decodeURIComponent(m[1]);
     if (removedUsers.has(id)) throw new FixtureError("Không tìm thấy người dùng", 404);
-    const on = !!b.blocked;
-    if (on) blockedCustomers.set(id, true);
-    else blockedCustomers.delete(id);
-    for (const o of orders) if (o.customer === id) o.blocked = on;
-    return R({ id, blocked: on });
+    const role = b.role;
+    if (typeof b.blocked !== "boolean" && role !== "customer" && role !== "support") throw new FixtureError("Chưa có gì để cập nhật", 400);
+    if (role !== undefined && role !== "customer" && role !== "support") throw new FixtureError("Quyền không hợp lệ", 400);
+    if (typeof b.blocked === "boolean") {
+      if (b.blocked) blockedCustomers.set(id, true);
+      else blockedCustomers.delete(id);
+      for (const o of orders) if (o.customer === id) o.blocked = b.blocked;
+    }
+    if (role === "support") supportCustomers.add(id);
+    else if (role === "customer") supportCustomers.delete(id);
+    return R({ id, blocked: !!blockedCustomers.get(id), role: supportCustomers.has(id) ? "support" : "customer" });
   }
   if (p === "/admin/analytics" && method === "GET") return R(sampleAnalytics(Number(q.get("days")) || 30));
   if ((m = p.match(/^\/admin\/analytics\/users\/([^/]+)$/))) {
@@ -283,6 +293,7 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
     if (method === "DELETE") {
       removedUsers.add(id);
       blockedCustomers.delete(id);
+      supportCustomers.delete(id);
       return null as T;
     }
     if (removedUsers.has(id)) throw new FixtureError("Không tìm thấy người dùng", 404);

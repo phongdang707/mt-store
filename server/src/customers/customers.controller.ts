@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../auth/admin.guard.js';
-import { BlockCustomerDto, SyncProfileDto } from './customer.dto.js';
+import { SyncProfileDto, UpdateCustomerDto } from './customer.dto.js';
 import { CustomerGuard, type CustomerRequest } from './customer.guard.js';
 import { CustomersService } from './customers.service.js';
 import { ZaloService } from './zalo.service.js';
@@ -17,7 +17,14 @@ export class CustomersController {
   @Get()
   me(@Req() req: CustomerRequest) {
     const c = req.customer;
-    return { id: String(c._id), name: c.zaloName || c.name, avatar: c.avatar, phone: c.phone, addr: c.addr };
+    return {
+      id: String(c._id),
+      name: c.zaloName || c.name,
+      avatar: c.avatar,
+      phone: c.phone,
+      addr: c.addr,
+      role: c.role === 'support' ? 'support' : 'customer',
+    };
   }
 
   /** Giỏ hàng hỏi hồ sơ đã có tên hoặc ảnh chưa. */
@@ -47,7 +54,7 @@ export class AdminCustomersController {
   constructor(private readonly customers: CustomersService) {}
 
   @Patch(':id')
-  block(@Param('id') id: string, @Body() dto: BlockCustomerDto) {
-    return this.customers.setBlocked(id, dto.blocked);
+  update(@Param('id') id: string, @Body() dto: UpdateCustomerDto) {
+    return this.customers.updateAdmin(id, dto);
   }
 }

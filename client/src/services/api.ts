@@ -1,5 +1,5 @@
 import { authorize, getAccessToken, getSetting, getSystemInfo } from "zmp-sdk/apis";
-import type { Catalog, Order } from "@/types";
+import type { Catalog, InvoiceStatus, Order, SupportDesk } from "@/types";
 import { storage } from "@/utils/storage";
 
 const BASE = String(import.meta.env.VITE_API_URL || "http://localhost:3000").replace(/\/+$/, "") + "/api";
@@ -271,6 +271,7 @@ export interface MeProfile {
   avatar: string;
   phone: string;
   addr: string;
+  role?: "customer" | "support";
 }
 
 export const api = {
@@ -284,6 +285,8 @@ export const api = {
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
   me: () => call<MeProfile>("GET", "/me"),
   mine: () => call<Order[]>("GET", "/orders/mine"),
+  supportInvoices: () => call<SupportDesk>("GET", "/support/invoices"),
+  supportSend: (code: string) => call<{ code: string; invoiceStatus: InvoiceStatus }>("POST", `/support/invoices/${encodeURIComponent(code)}/send`),
   createOrder: (b: { name?: string; avatar?: string; phone: string; addr: string; note?: string; items: CartLineInput[] }) =>
     call<Order>("POST", "/orders", b),
   createRequest: (b: { name?: string; avatar?: string; phone?: string; addr?: string; product: string; photos: string[] }) =>
