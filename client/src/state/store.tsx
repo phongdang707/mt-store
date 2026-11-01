@@ -75,25 +75,14 @@ function useStoreState() {
       startPresence();
       loadCatalog();
       refreshMine();
-      api.zaloName(false).then((name) => {
-        if (!name || stop) return;
-        setInfoState((i) => {
-          if (i.name === name) return i;
-          const next = { ...i, name };
-          if (storage.get("mt_remember", true)) storage.set("mt_info", next);
-          return next;
-        });
-      });
       document.addEventListener("visibilitychange", onVis);
       listening = true;
     };
     // Hồ sơ 403: cửa hàng đã chặn, không mở bảng giá.
     api
       .me()
-      .then((m) => {
-        if (stop) return;
-        setInfoState((i) => ({ ...i, phone: i.phone || m.phone, addr: i.addr || m.addr, name: m.name || i.name }));
-        start();
+      .then(() => {
+        if (!stop) start();
       })
       .catch((e) => {
         if (stop) return;
@@ -166,6 +155,11 @@ function useStoreState() {
     storage.set("mt_country", c);
     setQ("");
   };
+  const [askProfile, setAskProfile] = useState(false);
+  const busy = useRef(false);
+  const placing = useRef(false);
+  const draft = useRef<{ phone: string; addr: string; note: string; items: CartLineInput[] } | null>(null);
+
   const keepZaloName = (name: string) => {
     const nextName = name.trim();
     if (!nextName) return;
@@ -179,7 +173,10 @@ function useStoreState() {
   const setOpen = (s: Sheet) => {
     setOpenState(s);
     setMsg("");
-    if (s === "cart") void api.zaloProfile(false).then((who) => keepZaloName(who.name));
+    if (s !== "cart") {
+      setAskProfile(false);
+      busy.current = false;
+    }
   };
   const startPick = (id: string) => {
     track("open", id);
@@ -227,21 +224,19 @@ function useStoreState() {
     return `ĐƠN ĐẶT HÀNG – ${D.store}\n${i.name ? "Tên: " + i.name + "\n" : ""}${i.phone ? "SĐT: " + i.phone + "\n" : ""}${i.addr ? "Địa chỉ: " + i.addr + "\n" : ""}\n${lines.join("\n")}\n\nTạm tính: ${fmtL(cartTotal)}${i.note ? "\nGhi chú: " + i.note : ""}`;
   };
 
-  const sendOrder = async () => {
-    const i = info;
-    if (!i.phone.trim() || !(i.addr || "").trim()) {
-      toast("Bạn điền số điện thoại và địa chỉ nhé");
+  const finishOrder = async (load: () => Promise<{ name: string; avatar: string }>) => {
+    if (placing.current) return;
+    const d = draft.current;
+    if (!d) {
+      busy.current = false;
       return;
     }
-    const items: CartLineInput[] = entries.map(([k, qty]) => {
-      const [productId, v] = k.split("::");
-      return v === undefined ? { productId, qty } : { productId, variant: +v, qty };
-    });
-    if (!items.length) return;
+    placing.current = true;
+    setAskProfile(false);
     setSending(true);
     setMsg("");
     try {
-      const who = await api.zaloProfile(true);
+      const who = await load();
       const name = who.name.trim();
       const avatar = who.avatar.trim();
       keepZaloName(name);
@@ -253,23 +248,51 @@ function useStoreState() {
       const order = await api.createOrder({
         name: name || undefined,
         avatar: avatar || undefined,
-        phone: i.phone.trim(),
-        addr: i.addr.trim(),
-        note: i.note.trim() || undefined,
-        items,
+        phone: d.phone,
+        addr: d.addr,
+        note: d.note || undefined,
+        items: d.items,
       });
       setMY((l) => [order, ...l]);
       saveCart({});
       if (!remember) setInfoState(EMPTY_INFO);
       setOpenState(null);
       setOverlay({ type: "bill", o: order, success: true });
+      draft.current = null;
     } catch (e) {
       if (e instanceof ApiError && e.status === 403) setBlocked(true);
       setMsg((e as Error).message || "Chưa gửi được đơn, bạn thử lại nhé.");
     } finally {
+      placing.current = false;
+      busy.current = false;
       setSending(false);
     }
   };
+
+  const sendOrder = async () => {
+    if (busy.current) return;
+    const i = info;
+    if (!i.phone.trim() || !(i.addr || "").trim()) {
+      toast("Bạn điền số điện thoại và địa chỉ nhé");
+      return;
+    }
+    const items: CartLineInput[] = entries.map(([k, qty]) => {
+      const [productId, v] = k.split("::");
+      return v === undefined ? { productId, qty } : { productId, variant: +v, qty };
+    });
+    if (!items.length) return;
+    draft.current = { phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim(), items };
+    busy.current = true;
+    try {
+      if (await api.userInfoGranted()) await finishOrder(() => api.zaloProfile(false));
+      else setAskProfile(true);
+    } catch {
+      setAskProfile(true);
+    }
+  };
+
+  const allowProfile = () => finishOrder(() => api.zaloProfile(true));
+  const skipProfile = () => finishOrder(async () => ({ name: "", avatar: "" }));
 
   const addPhotos = (fs: File[]) => {
     const room = 6 - phFiles.length;
@@ -292,7 +315,7 @@ function useStoreState() {
     try {
       const photos: string[] = [];
       for (const f of phFiles) photos.push((await api.upload(await shrink(f.file))).url);
-      const who = await api.zaloProfile(true);
+      const who = await api.zaloProfile(false);
       const name = who.name.trim();
       const avatar = who.avatar.trim();
       keepZaloName(name);
@@ -346,7 +369,7 @@ function useStoreState() {
     cart, entries, cartCount, cartTotal, pendingCount, prodCount, setQty, clearCart, orderText,
     remember, setRemember, info, setInfo,
     open, setOpen, pick, setPick, startPick, addPick,
-    msg, sending, sendOrder,
+    msg, sending, sendOrder, askProfile, allowProfile, skipProfile,
     showPaid, setShowPaid, MY, myReady, refreshMine, markPaid,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
     overlay, setOverlay, blocked,

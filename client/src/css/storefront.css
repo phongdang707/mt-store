@@ -258,6 +258,11 @@ textarea.f{min-height:70px;resize:vertical}
 .chk{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:14px;color:var(--ink);cursor:pointer}.chk input{width:18px;height:18px;accent-color:var(--accent)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row2 .btn.ghost{margin-top:8px}
 .msg{background:var(--chip);border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:10px}
+.perm-bg{position:fixed;inset:0;background:rgba(40,20,25,.45);z-index:50}
+.perm{position:fixed;z-index:51;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100% - 32px));background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 12px 40px var(--shadow)}
+.perm h2{font-family:'Quicksand',sans-serif;font-weight:600;font-size:18px;letter-spacing:.4px;margin-bottom:8px}
+.perm p{font-size:14px;color:var(--muted);line-height:1.45;margin-bottom:14px}
+.perm .btn.ghost{margin-top:8px}
 .oc{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:12px}.oc.done{opacity:.55}
 .oc-h{display:flex;justify-content:space-between;gap:8px}.oc small{color:var(--muted)}
 .oc ul{list-style:none;margin:8px 0;font-size:14px}.oc li{display:flex;justify-content:space-between;gap:8px;padding:2px 0}.oc li em{font-style:normal;color:var(--muted);white-space:nowrap}

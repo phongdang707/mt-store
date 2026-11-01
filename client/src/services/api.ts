@@ -27,29 +27,43 @@ async function authHeaders(fresh = false): Promise<Record<string, string>> {
   return { "x-dev-user": id };
 }
 
-const DENIED = "mt_zalo_userinfo_denied";
 const EMPTY_PROFILE = { name: "", avatar: "" };
+/** Hồ sơ cứng của bản xem trước web. Không ghi vào đơn. */
+const PREVIEW_ID = "3368637342326461234";
+const PREVIEW_AVATAR = "https://h5.zdn.vn/static/images/avatar.png";
 let profile: { name: string; avatar: string } | null = null;
 let profileTask: Promise<{ name: string; avatar: string }> | null = null;
 let checked = false;
-let prompted = false;
 
 function denied(e: unknown) {
   const code = (e as { code?: number })?.code;
   return code === -201 || code === -1401;
 }
 
-function pick(userInfo?: { name?: string; avatar?: string } | null) {
-  return {
-    name: (userInfo?.name?.trim() || "").slice(0, 120),
-    avatar: (userInfo?.avatar?.trim() || "").slice(0, 2000),
-  };
+function pick(userInfo?: { id?: string; name?: string; avatar?: string } | null) {
+  const name = (userInfo?.name?.trim() || "").slice(0, 120);
+  const avatar = (userInfo?.avatar?.trim() || "").slice(0, 2000);
+  const preview = userInfo?.id === PREVIEW_ID || (name === "User Name" && avatar === PREVIEW_AVATAR);
+  if (preview) return EMPTY_PROFILE;
+  return { name, avatar };
+}
+
+/** Đã cấp `scope.userInfo` thì đọc hồ sơ, không hiện hộp thoại. */
+export async function userInfoGranted() {
+  if (profile?.name || profile?.avatar) return true;
+  try {
+    const { authSetting } = await getSetting();
+    return authSetting["scope.userInfo"] === true;
+  } catch (e) {
+    console.warn("getSetting", e);
+    return false;
+  }
 }
 
 /**
  * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID;
  * hai trường này cần khách cấp `scope.userInfo`. Server ở ngoài Việt Nam xin Graph API sẽ bị -501.
- * Chỉ hiện hộp thoại khi `ask` (lúc bấm gửi đơn). Lúc mở app chỉ đọc nếu đã cấp trước đó.
+ * `ask` chỉ bật từ nút Cho phép lúc gửi đơn. Không xin số điện thoại hay vị trí.
  */
 async function fetchProfile(ask: boolean) {
   let allowed = false;
@@ -61,20 +75,19 @@ async function fetchProfile(ask: boolean) {
   }
   if (!allowed && !ask) return EMPTY_PROFILE;
   if (!allowed) {
-    if (storage.get(DENIED, false) && prompted) return EMPTY_PROFILE;
-    prompted = true;
     try {
       const scopes = await authorize({ scopes: ["scope.userInfo"] });
       allowed = scopes["scope.userInfo"] === true;
-      if (!allowed) storage.set(DENIED, true);
     } catch (e) {
-      if (denied(e)) {
-        storage.set(DENIED, true);
-        return EMPTY_PROFILE;
-      }
+      if (denied(e)) return EMPTY_PROFILE;
       console.warn("authorize", e);
-      const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: true });
-      return pick(userInfo);
+      try {
+        const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: true });
+        return pick(userInfo);
+      } catch (err) {
+        if (denied(err)) return EMPTY_PROFILE;
+        throw err;
+      }
     }
   }
   if (!allowed) return EMPTY_PROFILE;
@@ -92,16 +105,12 @@ export function zaloProfile(ask = false): Promise<{ name: string; avatar: string
       checked = true;
       if (got.name || got.avatar) {
         profile = got;
-        storage.set(DENIED, false);
       }
       return profile ?? got;
     })
     .catch((e: unknown) => {
       console.warn("getUserInfo", e);
-      if (denied(e)) {
-        storage.set(DENIED, true);
-        checked = true;
-      }
+      if (denied(e)) checked = true;
       return profile ?? EMPTY_PROFILE;
     })
     .finally(() => {
@@ -198,6 +207,7 @@ export interface ProductEventInput {
 export const api = {
   zaloName,
   zaloProfile,
+  userInfoGranted,
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
   events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
   catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
