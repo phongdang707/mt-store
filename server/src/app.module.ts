@@ -11,6 +11,7 @@ import { OrdersModule } from './orders/orders.module.js';
 import { ProductsModule } from './products/products.module.js';
 import { SettingsModule } from './settings/settings.module.js';
 import { StorageModule } from './storage/storage.module.js';
+import { ZaloWebhookModule } from './webhook/webhook.module.js';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { StorageModule } from './storage/storage.module.js';
     HealthModule,
     ProductsModule,
     OrdersModule,
+    ZaloWebhookModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -19,5 +19,6 @@ import { AnalyticsService } from './analytics.service.js';
   ],
   controllers: [TrackController, AdminAnalyticsController],
   providers: [AnalyticsService],
+  exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -85,6 +85,53 @@ export class StorageService {
     await writeFile(join(dir, name), data);
     return `${this.localBase}/uploads/${folder}/${name}`;
   }
+
+  /** Xoá ảnh tìm hộ. URL lạ hoặc file đã mất thì bỏ qua. */
+  async remove(url: string) {
+    if (this.cloud && this.isOwnUrl(url)) {
+      const id = cloudinaryPublicId(url);
+      if (!id.startsWith('mt-store/requests/')) return;
+      try {
+        await cloudinary.uploader.destroy(id, { resource_type: 'image' });
+      } catch (e) {
+        this.log.warn(`Không xoá được ảnh: ${e instanceof Error ? e.message : 'lỗi không rõ'}`);
+      }
+      return;
+    }
+    const name = localRequestName(url);
+    if (!name) return;
+    try {
+      await unlink(join(LOCAL_UPLOAD_DIR, 'requests', name));
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code !== 'ENOENT') this.log.warn(`Không xoá được ảnh tạm ${name}`);
+    }
+  }
+}
+
+function cloudinaryPublicId(url: string) {
+  const path = url.split('?')[0]?.split('/image/upload/')[1] ?? '';
+  return path.replace(/^v\d+\//, '').replace(/\.[a-z0-9]+$/i, '');
+}
+
+/** Tên file trong `uploads/requests`, không có thư mục con. */
+function localRequestName(url: string) {
+  let path = '';
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return '';
+  }
+  const marker = '/uploads/requests/';
+  const idx = path.indexOf(marker);
+  if (idx < 0) return '';
+  let name = '';
+  try {
+    name = decodeURIComponent(path.slice(idx + marker.length));
+  } catch {
+    return '';
+  }
+  if (!name || name.includes('/') || name.includes('\\') || name.includes('..')) return '';
+  return name;
 }
 
 function sniffExt(b: Buffer) {

@@ -347,6 +347,27 @@ export class AnalyticsService {
     await this.customers.deleteOne({ _id: customer._id }).exec();
   }
 
+  /**
+   * Khách rút đồng ý trên Zalo. Xoá hồ sơ, phiên, lượt xem.
+   * Đơn giữ món và số tiền; gỡ tên, SĐT, địa chỉ, ghi chú và ảnh tìm hộ.
+   */
+  async revokeZaloUser(zaloId: string) {
+    const customer = await this.customers.findOne({ zaloId }).select('_id').exec();
+    if (!customer) return { found: false, photos: [] as string[] };
+    const id = customer._id;
+    const rows = await this.orders.find({ customer: id }).select('photos').lean().exec();
+    const photos = [...new Set(rows.flatMap((row) => row.photos ?? []).filter((url) => url.length > 0))];
+    await Promise.all([
+      this.visits.deleteMany({ customer: id }).exec(),
+      this.events.deleteMany({ customer: id }).exec(),
+      this.orders
+        .updateMany({ customer: id }, { $set: { name: '', avatar: '', phone: '', addr: '', note: '', product: '', photos: [] } })
+        .exec(),
+    ]);
+    await this.customers.deleteOne({ _id: id }).exec();
+    return { found: true, photos };
+  }
+
   private async productNames(ids: string[]) {
     const unique = [...new Set(ids.filter(Boolean))];
     const rows = unique.length ? await this.products.find({ _id: { $in: unique } }).select('name img').lean().exec() : [];
