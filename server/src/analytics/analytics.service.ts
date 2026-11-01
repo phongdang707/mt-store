@@ -123,7 +123,7 @@ export class AnalyticsService implements OnModuleInit {
     for (const key of ['platform', 'os', 'model', 'zaloVersion'] as const) {
       if (device[key]) profile[key] = device[key];
     }
-    await this.customers.updateOne({ _id: customer._id }, this.beatStages(now, seconds, profile)).exec();
+    await this.customers.updateOne({ _id: customer._id }, this.beatStages(now, seconds, profile), { updatePipeline: true }).exec();
   }
 
   /** Lượt xem, mở chi tiết, thêm giỏ. Trùng trong cùng một request chỉ ghi một lần. */
