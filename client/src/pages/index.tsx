@@ -20,7 +20,16 @@ export default function HomePage() {
     return (
       <Page>
         <main className="wrap">
-          <div className="empty">Cửa hàng đã chặn tài khoản này</div>
+          <div className="hold">
+            <div className="hold-ic" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 8v4l2.5 1.5" />
+                <circle cx="12" cy="12" r="9" />
+              </svg>
+            </div>
+            <h1>Hệ thống đang bảo trì</h1>
+            <p>Cửa hàng tạm ngưng để bảo trì. Bạn quay lại sau nhé.</p>
+          </div>
         </main>
       </Page>
     );

@@ -1,4 +1,4 @@
-import { authorize, getAccessToken, getSetting, getSystemInfo, getUserInfo } from "zmp-sdk/apis";
+import { getAccessToken, getSetting, getSystemInfo, getUserInfo } from "zmp-sdk/apis";
 import type { Catalog, Order } from "@/types";
 import { storage } from "@/utils/storage";
 
@@ -78,27 +78,22 @@ async function readIfGranted() {
 }
 
 /**
- * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID;
- * hai trường này cần khách cấp `scope.userInfo`. Server ở ngoài Việt Nam xin Graph API sẽ bị -501.
- * `ask` chỉ gọi `authorize` một lần khi chưa cấp quyền và chưa có hồ sơ. Không xin số điện thoại hay vị trí.
+ * Họ tên và avatar lấy trên máy khách. Token mặc định chỉ có user ID.
+ * Đã cấp `scope.userInfo` thì đọc im, không mở hộp thoại.
+ * Chưa cấp thì `getUserInfo` hiện đúng popup quyền mặc định của Zalo Mini App và trả name + avatar.
+ * Không xin số điện thoại hay vị trí.
  */
 async function fetchProfile(ask: boolean) {
   const silent = await readIfGranted();
   if (silent) return silent;
   if (!ask) return EMPTY_PROFILE;
   try {
-    const scopes = await authorize({ scopes: ["scope.userInfo"] });
-    if (scopes["scope.userInfo"] === false) return EMPTY_PROFILE;
-  } catch (e) {
-    if (denied(e)) return EMPTY_PROFILE;
-    console.warn("authorize", e);
-  }
-  try {
-    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: false });
+    const { userInfo } = await getUserInfo({ avatarType: "normal", autoRequestPermission: true });
     return pick(userInfo);
   } catch (e) {
     if (denied(e)) return EMPTY_PROFILE;
-    throw e;
+    console.warn("getUserInfo", e);
+    return EMPTY_PROFILE;
   }
 }
 
@@ -119,6 +114,8 @@ export interface ProfileStatus {
 }
 
 let cartSync: Promise<void> | null = null;
+/** Đã mở popup quyền trong phiên này. Hồ sơ cũ còn trống thì lần mở app sau hỏi lại. */
+let asked = false;
 
 /** Đợi lần sync của lần mở giỏ hiện tại, không xin quyền thêm. */
 export function waitCartProfile() {
@@ -126,8 +123,8 @@ export function waitCartProfile() {
 }
 
 /**
- * Mỗi lần mở giỏ: hỏi server đã có tên hoặc ảnh chưa.
- * Chưa có và chưa cấp quyền thì xin một lần. Đã có quyền thì đọc Zalo và ghi vào DB.
+ * Hồ sơ cũ thiếu tên hoặc ảnh: hỏi server, rồi ghi vào đúng khách đó.
+ * Đã cấp quyền thì đọc im. Chưa cấp thì một lần popup mặc định của Zalo trong phiên này.
  */
 export function syncCartProfile() {
   if (!inZalo) return Promise.resolve();
@@ -159,6 +156,8 @@ async function refreshCartProfile() {
     rememberProfile(status);
     return;
   }
+  if (asked) return;
+  asked = true;
   const got = await fetchProfile(true);
   if (got.name || got.avatar) {
     profile = got;

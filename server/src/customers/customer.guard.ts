@@ -23,7 +23,7 @@ export class CustomerGuard implements CanActivate {
     else if (dev && this.zalo.devMode && /^[\w-]{6,64}$/.test(dev)) user = { id: 'dev:' + dev };
     else throw new UnauthorizedException('Cần đăng nhập Zalo');
     req.customer = await this.customers.upsert(user);
-    if (req.customer.blocked) throw new ForbiddenException('Cửa hàng đã chặn tài khoản này');
+    if (req.customer.blocked) throw new ForbiddenException('Hệ thống đang bảo trì. Bạn quay lại sau nhé.');
     return true;
   }
 }
