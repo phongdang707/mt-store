@@ -23,13 +23,15 @@ export class CustomersService {
       .exec();
   }
 
-  /** Lưu tên, ảnh, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */
-  remember(id: unknown, info: { name?: string; avatar?: string; phone?: string; addr?: string }) {
+  /** Lưu tên Zalo, ảnh, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */
+  remember(id: unknown, info: { name?: string; zaloName?: string; avatar?: string; phone?: string; addr?: string }) {
     const set: Record<string, string> = {};
     for (const key of ['name', 'phone', 'addr'] as const) {
       const value = info[key]?.trim();
-      if (value) set[key] = value;
+      if (value) set[key] = value.slice(0, key === 'name' ? 120 : key === 'phone' ? 30 : 300);
     }
+    const zaloName = info.zaloName?.trim();
+    if (zaloName) set.zaloName = zaloName.slice(0, 120);
     const avatar = avatarUrl(info.avatar);
     if (avatar) set.avatar = avatar;
     if (!Object.keys(set).length) return Promise.resolve();

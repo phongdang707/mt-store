@@ -30,22 +30,24 @@ export class OrdersService {
     const { markets } = await this.settings.get();
     const closed = items.find((i) => markets.some((m) => m.key === i.country && !m.open));
     if (closed) throw new BadRequestException(`Hàng ${closed.country} đang tạm khoá đặt, bạn bỏ ${closed.name} khỏi giỏ nhé`);
+    const zaloName = dto.name?.trim() || c.zaloName;
     const doc = await this.insert('order', c, {
-      name: dto.name?.trim() || c.name,
+      name: zaloName || c.name,
       avatar: avatarUrl(dto.avatar) || c.avatar,
       phone: dto.phone.trim(),
       addr: dto.addr.trim(),
       note: dto.note?.trim() ?? '',
       items,
     });
-    await this.customers.remember(c._id, { name: doc.name, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
+    await this.customers.remember(c._id, { name: doc.name, zaloName, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
     return doc;
   }
 
   async createRequest(c: CustomerDocument, dto: CreateRequestDto, allowedPhoto: (url: string) => boolean) {
     if (!dto.photos.every(allowedPhoto)) throw new BadRequestException('Ảnh không hợp lệ');
+    const zaloName = dto.name?.trim() || c.zaloName;
     const doc = await this.insert('request', c, {
-      name: dto.name?.trim() || c.name,
+      name: zaloName || c.name,
       avatar: avatarUrl(dto.avatar) || c.avatar,
       phone: dto.phone?.trim() || c.phone,
       addr: dto.addr?.trim() || c.addr,
@@ -53,7 +55,7 @@ export class OrdersService {
       product: dto.product.trim(),
       photos: dto.photos,
     });
-    await this.customers.remember(c._id, { name: doc.name, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
+    await this.customers.remember(c._id, { name: doc.name, zaloName, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
     return doc;
   }
 

@@ -6,7 +6,7 @@ import { toJSON } from '../common/json.js';
 @Schema({ timestamps: true, toJSON })
 export class Customer {
   @Prop({ required: true, unique: true }) zaloId: string;
-  /** Tên khách điền khi đặt hàng. Không lấy từ hồ sơ Zalo. */
+  /** Tên trên đơn gần nhất. Form không có ô tên, nên đây là tên Zalo lúc gửi. */
   @Prop({ default: '' }) name: string;
   /** Tên hiển thị trên Zalo, từ `getUserInfo` lúc mở app. */
   @Prop({ default: '' }) zaloName: string;

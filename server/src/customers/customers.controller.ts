@@ -11,7 +11,7 @@ export class CustomersController {
   @Get()
   me(@Req() req: CustomerRequest) {
     const c = req.customer;
-    return { name: c.name, avatar: c.avatar, phone: c.phone, addr: c.addr };
+    return { name: c.zaloName || c.name, avatar: c.avatar, phone: c.phone, addr: c.addr };
   }
 }
 

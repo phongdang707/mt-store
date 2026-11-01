@@ -92,7 +92,7 @@ function useStoreState() {
       .me()
       .then((m) => {
         if (stop) return;
-        setInfoState((i) => ({ ...i, phone: i.phone || m.phone, addr: i.addr || m.addr, name: i.name || m.name }));
+        setInfoState((i) => ({ ...i, phone: i.phone || m.phone, addr: i.addr || m.addr, name: m.name || i.name }));
         start();
       })
       .catch((e) => {
@@ -242,13 +242,22 @@ function useStoreState() {
     setMsg("");
     try {
       const who = await api.zaloProfile(true);
-      const name = i.name.trim() || who.name;
-      if (who.name || who.avatar) {
+      const name = who.name.trim();
+      const avatar = who.avatar.trim();
+      keepZaloName(name);
+      if (name || avatar) {
         await api
-          .visit({ zaloName: who.name || undefined, avatar: who.avatar || undefined, ...deviceInfo(), seconds: 0 })
+          .visit({ zaloName: name || undefined, avatar: avatar || undefined, ...deviceInfo(), seconds: 0 })
           .catch(() => {});
       }
-      const order = await api.createOrder({ name: name || undefined, phone: i.phone.trim(), addr: i.addr.trim(), note: i.note.trim() || undefined, items });
+      const order = await api.createOrder({
+        name: name || undefined,
+        avatar: avatar || undefined,
+        phone: i.phone.trim(),
+        addr: i.addr.trim(),
+        note: i.note.trim() || undefined,
+        items,
+      });
       setMY((l) => [order, ...l]);
       saveCart({});
       if (!remember) setInfoState(EMPTY_INFO);
