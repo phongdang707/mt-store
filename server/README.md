@@ -11,6 +11,20 @@ npm run seed -- --rehost  # đẩy ảnh localhost đang có trong DB lên Cloud
 npm run start:dev         # http://localhost:3000/api
 ```
 
+Docker, MongoDB lấy `MONGODB_URI` trong `.env` (Atlas). API trong container chỉ mở `127.0.0.1:3000`. HTTPS public đi qua nginx của `gateway` (`nhatro_edge`).
+
+DNS (một lần), panel `nhatrothongminh.click`: bản ghi `A` tên `mt-store` → `103.72.97.203`, cột Bảo vệ **tắt**. Atlas Network Access phải cho IP này.
+
+```bash
+make tls       # sau khi DNS trỏ đúng: chứng chỉ + vhost HTTPS
+make rollout   # pull origin/main rồi build và thay container
+make seed      # nạp catalog vào Atlas khi cần
+make logs
+make down
+```
+
+`https://mt-store.nhatrothongminh.click/api/health` — `mongo` phải là `up`. Sửa code liên tục trên host: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`.
+
 Render (instance 512MB), Root Directory = `server`:
 
 ```bash
