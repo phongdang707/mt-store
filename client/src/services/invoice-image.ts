@@ -27,13 +27,15 @@ function loadImg(src: string): Promise<HTMLImageElement | null> {
 }
 
 async function readyFonts() {
+  const fonts = document.fonts;
+  if (!fonts?.load) return;
   try {
     await Promise.all([
-      document.fonts.load("700 40px Quicksand"),
-      document.fonts.load("700 28px 'Be Vietnam Pro'"),
-      document.fonts.load("600 22px 'Be Vietnam Pro'"),
+      fonts.load("700 40px Quicksand"),
+      fonts.load("700 28px 'Be Vietnam Pro'"),
+      fonts.load("600 22px 'Be Vietnam Pro'"),
     ]);
-    await document.fonts.ready;
+    await fonts.ready;
   } catch {
     /* Ảnh vẫn vẽ được bằng font hệ thống. */
   }
@@ -77,6 +79,13 @@ function wrap(x: Ctx, t: string, max: number, lines: number) {
   return out;
 }
 
+function fit(x: Ctx, t: string, max: number) {
+  if (x.measureText(t).width <= max) return t;
+  let s = t;
+  while (s.length > 1 && x.measureText(s + "…").width > max) s = s.slice(0, -1);
+  return s + "…";
+}
+
 function tracked(x: Ctx, text: string, px: number, py: number, gap: number, align: "left" | "right" | "center") {
   const chars = [...text];
   const widths = chars.map((ch) => x.measureText(ch).width);
@@ -115,7 +124,7 @@ export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "s
 
   const layer = document.createElement("canvas");
   layer.width = W;
-  layer.height = 980 + rows.length * 160;
+  layer.height = 1600 + rows.length * 180;
   const x = layer.getContext("2d");
   if (!x) return null;
   x.textBaseline = "top";
@@ -131,13 +140,14 @@ export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "s
   const headH = Math.max(logoH, 108);
   if (logo) x.drawImage(logo, L, y + (headH - logoH) / 2, logoW, logoH);
   const nameX = L + (logo ? logoW + 22 : 0);
+  const headMax = R - 300 - nameX;
   font(700, 34, true);
   x.fillStyle = "#a3546a";
-  x.fillText(shop.store || "MT store", nameX, y + 18);
+  x.fillText(fit(x, shop.store || "MT store", headMax), nameX, y + 18);
   if (shop.tagline) {
     font(500, 22);
     x.fillStyle = "#7d6862";
-    x.fillText(shop.tagline, nameX, y + 62);
+    x.fillText(fit(x, shop.tagline, headMax), nameX, y + 62);
   }
   const date = new Date(o.createdAt || Date.now()).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
   font(700, 40, true);
@@ -155,9 +165,9 @@ export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "s
 
   const colW = (CW - 28) / 2;
   font(700, 28);
-  const who = wrap(x, o.name || "Khách", colW, 2);
-  font(500, 22);
-  const addr = wrap(x, o.addr || "—", colW, 3);
+  const who = wrap(x, o.name || "Khách", colW - 48, 2);
+  font(500, 24);
+  const addr = wrap(x, o.addr || "—", colW - 48, 3);
   const infoH = 24 + Math.max(who.length * 36 + (o.phone ? 32 : 0), addr.length * 32 + 30) + 36;
   x.fillStyle = "#fdf6f3";
   rounded(x, L, y, CW, infoH, 20);
@@ -189,7 +199,6 @@ export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "s
   const prodW = CW - qtyW - unitW - amtW;
   const qtyX = L + prodW;
   const unitX = qtyX + qtyW;
-  const amtX = unitX + unitW;
   font(700, 18);
   x.fillStyle = "#6f5a55";
   tracked(x, "SẢN PHẨM", L, y, 0.8, "left");
@@ -279,7 +288,7 @@ export async function invoiceImage(o: SupportInvoice, shop: Pick<SupportDesk, "s
   x.fillStyle = "#fdf6f3";
   rounded(x, L, payY, payW, payH, 18);
   x.fill();
-  let ty = payY + 20;
+  let ty = payY + (payH - textH) / 2;
   font(700, 26);
   x.fillStyle = "#3d3530";
   x.fillText("Chuyển khoản", L + 22, ty);
