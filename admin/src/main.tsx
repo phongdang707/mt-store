@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AppProvider, useApp } from "./app-state";
 import Invoices from "./pages/invoices";
+import Logs from "./pages/logs";
 import Login from "./pages/login";
 import Orders from "./pages/orders";
 import Products from "./pages/products";
@@ -34,6 +35,7 @@ createRoot(document.getElementById("root")!).render(
                   <Route path="/tim-ho" element={<Requests />} />
                   <Route path="/hoa-don" element={<Invoices />} />
                   <Route path="/bao-cao" element={<Reports />} />
+                  <Route path="/nhat-ky" element={<Logs />} />
                   <Route path="/cai-dat" element={<Settings />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

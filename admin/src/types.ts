@@ -194,3 +194,27 @@ export interface AnalyticsUserDetail {
   activity: { date: string; visits: number; durationSec: number }[];
   products: { id: string; name: string; img: string; views: number; opens: number; carts: number }[];
 }
+
+export type LogLevel = "error" | "warn" | "info";
+export type LogSource = "http" | "webhook" | "zalo" | "app";
+
+export interface AppLog {
+  id: string;
+  at: string;
+  level: LogLevel;
+  source: LogSource;
+  message: string;
+  status?: number;
+  method?: string;
+  path?: string;
+}
+
+export interface AppLogDetail extends AppLog {
+  stack?: string;
+  meta?: Record<string, string | number>;
+}
+
+export interface AppLogPage {
+  items: AppLog[];
+  next: string | null;
+}

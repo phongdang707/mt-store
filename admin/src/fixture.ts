@@ -4,7 +4,8 @@
  * mà không cần server / MongoDB. Sản phẩm + ảnh lấy từ `server/seed` (vite.config phục vụ ở /__seed).
  * Không bao giờ được nạp trong bản build thật (api.ts chỉ import động khi có cờ).
  */
-import type { Analytics, AnalyticsUserDetail, Badges, InvoiceVia, Order, OrderItem, Product, Settings } from "./types";
+import { norm } from "./format";
+import type { Analytics, AnalyticsUserDetail, AppLogDetail, Badges, InvoiceVia, Order, OrderItem, Product, Settings } from "./types";
 
 type Raw = Omit<Product, "variants" | "img"> & { img: string; variants?: { name: string; img: string }[] };
 
@@ -39,6 +40,14 @@ function item(id: string, qty: number, variant: number | null = null, price?: nu
   const v = variant !== null ? p.variants[variant] : null;
   return { productId: p.id, variant, variantName: v?.name ?? "", name: p.name, country: p.country, img: v?.img || p.img, price: price ?? p.price, qty, addedLater: false };
 }
+
+const SAMPLE_LOGS: AppLogDetail[] = [
+  { id: "log1", at: new Date(Date.now() - 5 * MIN).toISOString(), level: "error", source: "http", status: 500, method: "POST", path: "/api/orders", message: "Không lưu được đơn", stack: "Error: Không lưu được đơn\n    at OrdersService.createOrder", meta: {} },
+  { id: "log2", at: new Date(Date.now() - 20 * MIN).toISOString(), level: "warn", source: "webhook", status: 401, method: "POST", path: "/api/zalo/webhook", message: "Chữ ký webhook không hợp lệ" },
+  { id: "log3", at: new Date(Date.now() - HOUR).toISOString(), level: "warn", source: "zalo", message: "Zalo 453: ZALO_APP_SECRET không khớp Mini App đã cấp token." },
+  { id: "log4", at: new Date(Date.now() - 2 * HOUR).toISOString(), level: "info", source: "webhook", method: "POST", path: "/api/zalo/webhook", message: "Webhook Zalo: user.revoke.consent", meta: { event: "user.revoke.consent" } },
+  { id: "log5", at: new Date(Date.now() - 3 * HOUR).toISOString(), level: "warn", source: "http", status: 400, method: "POST", path: "/api/auth/login", message: "Email chưa đúng định dạng" },
+];
 
 const KNOWN_CUSTOMER: Record<string, string> = { "Ngọc Anh": "u1", "Thu Hà": "u2", "Bảo Trâm": "u3" };
 const blockedCustomers = new Map<string, boolean>();
@@ -286,6 +295,26 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
     if (role === "support") supportCustomers.add(id);
     else if (role === "customer") supportCustomers.delete(id);
     return R({ id, blocked: !!blockedCustomers.get(id), role: supportCustomers.has(id) ? "support" : "customer" });
+  }
+  if (p === "/admin/logs" && method === "GET") {
+    const level = q.get("level");
+    const source = q.get("source");
+    const text = norm(q.get("q") || "");
+    const filtered = SAMPLE_LOGS.filter((row) => (!level || row.level === level) && (!source || row.source === source) && (!text || norm(row.message + " " + (row.path || "")).includes(text)));
+    const before = q.get("before");
+    const start = before ? Math.max(0, filtered.findIndex((row) => row.id === before) + 1) : 0;
+    const limit = Math.min(50, Math.max(1, Number(q.get("limit")) || 50));
+    const page = filtered.slice(start, start + limit);
+    return R({
+      items: page.map(({ stack: _stack, meta: _meta, ...row }) => row),
+      next: start + limit < filtered.length ? page[page.length - 1].id : null,
+    });
+  }
+  const logId = p.match(/^\/admin\/logs\/([^/]+)$/);
+  if (logId && method === "GET") {
+    const row = SAMPLE_LOGS.find((x) => x.id === decodeURIComponent(logId[1]));
+    if (!row) throw new FixtureError("Không có dòng nhật ký này", 404);
+    return R(row);
   }
   if (p === "/admin/analytics" && method === "GET") return R(sampleAnalytics(Number(q.get("days")) || 30));
   if ((m = p.match(/^\/admin\/analytics\/users\/([^/]+)$/))) {

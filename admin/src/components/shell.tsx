@@ -44,6 +44,16 @@ const ICON = {
       <path d="M3 19h18"></path>
     </svg>
   ),
+  logs: (s = 20) => (
+    <svg aria-hidden="true" width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 6h13"></path>
+      <path d="M8 12h13"></path>
+      <path d="M8 18h13"></path>
+      <path d="M3 6h.01"></path>
+      <path d="M3 12h.01"></path>
+      <path d="M3 18h.01"></path>
+    </svg>
+  ),
 };
 
 type Key = keyof typeof ICON;
@@ -53,6 +63,7 @@ const NAV: [Key, string, string, string][] = [
   ["requests", "/tim-ho", "Yêu cầu tìm hộ", "Tìm hộ"],
   ["invoices", "/hoa-don", "Hoá đơn", "Hoá đơn"],
   ["reports", "/bao-cao", "Báo cáo", "Báo cáo"],
+  ["logs", "/nhat-ky", "Nhật ký", "Log"],
   ["settings", "/cai-dat", "Cài đặt cửa hàng", "Cài đặt"],
 ];
 
@@ -63,6 +74,7 @@ const PILL: Record<Key, string> = {
   requests: "background: #fdecc8; color: #7a4f00; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
   invoices: "background: #fdecc8; color: #7a4f00; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
   reports: "background: #f6e1dc; color: #8f4459; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
+  logs: "background: #efe8e6; color: #6f5a55; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 8px",
   settings: "",
 };
 
@@ -103,6 +115,7 @@ function Sidebar({ variant }: { variant: ShellVariant }) {
     invoices: badges.unsentInvoices,
     settings: null,
     reports: null,
+    logs: null,
   };
   const store = settings?.storefrontUrl || import.meta.env.VITE_STOREFRONT_URL || "";
   return (
