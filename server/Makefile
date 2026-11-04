@@ -18,11 +18,25 @@ rollout:
 	  fi; \
 	  sleep 2; \
 	done
+	@dest=/opt/nhatro/backend/deploy/nginx/mt-store.conf; \
+	if [ -f "$$dest" ]; then \
+	  backup=$$(mktemp); \
+	  cp -a "$$dest" "$$backup"; \
+	  cp -f $(ROOT)/deploy/nginx/mt-store.conf "$$dest"; \
+	  if ! docker exec nhatro-nginx-1 nginx -t; then \
+	    cp -a "$$backup" "$$dest"; \
+	    rm -f "$$backup"; \
+	    echo "nginx -t failed; previous vhost restored" >&2; \
+	    exit 1; \
+	  fi; \
+	  rm -f "$$backup"; \
+	fi; \
 	docker exec nhatro-nginx-1 nginx -s reload
+	@echo "https://mt-store.nhatrothongminh.click"
 	@echo "https://mt-store.nhatrothongminh.click/api/health"
 
 logs:
-	cd $(ROOT) && docker compose logs -f api
+	cd $(ROOT) && docker compose logs -f api web
 
 seed:
 	cd $(ROOT) && docker compose run --rm api node dist/seed.js
