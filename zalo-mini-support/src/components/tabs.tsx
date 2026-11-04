@@ -1,7 +1,8 @@
 import { BottomNavigation, Icon } from "zmp-ui";
 
 const TABS = [
-  { key: "todo", label: "Cần gửi", icon: "zi-clock-1", to: "/" },
+  { key: "orders", label: "Đơn", icon: "zi-list-1", to: "/" },
+  { key: "todo", label: "Cần gửi", icon: "zi-clock-1", to: "/todo" },
   { key: "sent", label: "Đã gửi", icon: "zi-check", to: "/sent" },
   { key: "people", label: "Khách", icon: "zi-user", to: "/people" },
   { key: "me", label: "Tài khoản", icon: "zi-admin", to: "/me" },

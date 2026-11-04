@@ -3,9 +3,120 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 16px 96px;
+  /* Header và BottomNavigation của ZaUI là fixed, chừa chỗ để nội dung không bị che. */
+  padding: calc(var(--zaui-safe-area-inset-top, 0px) + 44px + 12px) 16px calc(var(--zaui-safe-area-inset-bottom, 0px) + 96px);
 }
 
 .screen p {
   margin: 0;
+}
+
+.muted {
+  color: var(--zmp-text-secondary, #767a7f);
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 -16px;
+  padding: 0 16px 2px;
+  scrollbar-width: none;
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  flex: none;
+  border: 1px solid #d6d9dc;
+  border-radius: 999px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
+.chip.on {
+  border-color: #006af5;
+  background: #e8f1ff;
+  color: #006af5;
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 12px;
+  background: #fff;
+  padding: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item img,
+.item .ph {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: #f1f2f4;
+}
+
+.grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.photos {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.photos img {
+  flex: none;
+  width: 88px;
+  height: 88px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.tag {
+  flex: none;
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 2px 8px;
+  background: #e8f1ff;
+  color: #006af5;
+}
+
+.tag.pending {
+  background: #fff4e0;
+  color: #b25e00;
+}
+
+.tag.cancelled {
+  background: #f1f2f4;
+  color: #767a7f;
 }

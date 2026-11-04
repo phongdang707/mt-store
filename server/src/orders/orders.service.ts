@@ -237,31 +237,15 @@ export class OrdersService {
       logo: s.logo || '',
       qr: s.qr || '',
       bank: { bank: s.bank?.bank || '', bin: s.bank?.bin || '', acc: s.bank?.acc || '', name: s.bank?.name || '' },
-      invoices: list.map((o) => {
-        const person = people.get(String(o.customer));
-        return {
-          code: o.code,
-          name: person?.name || o.name || '',
-          avatar: person?.avatar || o.avatar || '',
-          phone: o.phone || person?.phone || '',
-          addr: o.addr || '',
-          items: o.items.map((i) => ({
-            name: i.name,
-            variantName: i.variantName || '',
-            img: i.img || '',
-            qty: i.qty,
-            price: i.price,
-          })),
-          subtotal: o.subtotal,
-          shippingFee: o.shippingFee,
-          shipBase: o.shipBase ?? null,
-          total: o.total,
-          createdAt: o.createdAt.toISOString(),
-          invoiceStatus: invoiceStatus(o),
-          zaloUserId: person?.zaloUserId || '',
-        };
-      }),
+      invoices: list.map((o) => this.supportRow(o, people.get(String(o.customer)))),
     };
+  }
+
+  /** Mọi đơn và yêu cầu tìm hộ, mới nhất trước, cho customer support. Không kèm token hay lý do huỷ. */
+  async supportOrders() {
+    const [s, list] = await Promise.all([this.settings.get(), this.orders.find().sort({ createdAt: -1 }).limit(500).exec()]);
+    const people = await this.customers.peopleOf(list.map((o) => o.customer));
+    return { store: s.store, orders: list.map((o) => this.supportRow(o, people.get(String(o.customer)))) };
   }
 
   /** Ghi đã gửi bản hoá đơn hiện tại qua Zalo. Không trả token. */
@@ -285,6 +269,37 @@ export class OrdersService {
 
   private assertOpen(o: OrderDocument) {
     if (o.status === 'cancelled') throw new BadRequestException('Đơn đã huỷ, hãy mở lại trước khi sửa');
+  }
+
+  /** Một đơn cho customer support. Tên, ảnh lấy từ hồ sơ khách; không có token, lý do huỷ. */
+  private supportRow(o: OrderDocument, person?: { zaloUserId: string; name: string; avatar: string; phone: string }) {
+    return {
+      code: o.code,
+      kind: o.kind,
+      status: o.status,
+      paid: o.paid,
+      name: person?.name || o.name || '',
+      avatar: person?.avatar || o.avatar || '',
+      phone: o.phone || person?.phone || '',
+      addr: o.addr || '',
+      note: o.note || '',
+      product: o.product || '',
+      photos: o.photos,
+      items: o.items.map((i) => ({
+        name: i.name,
+        variantName: i.variantName || '',
+        img: i.img || '',
+        qty: i.qty,
+        price: i.price,
+      })),
+      subtotal: o.subtotal,
+      shippingFee: o.shippingFee,
+      shipBase: o.shipBase ?? null,
+      total: o.total,
+      createdAt: o.createdAt.toISOString(),
+      invoiceStatus: o.status === 'confirmed' ? invoiceStatus(o) : null,
+      zaloUserId: person?.zaloUserId || '',
+    };
   }
 
   /** Bản khách không kèm lý do huỷ. */

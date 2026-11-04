@@ -32,3 +32,32 @@ export interface Person {
   orders: number;
   open: number;
 }
+
+export type OrderKind = "order" | "request";
+export type OrderStatus = "pending" | "confirmed" | "cancelled";
+
+export interface Order {
+  code: string;
+  kind: OrderKind;
+  status: OrderStatus;
+  paid: boolean;
+  name: string;
+  avatar: string;
+  phone: string;
+  addr: string;
+  note: string;
+  product: string;
+  photos: string[];
+  items: { name: string; variantName: string; img: string; qty: number; price: number }[];
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  createdAt: string;
+  invoiceStatus: InvoiceStatus | null;
+  zaloUserId: string;
+}
+
+export interface OrderBook {
+  store: string;
+  orders: Order[];
+}

@@ -1,5 +1,5 @@
 import { getAccessToken } from "zmp-sdk";
-import type { Desk, InvoiceStatus, Me } from "@/types";
+import type { Desk, InvoiceStatus, Me, OrderBook } from "@/types";
 
 const BASE = String(import.meta.env.VITE_API_URL || "https://mt-store.nhatrothongminh.click").replace(/\/+$/, "") + "/api";
 
@@ -25,11 +25,27 @@ export async function accessToken(force = false) {
     cached = (await getAccessToken()) || "";
   } catch (error) {
     cached = "";
-    if (localHost()) throw new Error("Mở Mini App trong Zalo để đăng nhập.");
-    throw error instanceof Error ? error : new Error("Chưa lấy được phiên Zalo");
+    console.error("getAccessToken", error);
+    // SDK reject không kèm lỗi khi trang không chạy trong Zalo (trình duyệt thường, localhost, IP mạng).
+    if (error == null || localHost()) {
+      throw new Error("Đang mở ngoài Zalo nên không có phiên. Mở Mini App trong ứng dụng Zalo để đăng nhập.");
+    }
+    const why = sdkReason(error);
+    throw new Error(why ? `Zalo chưa cấp phiên: ${why}` : "Zalo chưa cấp phiên đăng nhập. Đóng Mini App rồi mở lại.");
   }
-  if (!cached) throw new Error("Zalo chưa cấp phiên đăng nhập.");
+  if (!cached) throw new Error("Zalo chưa cấp phiên đăng nhập. Đóng Mini App rồi mở lại.");
   return cached;
+}
+
+/** Lỗi SDK là object `{ code, message }` chứ không phải Error, lấy ra để nhân viên chụp màn hình gửi lại. */
+function sdkReason(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (!error || typeof error !== "object") return String(error ?? "");
+  const e = error as { code?: unknown; error?: unknown; message?: unknown; errorMessage?: unknown };
+  const message = String(e.message ?? e.errorMessage ?? "").trim();
+  const code = e.code ?? e.error;
+  if (message && code != null) return `${message} (mã ${String(code)})`;
+  return message || (code != null ? `mã ${String(code)}` : "");
 }
 
 async function call<T>(path: string, method = "GET"): Promise<T> {
@@ -50,6 +66,10 @@ export function me() {
 
 export function desk() {
   return call<Desk>("/support/invoices");
+}
+
+export function orders() {
+  return call<OrderBook>("/support/orders");
 }
 
 export function markSent(code: string) {
