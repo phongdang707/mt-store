@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { failLogin, finishLogin } from "@/services/api";
+import { Welcome } from "@/shop/welcome";
 
 /** Đổi oauth code một lần. Strict Mode gọi effect hai lần, nên khóa theo code. */
 export default function ZaloCallback() {
   const params = useSearchParams();
   const router = useRouter();
-  const [hint, setHint] = useState("Đang đăng nhập…");
+  const [hint, setHint] = useState("Đang mở cửa shop cho bạn…");
 
   useEffect(() => {
     const error = params.get("error");
@@ -36,9 +37,5 @@ export default function ZaloCallback() {
       });
   }, [params, router]);
 
-  return (
-    <main className="wrap">
-      <div className="empty">{hint}</div>
-    </main>
-  );
+  return <Welcome waiting line={hint} />;
 }

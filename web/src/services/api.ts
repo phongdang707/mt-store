@@ -187,7 +187,7 @@ export const api = {
   beginZaloLogin,
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
   events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
-  catalog: () => call<Catalog>("GET", "/catalog", undefined, false),
+  catalog: () => call<Catalog>("GET", "/catalog"),
   me: () => call<MeProfile>("GET", "/me"),
   mine: () => call<Order[]>("GET", "/orders/mine"),
   supportInvoices: () => call<SupportDesk>("GET", "/support/invoices"),

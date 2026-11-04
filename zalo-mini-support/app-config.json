@@ -1,0 +1,12 @@
+{
+  "app": {
+    "title": "MT Chăm sóc",
+    "actionBarHidden": true,
+    "statusBar": "transparent",
+    "textColor": "black"
+  },
+  "debug": false,
+  "listCSS": [],
+  "listSyncJS": [],
+  "listAsyncJS": []
+}

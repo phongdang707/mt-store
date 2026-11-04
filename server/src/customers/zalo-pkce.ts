@@ -18,7 +18,7 @@ export function codeVerifier() {
   return chars.join('');
 }
 
-/** Base64 không padding của SHA-256(ASCII(verifier)). Zalo OAuth v4. */
+/** Base64url không padding của SHA-256(ASCII(verifier)). Zalo OAuth v4, cùng cách SDK chính thức. */
 export function codeChallenge(verifier: string) {
-  return createHash('sha256').update(verifier, 'ascii').digest('base64').replace(/=+$/, '');
+  return createHash('sha256').update(verifier, 'ascii').digest('base64url');
 }

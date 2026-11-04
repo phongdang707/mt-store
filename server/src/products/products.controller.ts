@@ -1,5 +1,6 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, UseGuards } from '@nestjs/common';
 import { AdminGuard } from '../auth/admin.guard.js';
+import { CustomerGuard } from '../customers/customer.guard.js';
 import { CreateProductDto, UpdateProductDto } from './product.dto.js';
 import { ProductsService } from './products.service.js';
 
@@ -7,8 +8,9 @@ import { ProductsService } from './products.service.js';
 export class ProductsController {
   constructor(private readonly products: ProductsService) {}
 
-  /** Toàn bộ dữ liệu trang bán hàng trong một lần gọi. */
+  /** Toàn bộ dữ liệu trang bán hàng. Cần phiên Zalo. */
   @Get('catalog')
+  @UseGuards(CustomerGuard)
   catalog() {
     return this.products.catalog();
   }

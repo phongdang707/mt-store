@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { track } from "@/services/track";
 import { LOGO } from "@/static/logo";
 import { useStore, type Sort } from "@/state/store";
@@ -26,6 +27,7 @@ export function Header() {
       <header className="bar">
         <div className="bar-in">
           <div className="bar-acts">
+            <ThemeToggle />
             {authed ? (
               <button className="ordbtn" onClick={logout}>
                 Đăng xuất

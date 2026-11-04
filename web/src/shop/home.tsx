@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Catalog, Dock, Header } from "@/components/catalog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Overlays } from "@/components/overlays";
 import { CartSheet, OrdersSheet, PhotoSheet, PickSheet } from "@/components/sheets";
 import { SupportSheet } from "@/components/support-sheet";
+import { Welcome } from "@/shop/welcome";
 import { useStore } from "@/state/store";
 
 export default function HomePage() {
-  const { D, loadError, loadCatalog, open, setOpen, blocked, loginAsk, notice, closeLogin, startLogin } = useStore();
+  const { D, loadError, loadCatalog, open, setOpen, blocked, sessionReady, authed, notice, startLogin } = useStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -17,19 +19,24 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    if (!open && !loginAsk) return;
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (loginAsk) closeLogin();
-      else setOpen(null);
+      if (e.key === "Escape") setOpen(null);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, loginAsk, closeLogin, setOpen]);
+  }, [open, setOpen]);
 
   if (blocked) {
     return (
       <div className="shop">
+        <header className="bar">
+          <div className="bar-in">
+            <div className="bar-acts">
+              <ThemeToggle />
+            </div>
+          </div>
+        </header>
         <main className="wrap">
           <div className="hold">
             <div className="hold-ic" aria-hidden="true">
@@ -43,6 +50,15 @@ export default function HomePage() {
           </div>
         </main>
       </div>
+    );
+  }
+
+  if (!sessionReady || !authed) {
+    return (
+      <>
+        {notice ? <div className="toast">{notice}</div> : null}
+        <Welcome waiting={!sessionReady} onLogin={startLogin} />
+      </>
     );
   }
 
@@ -72,34 +88,13 @@ export default function HomePage() {
       {mounted &&
         createPortal(
           <>
-            {D && !open && !loginAsk && <Dock />}
+            {D && !open && <Dock />}
             {open === "cart" && <CartSheet />}
             {open === "pick" && <PickSheet />}
             {open === "orders" && <OrdersSheet />}
             {open === "support" && <SupportSheet />}
             {open === "photo" && <PhotoSheet />}
             <Overlays />
-            {loginAsk && (
-              <>
-                <div className="sheet-bg" onClick={closeLogin}></div>
-                <aside className="sheet" role="dialog" aria-label="Đăng nhập bằng Zalo">
-                  <div className="sh-h">
-                    <h2>Đăng nhập</h2>
-                    <button className="x" onClick={closeLogin} aria-label="Đóng">
-                      ✕
-                    </button>
-                  </div>
-                  <div className="sh-b">
-                    <p>Bạn đăng nhập bằng Zalo để đặt hàng, xem đơn và gửi ảnh.</p>
-                  </div>
-                  <div className="sh-f">
-                    <button className="btn" onClick={startLogin}>
-                      Đăng nhập bằng Zalo
-                    </button>
-                  </div>
-                </aside>
-              </>
-            )}
           </>,
           document.body,
         )}

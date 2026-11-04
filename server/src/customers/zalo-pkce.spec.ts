@@ -19,9 +19,9 @@ describe('codeVerifier', () => {
 });
 
 describe('codeChallenge', () => {
-  it('là SHA-256 rồi Base64, bỏ padding', () => {
+  it('là SHA-256 rồi Base64url, bỏ padding', () => {
     const verifier = 'Aa1' + 'b'.repeat(40);
-    expect(codeChallenge(verifier)).toBe('T6m3Vs21sclDoQCMroV/DKJDrJq/JQEs6Cnov/4WDic');
-    expect(codeChallenge(verifier)).not.toContain('=');
+    expect(codeChallenge(verifier)).toBe('T6m3Vs21sclDoQCMroV_DKJDrJq_JQEs6Cnov_4WDic');
+    expect(codeChallenge(verifier)).not.toMatch(/[+/=]/);
   });
 });

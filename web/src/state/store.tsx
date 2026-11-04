@@ -59,7 +59,7 @@ function useStoreState() {
   const [loadError, setLoadError] = useState("");
   const [country, setCountryState] = useState("Nhật");
   const [authed, setAuthed] = useState(false);
-  const [loginAsk, setLoginAsk] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
   const [notice, setNotice] = useState("");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Tất cả");
@@ -107,7 +107,10 @@ function useStoreState() {
         setD(d);
         setCountryState((c) => (d.countries.includes(c) ? c : d.countries[0] ?? "Nhật"));
       })
-      .catch(() => setLoadError("Chưa tải được bảng giá. Bạn kiểm tra mạng rồi thử lại nhé."));
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 403) setBlocked(true);
+        else if (!(e instanceof ApiError && e.status === 401)) setLoadError("Chưa tải được bảng giá. Bạn kiểm tra mạng rồi thử lại nhé.");
+      });
   }, []);
 
   const refreshMine = useCallback(() => {
@@ -124,10 +127,9 @@ function useStoreState() {
     let stop = false;
     let listening = false;
     const onVis = () => document.visibilityState === "visible" && refreshMine();
-    const start = (withSession: boolean) => {
+    const start = () => {
       if (stop) return;
       loadCatalog();
-      if (!withSession) return;
       void api.prepareProfile();
       startPresence();
       refreshMine();
@@ -165,25 +167,26 @@ function useStoreState() {
     const savedCountry = storage.get("mt_country", "");
     if (savedCountry) setCountryState(savedCountry);
     if (!customerToken()) {
-      start(false);
+      setSessionReady(true);
       return () => {
         stop = true;
       };
     }
-    setAuthed(true);
     api
       .me()
       .then((profile) => {
         if (stop) return;
         setSupport(profile.role === "support");
         bindAccount(profile);
-        start(true);
+        setAuthed(true);
+        setSessionReady(true);
+        start();
       })
       .catch((e) => {
         if (stop) return;
         setAuthed(false);
+        setSessionReady(true);
         if (e instanceof ApiError && e.status === 403) setBlocked(true);
-        else start(false);
       });
     return () => {
       stop = true;
@@ -205,10 +208,13 @@ function useStoreState() {
   useEffect(() => {
     return onSessionLost(() => {
       setAuthed(false);
+      setSessionReady(true);
+      setD(null);
       userId.current = "";
       setSupport(false);
       setMY([]);
-      setLoginAsk(true);
+      setOpenState(null);
+      setOverlay(null);
     });
   }, []);
 
@@ -283,10 +289,7 @@ function useStoreState() {
     if (id && rememberRef.current) storage.set(infoKey(id), next);
   };
   const setOpen = (s: Sheet) => {
-    if ((s === "orders" || s === "support" || s === "photo") && !customerToken()) {
-      setLoginAsk(true);
-      return;
-    }
+    if ((s === "orders" || s === "support" || s === "photo") && !customerToken()) return;
     setOpenState(s);
     setMsg("");
     if (s !== "cart") busy.current = false;
@@ -391,10 +394,7 @@ function useStoreState() {
 
   const sendOrder = () => {
     if (busy.current) return;
-    if (!customerToken()) {
-      setLoginAsk(true);
-      return;
-    }
+    if (!customerToken()) return;
     const i = info;
     if (!i.phone.trim() || !(i.addr || "").trim()) {
       toast("Bạn điền số điện thoại và địa chỉ nhé");
@@ -435,10 +435,7 @@ function useStoreState() {
     });
 
   const sendPhoto = async () => {
-    if (!customerToken()) {
-      setLoginAsk(true);
-      return;
-    }
+    if (!customerToken()) return;
     if (!phFiles.length) return toast("Bạn chọn ít nhất 1 ảnh nhé");
     if (!phName.trim()) return toast("Bạn nhập tên sản phẩm nhé");
     setPhSending(true);
@@ -476,17 +473,18 @@ function useStoreState() {
   };
 
   const startLogin = () => {
-    setLoginAsk(false);
     void beginZaloLogin().catch((e: unknown) => toast(e instanceof Error ? e.message : "Chưa mở được đăng nhập Zalo"));
   };
-  const closeLogin = () => setLoginAsk(false);
   const logout = () => {
     endSession();
     userId.current = "";
     setAuthed(false);
+    setSessionReady(true);
+    setD(null);
     setSupport(false);
     setMY([]);
-    setLoginAsk(false);
+    setOpenState(null);
+    setOverlay(null);
     cartRef.current = {};
     setCart({});
     dirtyCart.current = false;
@@ -511,7 +509,7 @@ function useStoreState() {
     showPaid, setShowPaid, MY, myReady, refreshMine,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
     overlay, setOverlay, blocked, support,
-    authed, loginAsk, notice, startLogin, closeLogin, logout,
+    authed, sessionReady, notice, startLogin, logout,
   };
 }
 
