@@ -39,7 +39,7 @@ services:
       context: ../web
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://mt-store.nhatrothongminh.click}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://mt-store.store}
     image: mt-store-web:latest
     container_name: mt-store-web
     restart: unless-stopped

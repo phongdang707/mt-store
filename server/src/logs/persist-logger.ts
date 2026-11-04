@@ -1,11 +1,11 @@
 import { ConsoleLogger } from '@nestjs/common';
 import { LogsService } from './logs.service.js';
 import { calledContext, sourceOfContext, textOf } from './redact.js';
-import { requestLog } from './request-log.js';
+import { pushNote, requestLog } from './request-log.js';
 
 const SKIP = new Set(['ExceptionsHandler', 'LogsService', 'PersistLogger']);
 
-/** Đưa Logger.warn / Logger.error vào Mongo. Bỏ qua lỗi Nest đã ghi ở filter. */
+/** Đưa Logger.warn / Logger.error vào nhật ký. Trong request thì gom lại, ghi một lần lúc kết thúc. */
 export class PersistLogger extends ConsoleLogger {
   constructor(private readonly logs: LogsService) {
     super();
@@ -24,14 +24,16 @@ export class PersistLogger extends ConsoleLogger {
   private keep(level: 'error' | 'warn', message: unknown, params: unknown[]) {
     const context = calledContext(params);
     if (context && SKIP.has(context)) return;
+    const text = textOf(message);
     const ctx = requestLog.getStore();
-    if (ctx?.skip || ctx?.id || ctx?.pending) return;
-    const task = this.logs.record({
+    if (ctx) {
+      pushNote(text, sourceOfContext(context));
+      return;
+    }
+    void this.logs.record({
       level,
       source: sourceOfContext(context),
-      message: textOf(message),
+      message: text,
     });
-    if (ctx) ctx.pending = task;
-    else void task;
   }
 }

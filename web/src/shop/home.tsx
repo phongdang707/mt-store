@@ -11,7 +11,7 @@ import { Welcome } from "@/shop/welcome";
 import { useStore } from "@/state/store";
 
 export default function HomePage() {
-  const { D, loadError, loadCatalog, open, setOpen, blocked, sessionReady, authed, notice, startLogin } = useStore();
+  const { D, loadError, loadCatalog, open, setOpen, overlay, blocked, sessionReady, authed, notice, startLogin } = useStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -26,6 +26,20 @@ export default function HomePage() {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
+
+  useEffect(() => {
+    const on = !!open || !!overlay;
+    if (!on) return;
+    const y = window.scrollY;
+    const body = document.body;
+    body.classList.add("sheet-on");
+    body.style.top = `-${y}px`;
+    return () => {
+      body.classList.remove("sheet-on");
+      body.style.top = "";
+      window.scrollTo(0, y);
+    };
+  }, [open, overlay]);
 
   if (blocked) {
     return (

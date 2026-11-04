@@ -8,6 +8,11 @@ import { LogsService } from './logs.service.js';
 export class AdminLogsController {
   constructor(private readonly logs: LogsService) {}
 
+  @Get('report')
+  report() {
+    return this.logs.report();
+  }
+
   @Get()
   list(@Query() q: LogListQuery) {
     return this.logs.list(q);

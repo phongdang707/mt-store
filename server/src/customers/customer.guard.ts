@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
+import { setActor } from '../logs/request-log.js';
 import { CustomerSessionService } from './customer-session.service.js';
 import type { CustomerDocument } from './customer.schema.js';
 import { CustomersService } from './customers.service.js';
@@ -37,6 +38,7 @@ export class CustomerGuard implements CanActivate {
       if (!customer) throw new UnauthorizedException('Cần đăng nhập Zalo');
       req.customer = customer;
     } else throw new UnauthorizedException('Cần đăng nhập Zalo');
+    setActor(String(req.customer._id));
     if (req.customer.blocked) throw new ForbiddenException('Hệ thống đang bảo trì. Bạn quay lại sau nhé.');
     return true;
   }

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { logFilter } from './logs.service.js';
-import { calledContext, cleanMeta, isSkippedPath, redactPath, redactText, sourceOfContext, sourceOfPath } from './redact.js';
+import { calledContext, cleanMeta, fingerprintOf, isApiPath, isBeaconPath, isSkippedPath, normalizePath, redactPath, redactText, sourceOfContext, sourceOfPath } from './redact.js';
 
 describe('redact', () => {
   it('ẩn query bí mật và giữ phần còn lại', () => {
@@ -45,7 +45,21 @@ describe('redact', () => {
     expect(isSkippedPath('/api/health')).toBe(true);
     expect(isSkippedPath('/api/admin/logs?level=error')).toBe(true);
     expect(isSkippedPath('/api/admin/logs/abc')).toBe(true);
+    expect(isSkippedPath('/api/admin/logs/report')).toBe(true);
     expect(isSkippedPath('/api/orders')).toBe(false);
+    expect(isApiPath('/api/orders')).toBe(true);
+    expect(isApiPath('/uploads/a.jpg')).toBe(false);
+  });
+
+  it('nhận beacon thành công và bỏ id khỏi path', () => {
+    expect(isBeaconPath('POST', '/api/me/visit')).toBe(true);
+    expect(isBeaconPath('POST', '/api/me/events?x=1')).toBe(true);
+    expect(isBeaconPath('GET', '/api/me/visit')).toBe(false);
+    expect(isBeaconPath('POST', '/api/orders')).toBe(false);
+    expect(normalizePath('/api/admin/orders/MT482931/items/2')).toBe('/api/admin/orders/:id/items/:n');
+    expect(normalizePath('/api/invoices/0123456789abcdef01234567')).toBe('/api/invoices/:token');
+    expect(redactPath('/api/invoices/0123456789abcdef01234567')).toBe('/api/invoices/:token');
+    expect(fingerprintOf(400, '/api/orders/MT100000', 'Thiếu món')).toBe('400 /api/orders/:id Thiếu món');
   });
 
   it('lấy context ở tham số cuối, không nhầm stack', () => {
@@ -58,12 +72,17 @@ describe('redact', () => {
 describe('logFilter', () => {
   it('lọc mức, nguồn, chữ, và cursor', () => {
     const before = new mongoose.Types.ObjectId().toHexString();
-    const filter = logFilter({ level: 'error', source: 'http', q: 'a+b', before });
+    const filter = logFilter({ level: 'error', source: 'http', q: 'a+b', before, actor: 'a@b.c', rid: 'abc', fingerprint: '500 /api/orders boom' });
     expect(filter.level).toBe('error');
     expect(filter.source).toBe('http');
+    expect(filter.actor).toBe('a@b.c');
+    expect(filter.rid).toBe('abc');
+    expect(filter.fingerprint).toBe('500 /api/orders boom');
     expect(filter._id).toEqual({ $lt: new mongoose.Types.ObjectId(before) });
-    const or = filter.$or as { message: RegExp }[];
-    expect(or[0].message.test('a+b')).toBe(true);
-    expect(or[0].message.test('ab')).toBe(false);
+    const or = filter.$or as { message?: RegExp; notes?: RegExp; actor?: RegExp }[];
+    expect(or[0].message?.test('a+b')).toBe(true);
+    expect(or[0].message?.test('ab')).toBe(false);
+    expect(or.some((item) => item.notes)).toBe(true);
+    expect(or.some((item) => item.actor)).toBe(true);
   });
 });

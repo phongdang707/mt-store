@@ -9,7 +9,7 @@ RUN npm ci
 FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-ARG NEXT_PUBLIC_API_URL=https://mt-store.nhatrothongminh.click
+ARG NEXT_PUBLIC_API_URL=https://mt-store.store
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN mkdir -p public && npm run build

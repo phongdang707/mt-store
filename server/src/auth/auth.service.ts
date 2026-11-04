@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
+import { setActor, setRequestMeta } from '../logs/request-log.js';
 import { Admin } from './admin.schema.js';
 import { assertAdminClaims } from './admin-claims.js';
 import { hashPassword, verifyPassword } from './password.js';
@@ -58,10 +59,13 @@ export class AuthService implements OnModuleInit {
   }
 
   async login(email: string, password: string, remember: boolean) {
-    const admin = await this.admins.findOne({ email: email.trim().toLowerCase() }).exec();
+    const normalized = email.trim().toLowerCase();
+    const admin = await this.admins.findOne({ email: normalized }).exec();
     if (!admin || !(await verifyPassword(password, admin.passwordHash))) {
+      setRequestMeta({ email: normalized });
       throw new UnauthorizedException('Email hoặc mật khẩu chưa đúng');
     }
+    setActor(admin.email);
     const claims: AdminClaims = { sub: String(admin._id), email: admin.email, name: admin.displayName };
     const token = await this.jwt.signAsync(claims, { expiresIn: remember ? '30d' : '12h' });
     return { token, admin: { email: admin.email, name: admin.displayName } };

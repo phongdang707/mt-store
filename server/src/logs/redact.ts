@@ -20,8 +20,8 @@ export function textOf(message: unknown): string {
 export function redactPath(raw: string): string {
   const value = String(raw || '');
   const qIndex = value.indexOf('?');
-  if (qIndex < 0) return clip(value, 500);
-  const path = value.slice(0, qIndex);
+  if (qIndex < 0) return clip(value.replace(/\/invoices\/[^/]+/g, '/invoices/:token'), 500);
+  const path = value.slice(0, qIndex).replace(/\/invoices\/[^/]+/g, '/invoices/:token');
   const params = new URLSearchParams(value.slice(qIndex + 1));
   for (const key of Array.from(params.keys())) {
     if (SECRET_QUERY.has(key.toLowerCase())) params.set(key, '***');
@@ -35,9 +35,54 @@ export function redactText(s: string): string {
   return s.replace(/([?&](?:token|code|password|state|verifier|access_token|refresh_token|secret|signature|authorization)=)[^&\s]+/gi, '$1***');
 }
 
+export function isApiPath(path: string) {
+  const p = (path || '').split('?')[0];
+  return p === '/api' || p.startsWith('/api/');
+}
+
 export function isSkippedPath(path: string) {
   const p = (path || '').split('?')[0];
   return p === '/api/health' || p.startsWith('/api/health/') || p === '/api/admin/logs' || p.startsWith('/api/admin/logs/');
+}
+
+/** Beacon phân tích chạy liên tục. Thành công thì không ghi; lỗi vẫn ghi. */
+export function isBeaconPath(method: string, path: string) {
+  if ((method || '').toUpperCase() !== 'POST') return false;
+  const p = (path || '').split('?')[0];
+  return p === '/api/me/visit' || p === '/api/me/events';
+}
+
+const MONGO_ID = /^[a-f0-9]{24}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ORDER_CODE = /^(?:MT\d{6}|TH\d{4,5})$/;
+
+/** Bỏ id, mã đơn, và đoạn số để các lần cùng một lỗi gom được. */
+export function normalizePath(raw: string): string {
+  return redactPath(raw)
+    .split('?')[0]
+    .split('/')
+    .map((seg) => {
+      if (!seg) return seg;
+      if (MONGO_ID.test(seg) || UUID.test(seg) || ORDER_CODE.test(seg) || seg.length >= 20) return ':id';
+      if (/^\d+$/.test(seg)) return ':n';
+      return seg;
+    })
+    .join('/');
+}
+
+export function fingerprintOf(status: number, path: string, message: string) {
+  return clip(`${status} ${normalizePath(path)} ${message.trim()}`, 240);
+}
+
+export function cleanNotes(notes?: string[]): string[] | undefined {
+  if (!notes?.length) return undefined;
+  const out: string[] = [];
+  for (const raw of notes) {
+    if (out.length >= 8) break;
+    const line = clip(redactText(raw.trim()), 200);
+    if (line) out.push(line);
+  }
+  return out.length ? out : undefined;
 }
 
 export function sourceOfPath(path: string): LogSource {

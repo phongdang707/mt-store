@@ -2,7 +2,7 @@ import { getAccessToken } from "zmp-sdk";
 import { sdkReason } from "@/services/sdk-error";
 import type { Desk, InvoiceStatus, Me, OrderBook } from "@/types";
 
-const BASE = String(import.meta.env.VITE_API_URL || "https://mt-store.nhatrothongminh.click").replace(/\/+$/, "") + "/api";
+const BASE = String(import.meta.env.VITE_API_URL || "https://mt-store.store").replace(/\/+$/, "") + "/api";
 
 export class ApiError extends Error {
   constructor(

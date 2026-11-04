@@ -1,5 +1,6 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import type { Request } from 'express';
+import { setActor } from '../logs/request-log.js';
 import { AuthService } from './auth.service.js';
 
 /** Bearer token, hoặc `?token=` cho EventSource (không gửi được header). */
@@ -13,7 +14,9 @@ export class AdminGuard implements CanActivate {
     const token = h?.startsWith('Bearer ') ? h.slice(7) : typeof req.query.token === 'string' ? req.query.token : '';
     if (!token) throw new UnauthorizedException();
     try {
-      req.admin = await this.auth.verify(token);
+      const claims = await this.auth.verify(token);
+      req.admin = claims;
+      setActor(claims.email);
       return true;
     } catch {
       throw new UnauthorizedException('Phiên đăng nhập đã hết hạn');

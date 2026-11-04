@@ -15,6 +15,14 @@ export function when(iso: string) {
   return d.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" });
 }
 
+/** Lớp màu pill: huỷ xám, tìm hộ hồng nhạt, chờ vàng, đã xác nhận rose. */
+export function tone(o: Pick<Order, "kind" | "status">) {
+  if (o.status === "cancelled") return "off";
+  if (o.kind === "request") return "ask";
+  if (o.status === "pending") return "wait";
+  return "ok";
+}
+
 /** Nhãn trạng thái ngắn cho danh sách và chi tiết đơn. */
 export function stateLabel(o: Pick<Order, "kind" | "status" | "paid">) {
   if (o.status === "cancelled") return "Đã huỷ";

@@ -3,6 +3,7 @@ import { ForbiddenException, Injectable, Logger, ServiceUnavailableException, Un
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
+import { setActor } from '../logs/request-log.js';
 import { CustomerSessionService } from './customer-session.service.js';
 import { CustomersService } from './customers.service.js';
 import { ZaloLoginState } from './zalo-login-state.schema.js';
@@ -50,6 +51,7 @@ export class ZaloAuthService {
     if (!me.id) throw new UnauthorizedException('Zalo chưa trả danh tính. Bạn thử lại nhé.');
     const customer = await this.customers.upsert({ id: me.id });
     if (!customer) throw new UnauthorizedException('Chưa tạo được tài khoản');
+    setActor(String(customer._id));
     if (customer.blocked) throw new ForbiddenException('Hệ thống đang bảo trì. Bạn quay lại sau nhé.');
     await this.customers.saveZaloTokens(customer._id, tokens);
     if (me.name || me.avatar) await this.customers.syncProfile(customer._id, { zaloName: me.name, avatar: me.avatar });

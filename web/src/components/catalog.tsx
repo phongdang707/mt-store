@@ -19,6 +19,26 @@ export function Ph({ p }: { p: Product }) {
   return p.img ? <img src={p.img} alt={p.name} loading="lazy" /> : <span>{(p.name || "?").trim().charAt(0).toUpperCase()}</span>;
 }
 
+const OrdersIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
+    <path d="M9 8h6M9 12h6" />
+  </svg>
+);
+
+const LogoutIcon = () => (
+  <svg className="logout-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10 7V6a2 2 0 0 1 2-2h7v16h-7a2 2 0 0 1-2-2v-1" />
+    <path d="M15 12H3m0 0 3-3M3 12l3 3" />
+  </svg>
+);
+
+const SupportIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 16.2A7.2 7.2 0 1 1 8.2 19L5 20.2 5.6 16.2z" />
+  </svg>
+);
+
 export function Header() {
   const { D, MY, setOpen, support, authed, startLogin, logout } = useStore();
   const n = MY.filter((o) => o.status === "pending").length;
@@ -26,29 +46,30 @@ export function Header() {
     <>
       <header className="bar">
         <div className="bar-in">
+          <div className="bar-logo" aria-hidden="true">
+            <Logo src={D?.logo} width="auto" />
+          </div>
           <div className="bar-acts">
             <ThemeToggle />
             {authed ? (
-              <button className="ordbtn" onClick={logout}>
-                Đăng xuất
+              <button className="ordbtn logoutbtn" type="button" onClick={logout} aria-label="Đăng xuất">
+                <LogoutIcon />
+                <span className="logout-tx">Đăng xuất</span>
               </button>
             ) : (
-              <button className="ordbtn" onClick={startLogin}>
+              <button className="ordbtn loginbtn" type="button" onClick={startLogin}>
                 Đăng nhập bằng Zalo
               </button>
             )}
-            <button className="ordbtn" onClick={() => setOpen("orders")}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" />
-                <path d="M9 8h6M9 12h6" />
-              </svg>
+            <button className="ordbtn desk-act" type="button" onClick={() => setOpen("orders")}>
+              <OrdersIcon />
               Đơn của bạn
               <b id="ocnt" hidden={!n}>
                 {n}
               </b>
             </button>
             {support ? (
-              <button className="ordbtn" onClick={() => setOpen("support")}>
+              <button className="ordbtn desk-act" type="button" onClick={() => setOpen("support")}>
                 Chăm sóc khách hàng
               </button>
             ) : null}
@@ -362,15 +383,27 @@ export function Catalog() {
 }
 
 export function Dock() {
-  const { cartCount, cartTotal, setOpen } = useStore();
+  const { cartCount, cartTotal, setOpen, MY, support } = useStore();
+  const pending = MY.filter((o) => o.status === "pending").length;
   return (
     <div className="dock">
-      <button onClick={() => setOpen("cart")} aria-label="Giỏ hàng">
+      <button className="dock-side" type="button" onClick={() => setOpen("orders")} aria-label={pending ? `Đơn của bạn, ${pending} đơn chờ` : "Đơn của bạn"}>
+        <OrdersIcon />
+        <span>Đơn</span>
+        <b hidden={!pending}>{pending}</b>
+      </button>
+      <button className="dock-cart" type="button" onClick={() => setOpen("cart")} aria-label="Giỏ hàng">
         <span>
           🛒 Giỏ hàng<b>{cartCount}</b>
         </span>
         <span>{cartCount ? fmt(cartTotal) : "Chưa có món"}</span>
       </button>
+      {support ? (
+        <button className="dock-side" type="button" onClick={() => setOpen("support")} aria-label="Chăm sóc khách hàng">
+          <SupportIcon />
+          <span>Hỗ trợ</span>
+        </button>
+      ) : null}
     </div>
   );
 }

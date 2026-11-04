@@ -17,6 +17,12 @@ export class AppLog {
   @Prop() method?: string;
   @Prop() path?: string;
   @Prop() stack?: string;
+  @Prop() rid?: string;
+  @Prop() ms?: number;
+  @Prop() actor?: string;
+  @Prop({ type: [String] }) notes?: string[];
+  /** status + path đã bỏ id + message. Chỉ có trên warn/error. */
+  @Prop() fingerprint?: string;
   @Prop({ type: mongoose.Schema.Types.Mixed }) meta?: Record<string, string | number>;
 }
 
@@ -24,3 +30,6 @@ export type AppLogDocument = HydratedDocument<AppLog>;
 export const AppLogSchema = SchemaFactory.createForClass(AppLog);
 AppLogSchema.index({ at: -1 });
 AppLogSchema.index({ at: 1 }, { expireAfterSeconds: 15 * 24 * 60 * 60 });
+AppLogSchema.index({ actor: 1, at: -1 });
+AppLogSchema.index({ rid: 1 });
+AppLogSchema.index({ fingerprint: 1, at: -1 });

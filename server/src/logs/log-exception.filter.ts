@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
-import type { Request, Response } from 'express';
-import { LogsService } from './logs.service.js';
+import type { Response } from 'express';
+import { setFailure } from './request-log.js';
 
 function statusOf(exception: unknown) {
   return exception instanceof HttpException ? exception.getStatus() : 500;
@@ -30,22 +30,17 @@ function responseBody(exception: unknown, status: number): Record<string, unknow
   return { statusCode: status, message: 'Internal server error' };
 }
 
-/** Mọi response API từ 400 trở lên vào nhật ký, rồi trả đúng body Nest vẫn trả. */
+/** Nhét lỗi vào ngữ cảnh request. Dòng nhật ký được ghi khi response kết thúc. */
 @Catch()
 export class LogExceptionFilter implements ExceptionFilter {
-  constructor(private readonly logs: LogsService) {}
-
   catch(exception: unknown, host: ArgumentsHost) {
     if (host.getType() !== 'http') return;
     const http = host.switchToHttp();
-    const req = http.getRequest<Request>();
     const res = http.getResponse<Response>();
     const status = statusOf(exception);
     if (status >= 400) {
-      void this.logs.recordHttp({
+      setFailure({
         status,
-        method: req.method || '',
-        path: req.originalUrl || req.url || '',
         message: messageOf(exception),
         stack: exception instanceof Error ? exception.stack : undefined,
       });

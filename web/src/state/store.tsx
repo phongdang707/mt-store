@@ -491,14 +491,6 @@ function useStoreState() {
     toast("Đã đăng xuất");
   };
 
-  // Cuộn nội dung sheet không đẩy trang phía sau.
-  const scrollY = useRef(0);
-  useEffect(() => {
-    const on = !!open || !!overlay;
-    if (on) scrollY.current = window.scrollY;
-    document.body.style.overflow = on ? "hidden" : "";
-  }, [open, overlay]);
-
   return {
     D, loadError, loadCatalog, byId, ck,
     country, setCountry, q, setQ, cat, setCat, sort, setSort,

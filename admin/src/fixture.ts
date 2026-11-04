@@ -42,11 +42,13 @@ function item(id: string, qty: number, variant: number | null = null, price?: nu
 }
 
 const SAMPLE_LOGS: AppLogDetail[] = [
-  { id: "log1", at: new Date(Date.now() - 5 * MIN).toISOString(), level: "error", source: "http", status: 500, method: "POST", path: "/api/orders", message: "Không lưu được đơn", stack: "Error: Không lưu được đơn\n    at OrdersService.createOrder", meta: {} },
-  { id: "log2", at: new Date(Date.now() - 20 * MIN).toISOString(), level: "warn", source: "webhook", status: 401, method: "POST", path: "/api/zalo/webhook", message: "Chữ ký webhook không hợp lệ" },
+  { id: "log1", at: new Date(Date.now() - 5 * MIN).toISOString(), level: "error", source: "http", status: 500, method: "POST", path: "/api/orders", message: "Không lưu được đơn", actor: "665f0c0c0c0c0c0c0c0c0c0c", rid: "a1b2c3d4e5f6", ms: 120, notes: ["Mongo timeout"], fingerprint: "500 /api/orders Không lưu được đơn", stack: "Error: Không lưu được đơn\n    at OrdersService.createOrder", meta: {} },
+  { id: "log6", at: new Date(Date.now() - 8 * MIN).toISOString(), level: "info", source: "http", status: 201, method: "POST", path: "/api/orders", message: "OK", actor: "chushop@gmail.com", rid: "f1b2c3d4e5f6", ms: 48 },
+  { id: "log2", at: new Date(Date.now() - 20 * MIN).toISOString(), level: "warn", source: "webhook", status: 401, method: "POST", path: "/api/zalo/webhook", message: "Chữ ký webhook không hợp lệ", rid: "c1b2c3d4e5f6", ms: 6, fingerprint: "401 /api/zalo/webhook Chữ ký webhook không hợp lệ" },
+  { id: "log1b", at: new Date(Date.now() - 40 * MIN).toISOString(), level: "error", source: "http", status: 500, method: "POST", path: "/api/orders", message: "Không lưu được đơn", actor: "665f0c0c0c0c0c0c0c0c0c0c", rid: "b1b2c3d4e5f6", ms: 88, fingerprint: "500 /api/orders Không lưu được đơn" },
   { id: "log3", at: new Date(Date.now() - HOUR).toISOString(), level: "warn", source: "zalo", message: "Zalo 453: ZALO_APP_SECRET không khớp Mini App đã cấp token." },
-  { id: "log4", at: new Date(Date.now() - 2 * HOUR).toISOString(), level: "info", source: "webhook", method: "POST", path: "/api/zalo/webhook", message: "Webhook Zalo: user.revoke.consent", meta: { event: "user.revoke.consent" } },
-  { id: "log5", at: new Date(Date.now() - 3 * HOUR).toISOString(), level: "warn", source: "http", status: 400, method: "POST", path: "/api/auth/login", message: "Email chưa đúng định dạng" },
+  { id: "log4", at: new Date(Date.now() - 2 * HOUR).toISOString(), level: "info", source: "webhook", method: "POST", path: "/api/zalo/webhook", message: "Webhook Zalo: user.revoke.consent", rid: "d1b2c3d4e5f6", ms: 30, meta: { event: "user.revoke.consent" } },
+  { id: "log5", at: new Date(Date.now() - 3 * HOUR).toISOString(), level: "warn", source: "http", status: 400, method: "POST", path: "/api/auth/login", message: "Email chưa đúng định dạng", rid: "e1b2c3d4e5f6", ms: 4, fingerprint: "400 /api/auth/login Email chưa đúng định dạng", meta: { email: "sai@shop.test" } },
 ];
 
 const KNOWN_CUSTOMER: Record<string, string> = { "Ngọc Anh": "u1", "Thu Hà": "u2", "Bảo Trâm": "u3" };
@@ -296,17 +298,37 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
     else if (role === "customer") supportCustomers.delete(id);
     return R({ id, blocked: !!blockedCustomers.get(id), role: supportCustomers.has(id) ? "support" : "customer" });
   }
+  if (p === "/admin/logs/report" && method === "GET") {
+    const groups = new Map<string, { fingerprint: string; count: number; lastAt: string; status?: number; path?: string; message: string; sampleId: string; level: AppLogDetail["level"] }>();
+    for (const row of SAMPLE_LOGS) {
+      if (!row.fingerprint || row.level === "info") continue;
+      const prev = groups.get(row.fingerprint);
+      if (!prev) {
+        groups.set(row.fingerprint, { fingerprint: row.fingerprint, count: 1, lastAt: row.at, status: row.status, path: row.path, message: row.message, sampleId: row.id, level: row.level });
+        continue;
+      }
+      prev.count += 1;
+      if (row.at > prev.lastAt) Object.assign(prev, { lastAt: row.at, status: row.status, path: row.path, message: row.message, sampleId: row.id, level: row.level });
+    }
+    return R({ items: [...groups.values()].sort((a, b) => b.count - a.count || b.lastAt.localeCompare(a.lastAt)) });
+  }
   if (p === "/admin/logs" && method === "GET") {
     const level = q.get("level");
     const source = q.get("source");
+    const actor = q.get("actor");
+    const rid = q.get("rid");
+    const fingerprint = q.get("fingerprint");
     const text = norm(q.get("q") || "");
-    const filtered = SAMPLE_LOGS.filter((row) => (!level || row.level === level) && (!source || row.source === source) && (!text || norm(row.message + " " + (row.path || "")).includes(text)));
+    const filtered = SAMPLE_LOGS.filter((row) => {
+      const blob = norm([row.message, row.path || "", row.actor || "", ...(row.notes || [])].join(" "));
+      return (!level || row.level === level) && (!source || row.source === source) && (!actor || row.actor === actor) && (!rid || row.rid === rid) && (!fingerprint || row.fingerprint === fingerprint) && (!text || blob.includes(text));
+    });
     const before = q.get("before");
     const start = before ? Math.max(0, filtered.findIndex((row) => row.id === before) + 1) : 0;
     const limit = Math.min(50, Math.max(1, Number(q.get("limit")) || 50));
     const page = filtered.slice(start, start + limit);
     return R({
-      items: page.map(({ stack: _stack, meta: _meta, ...row }) => row),
+      items: page.map(({ stack: _stack, meta: _meta, notes: _notes, fingerprint: _fingerprint, ...row }) => row),
       next: start + limit < filtered.length ? page[page.length - 1].id : null,
     });
   }

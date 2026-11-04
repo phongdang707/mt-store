@@ -1,4 +1,9 @@
 import "zmp-ui/zaui.css";
+import "@fontsource/be-vietnam-pro/400.css";
+import "@fontsource/be-vietnam-pro/600.css";
+import "@fontsource/be-vietnam-pro/700.css";
+import "@fontsource/quicksand/600.css";
+import "@fontsource/quicksand/700.css";
 import "@/css/app.css";
 
 import React from "react";

@@ -1,31 +1,36 @@
-import { Avatar, Button, Header, Page, Text } from "zmp-ui";
-import { Tabs } from "@/components/tabs";
+import { Page } from "zmp-ui";
+import { Hold } from "@/components/gate";
+import { BackBar, Face } from "@/components/shell";
 import { useDesk } from "@/state";
 
 export default function MePage() {
   const { me, loading, error, reload } = useDesk();
   return (
     <Page>
-      <Header title="Tài khoản" showBackIcon={false} />
-      <div className="screen">
-        {loading ? <Text>Đang kiểm tra quyền…</Text> : null}
-        {error ? <Text>{error}</Text> : null}
-        {me ? (
-          <>
-            <Avatar src={me.avatar || undefined} size={64} />
-            <Text bold>{me.name || "Nhân viên"}</Text>
-            <Text size="small">{me.role === "support" ? "Customer support" : "Chưa có quyền chăm sóc"}</Text>
-          </>
+      <BackBar title="Tài khoản" />
+      <div className="screen quiet">
+        {loading && !me ? <Hold title="Đang kiểm tra quyền…" /> : null}
+        {error ? (
+          <Hold title={error}>
+            <button type="button" className="btn ghost" onClick={reload}>
+              Thử lại
+            </button>
+          </Hold>
         ) : null}
-        {me && me.role !== "support" && !error ? (
-          <Text>Admin gán quyền customer support cho tài khoản Zalo này trong Báo cáo. Sau đó bấm tải lại.</Text>
+        {me && !error ? (
+          <div className="hold">
+            <div className="gate">
+              <Face src={me.avatar} name={me.name} size={72} />
+              <h2>{me.name || "Nhân viên"}</h2>
+              <span className={"tag " + (me.role === "support" ? "ok" : "off")}>{me.role === "support" ? "Customer support" : "Chưa có quyền"}</span>
+              {me.role !== "support" ? <p>Tài khoản này chưa được gán customer support.</p> : null}
+              <button type="button" className="btn ghost" disabled={loading} onClick={reload}>
+                {loading ? "Đang tải…" : "Tải lại"}
+              </button>
+            </div>
+          </div>
         ) : null}
-        <Text size="small">Mini App dùng cùng ứng dụng Zalo với trang bán hàng, nên user id của khách mở được cuộc chat.</Text>
-        <Button variant="secondary" fullWidth onClick={reload}>
-          Tải lại
-        </Button>
       </div>
-      <Tabs tab="me" />
     </Page>
   );
 }

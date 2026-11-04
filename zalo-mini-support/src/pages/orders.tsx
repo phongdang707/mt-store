@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { Avatar, Button, Header, Icon, Input, List, Page, Text, useNavigate } from "zmp-ui";
-import { Gate } from "@/components/gate";
-import { Tabs } from "@/components/tabs";
+import { useNavigate } from "zmp-ui";
+import { Gate, Hold } from "@/components/gate";
+import { Face, Shell } from "@/components/shell";
 import { useTalk } from "@/hooks/use-talk";
 import { orderMessage } from "@/services/chat";
-import { money, norm, stateLabel, when } from "@/services/format";
+import { norm, stateLabel, tone, totalLabel, when } from "@/services/format";
 import { useDesk } from "@/state";
 import type { Order } from "@/types";
 
@@ -20,7 +20,6 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 
 export default function OrdersPage() {
   const { book, bookError, reload } = useDesk();
-  const navigate = useNavigate();
   const { busy, talk } = useTalk();
   const [filter, setFilter] = useState<FilterKey>("all");
   const [q, setQ] = useState("");
@@ -37,70 +36,76 @@ export default function OrdersPage() {
   }, [all, filter, q]);
 
   return (
-    <Page>
-      <Header title="Đơn hàng" showBackIcon={false} />
-      <div className="screen">
-        <Gate>
-          {!book ? (
-            <>
-              <Text>{bookError || "Chưa tải được danh sách đơn."}</Text>
-              <Button variant="secondary" fullWidth onClick={reload}>
-                Thử lại
-              </Button>
-            </>
-          ) : (
-            <>
-              <Input.Search placeholder="Tìm mã đơn, tên, số điện thoại, món" value={q} onChange={(e) => setQ(e.target.value)} />
-              <div className="chips">
-                {FILTERS.map((f) => {
-                  const count = all.filter(f.match).length;
-                  return (
-                    <button key={f.key} type="button" className={"chip" + (filter === f.key ? " on" : "")} onClick={() => setFilter(f.key)}>
-                      {f.label}
-                      {f.key !== "all" && count ? ` ${count}` : ""}
-                    </button>
-                  );
-                })}
-              </div>
-              {rows.length ? (
-                <List>
-                  {rows.map((o) => (
-                    <List.Item
-                      key={o.code}
-                      title={o.name || "Khách"}
-                      subTitle={[o.code, stateLabel(o), o.total ? money(o.total) : ""].filter(Boolean).join(" · ")}
-                      prefix={<Avatar src={o.avatar || undefined} size={40} />}
-                      suffix={
-                        <Button
-                          size="small"
-                          variant="tertiary"
-                          icon={<Icon icon="zi-chat" />}
-                          disabled={!!busy || !o.zaloUserId}
-                          loading={!!o.zaloUserId && busy === o.zaloUserId}
-                          aria-label={`Nhắn ${o.name || "khách"}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void talk(o.zaloUserId, orderMessage(book.store, o));
-                          }}
-                        />
-                      }
-                      onClick={() => navigate(`/order/${o.code}`)}
-                    >
-                      <Text size="xSmall" className="muted">
-                        {when(o.createdAt)}
-                        {o.phone ? ` · ${o.phone}` : ""}
-                      </Text>
-                    </List.Item>
-                  ))}
-                </List>
-              ) : (
-                <Text>Không có đơn trong mục này.</Text>
-              )}
-            </>
-          )}
-        </Gate>
-      </div>
-      <Tabs tab="orders" />
-    </Page>
+    <Shell
+      tab="orders"
+      sub={book ? `${book.orders.length} đơn` : "Đơn hàng"}
+      placeholder="Tìm mã đơn, tên, số điện thoại, món"
+      query={q}
+      onQuery={book ? setQ : undefined}
+      tools={
+        book ? (
+          <div className="chips">
+            {FILTERS.map((f) => {
+              const count = all.filter(f.match).length;
+              return (
+                <button key={f.key} type="button" className={"chip" + (filter === f.key ? " on" : "")} onClick={() => setFilter(f.key)}>
+                  {f.label}
+                  {f.key !== "all" && count ? ` · ${count}` : ""}
+                </button>
+              );
+            })}
+          </div>
+        ) : null
+      }
+    >
+      <Gate>
+        {!book ? (
+          <Hold title={bookError || "Chưa tải được danh sách đơn."}>
+            <button type="button" className="btn ghost" onClick={reload}>
+              Thử lại
+            </button>
+          </Hold>
+        ) : rows.length ? (
+          <div className="list">
+            {rows.map((o) => (
+              <OrderCard key={o.code} order={o} busy={busy} onTalk={() => void talk(o.zaloUserId, orderMessage(book.store, o))} />
+            ))}
+          </div>
+        ) : (
+          <Hold title={q.trim() ? "Không có đơn khớp." : "Không có đơn trong mục này."} />
+        )}
+      </Gate>
+    </Shell>
+  );
+}
+
+function OrderCard({ order: o, busy, onTalk }: { order: Order; busy: string; onTalk: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <article className="card order">
+      <button type="button" className="hit" onClick={() => navigate(`/order/${o.code}`)}>
+        <Face src={o.avatar} name={o.name} size={44} />
+        <span className="grow">
+          <span className="row">
+            <span className="nm">{o.name || "Khách"}</span>
+            <span className={"tag " + tone(o)}>{stateLabel(o)}</span>
+          </span>
+          <span className="meta">{[o.code, when(o.createdAt)].filter(Boolean).join(" · ")}</span>
+          <strong className="price">{totalLabel(o)}</strong>
+        </span>
+      </button>
+      <button
+        type="button"
+        className={"talk" + (o.zaloUserId ? "" : " none")}
+        aria-label={`Nhắn ${o.name || "khách"}`}
+        aria-busy={!!o.zaloUserId && busy === o.zaloUserId}
+        disabled={!!busy}
+        onClick={onTalk}
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path fill="currentColor" d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3.2V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" />
+        </svg>
+      </button>
+    </article>
   );
 }

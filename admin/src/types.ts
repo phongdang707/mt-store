@@ -207,11 +207,27 @@ export interface AppLog {
   status?: number;
   method?: string;
   path?: string;
+  rid?: string;
+  ms?: number;
+  actor?: string;
 }
 
 export interface AppLogDetail extends AppLog {
   stack?: string;
+  notes?: string[];
   meta?: Record<string, string | number>;
+  fingerprint?: string;
+}
+
+export interface LogReportGroup {
+  fingerprint: string;
+  count: number;
+  lastAt: string;
+  status?: number;
+  path?: string;
+  message: string;
+  sampleId: string;
+  level: LogLevel;
 }
 
 export interface AppLogPage {

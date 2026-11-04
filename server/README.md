@@ -13,7 +13,7 @@ npm run start:dev         # http://localhost:3000/api
 
 Docker, MongoDB lấy `MONGODB_URI` trong `.env` (Atlas). `make rollout` build cả API và trang `web/` trên server này. API mở `127.0.0.1:3000`, Next mở `127.0.0.1:3001`. HTTPS public đi qua nginx của `gateway` (`nhatro_edge`): `/` vào Next, `/api` và `/uploads` vào API.
 
-DNS (một lần), panel `nhatrothongminh.click`: bản ghi `A` tên `mt-store` → `103.72.97.203`, cột Bảo vệ **tắt**. Atlas Network Access phải cho IP này.
+DNS: bản ghi `A` của `mt-store.store` → `103.72.97.203`, cột Bảo vệ **tắt**. Atlas Network Access phải cho IP này. Tên cũ `mt-store.nhatrothongminh.click` chỉ redirect sang `https://mt-store.store`.
 
 ```bash
 make tls       # sau khi DNS trỏ đúng: chứng chỉ + vhost HTTPS
@@ -23,7 +23,7 @@ make logs
 make down
 ```
 
-`https://mt-store.nhatrothongminh.click` là trang bán hàng. `https://mt-store.nhatrothongminh.click/api/health` — `mongo` phải là `up`. Sửa code liên tục trên host: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`.
+`https://mt-store.store` là trang bán hàng. `https://mt-store.store/api/health` — `mongo` phải là `up`. Sửa code liên tục trên host: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build`.
 
 Render (instance 512MB), Root Directory = `server`:
 
