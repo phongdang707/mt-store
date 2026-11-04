@@ -16,6 +16,7 @@ export function useTalk() {
     setBusy(zaloUserId);
     try {
       await openCareChat(zaloUserId, message);
+      openSnackbar({ text: "Đã mở chat với khách trong Zalo. Bạn đọc lại rồi bấm gửi.", type: "success" });
       return true;
     } catch (error) {
       openSnackbar({ text: error instanceof Error ? error.message : "Chưa mở được cuộc trò chuyện", type: "error" });

@@ -1,5 +1,6 @@
 import type { Order } from "@/types";
-import { openChat } from "zmp-sdk";
+import { getUserID, openChat } from "zmp-sdk";
+import { sdkReason } from "@/services/sdk-error";
 
 export function careMessage(store: string, name: string, code?: string) {
   const shop = store.trim() || "MT store";
@@ -18,20 +19,36 @@ export function orderMessage(store: string, order: Pick<Order, "code" | "kind" |
   return `Chào ${who}, ${shop} nhắn về đơn ${order.code} của bạn.`;
 }
 
-function denied(error: unknown) {
-  if (!error || typeof error !== "object" || !("code" in error)) return false;
-  const code = (error as { code?: number | string }).code;
-  return code === -201 || code === "-201";
+function codeOf(error: unknown) {
+  if (!error || typeof error !== "object" || !("code" in error)) return "";
+  return String((error as { code?: unknown }).code ?? "");
+}
+
+let selfId: Promise<string> | null = null;
+
+/** User id của chính nhân viên trong cùng Zalo App. Lỗi thì bỏ qua kiểm tra. */
+function myZaloId() {
+  selfId ??= getUserID({}).then(
+    (id) => id || "",
+    () => "",
+  );
+  return selfId;
 }
 
 /** Mở chat cá nhân và điền sẵn lời nhắn. Khách nhận tin chỉ khi nhân viên bấm gửi trong Zalo. */
 export async function openCareChat(id: string, message: string) {
+  if (id && id === (await myZaloId())) {
+    throw new Error("Đây là tài khoản Zalo của chính bạn. Zalo không mở chat với chính mình, hãy thử với đơn của khách khác.");
+  }
   try {
     await openChat({ type: "user", id, message });
   } catch (error) {
-    if (denied(error)) throw new Error("Bạn đã đóng cuộc trò chuyện.");
+    console.error("openChat", id, error);
+    if (codeOf(error) === "-201") throw new Error("Bạn đã đóng cuộc trò chuyện.");
     const host = location.hostname;
-    if (host === "localhost" || host === "127.0.0.1") throw new Error("Mở Mini App trong Zalo để nhắn khách.");
-    throw error instanceof Error ? error : new Error("Chưa mở được cuộc trò chuyện");
+    // SDK reject không kèm lỗi khi trang không chạy trong Zalo.
+    if (error == null || host === "localhost" || host === "127.0.0.1") throw new Error("Mở Mini App trong Zalo để nhắn khách.");
+    const why = sdkReason(error);
+    throw new Error(why ? `Zalo không mở được chat: ${why}` : "Zalo không mở được chat với khách này.");
   }
 }
