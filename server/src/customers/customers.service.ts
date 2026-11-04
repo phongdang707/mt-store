@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Types, type Model } from 'mongoose';
 import { Customer, type CustomerRole } from './customer.schema.js';
-import type { ZaloUser } from './zalo.service.js';
+import type { ZaloTokens, ZaloUser } from './zalo.service.js';
 
 /** Ảnh Zalo là URL http(s). `//` và `http` được đổi thành https. Chuỗi khác bỏ. */
 export function avatarUrl(v: string | undefined) {
@@ -16,6 +16,11 @@ export function avatarUrl(v: string | undefined) {
 @Injectable()
 export class CustomersService {
   constructor(@InjectModel(Customer.name) private readonly customers: Model<Customer>) {}
+
+  byId(id: string) {
+    if (!Types.ObjectId.isValid(id)) return Promise.resolve(null);
+    return this.customers.findById(id).exec();
+  }
 
   /** Tạo khách theo zaloUserId nếu chưa có. Tên Zalo ghi ở `zaloName` khi mở app. */
   upsert(u: ZaloUser) {
@@ -113,6 +118,24 @@ export class CustomersService {
     if (!Types.ObjectId.isValid(key)) return false;
     const row = await this.customers.findById(key).select('blocked').lean().exec();
     return !!row?.blocked;
+  }
+
+  zaloSession(id: unknown) {
+    const key = String(id ?? '');
+    if (!Types.ObjectId.isValid(key)) return Promise.resolve(null);
+    return this.customers.findById(key).select('+zaloAccessToken +zaloAccessExp +zaloRefreshToken').lean().exec();
+  }
+
+  /** `expectedRefresh` chỉ ghi khi refresh token trong DB vẫn là bản vừa dùng. */
+  async saveZaloTokens(id: unknown, tokens: ZaloTokens, expectedRefresh?: string) {
+    const filter: Record<string, unknown> = { _id: id };
+    if (expectedRefresh !== undefined) filter.zaloRefreshToken = expectedRefresh;
+    const res = await this.customers
+      .updateOne(filter, {
+        $set: { zaloAccessToken: tokens.access, zaloRefreshToken: tokens.refresh, zaloAccessExp: tokens.exp },
+      })
+      .exec();
+    return res.matchedCount > 0;
   }
 
   /** Id khách → đang bị chặn. Id lạ bỏ qua. */

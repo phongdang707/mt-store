@@ -3,6 +3,7 @@ import { AdminGuard } from '../auth/admin.guard.js';
 import { SyncProfileDto, UpdateCustomerDto } from './customer.dto.js';
 import { CustomerGuard, type CustomerRequest } from './customer.guard.js';
 import { CustomersService } from './customers.service.js';
+import { ZaloAuthService } from './zalo-auth.service.js';
 import { ZaloService } from './zalo.service.js';
 
 @Controller('me')
@@ -11,6 +12,7 @@ export class CustomersController {
   constructor(
     private readonly customers: CustomersService,
     private readonly zalo: ZaloService,
+    private readonly zaloAuth: ZaloAuthService,
   ) {}
 
   /** Id khách để tách giỏ trên máy, cùng SĐT/địa chỉ của đúng người đó. */
@@ -39,8 +41,13 @@ export class CustomersController {
     let zaloName = dto.zaloName;
     let avatar = dto.avatar;
     const token = req.header('x-zalo-token');
+    const bearer = req.header('authorization')?.toLowerCase().startsWith('bearer ');
     if (token) {
       const remote = await this.zalo.profile(token);
+      if (remote.name) zaloName = remote.name;
+      if (remote.avatar) avatar = remote.avatar;
+    } else if (bearer) {
+      const remote = await this.zaloAuth.storedProfile(req.customer._id);
       if (remote.name) zaloName = remote.name;
       if (remote.avatar) avatar = remote.avatar;
     }

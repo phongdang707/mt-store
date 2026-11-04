@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { Admin } from './admin.schema.js';
+import { assertAdminClaims } from './admin-claims.js';
 import { hashPassword, verifyPassword } from './password.js';
 
 export interface AdminClaims {
@@ -66,7 +67,9 @@ export class AuthService implements OnModuleInit {
     return { token, admin: { email: admin.email, name: admin.displayName } };
   }
 
-  verify(token: string) {
-    return this.jwt.verifyAsync<AdminClaims>(token);
+  async verify(token: string) {
+    const claims = await this.jwt.verifyAsync<AdminClaims & { aud?: string | string[] }>(token);
+    assertAdminClaims(claims);
+    return claims;
   }
 }

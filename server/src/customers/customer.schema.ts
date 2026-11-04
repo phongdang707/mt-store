@@ -46,6 +46,11 @@ export class Customer {
   @Prop({ default: false }) blocked: boolean;
   /** `support`: mở Mini App thì thấy mục chăm sóc khách hàng. */
   @Prop({ type: String, enum: CUSTOMER_ROLES, default: 'customer' }) role: CustomerRole;
+  /** Access token OAuth web. Không trả ra API. */
+  @Prop({ select: false, default: '' }) zaloAccessToken: string;
+  @Prop({ select: false }) zaloAccessExp?: Date;
+  /** Refresh token dùng một lần. Lưu bản mới sau mỗi lần làm mới. */
+  @Prop({ select: false, default: '' }) zaloRefreshToken: string;
   @Prop() blockedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -54,3 +59,15 @@ export class Customer {
 export type CustomerDocument = HydratedDocument<Customer>;
 export const CustomerSchema = SchemaFactory.createForClass(Customer);
 CustomerSchema.index({ 'activity.date': 1 });
+CustomerSchema.set('toJSON', {
+  versionKey: false,
+  transform(_doc, ret) {
+    const out = ret as unknown as Record<string, unknown>;
+    out.id = String(out._id);
+    delete out._id;
+    delete out.zaloAccessToken;
+    delete out.zaloRefreshToken;
+    delete out.zaloAccessExp;
+    return out;
+  },
+});

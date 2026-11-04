@@ -1,6 +1,6 @@
 # MT store — server
 
-NestJS 12 + MongoDB (Mongoose 9), ESM. Phục vụ trang bán hàng (`client/`, Zalo Mini App) và trang quản lý (`admin/`).
+NestJS 12 + MongoDB (Mongoose 9), ESM. Phục vụ trang bán hàng (`web/`, Next.js) và trang quản lý (`admin/`).
 
 ```bash
 cp .env.example .env      # điền MONGODB_URI, JWT_SECRET, ADMIN_EMAIL/ADMIN_PASSWORD, Cloudinary, Zalo
@@ -37,7 +37,7 @@ yarn start
 Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Ảnh production cần `CLOUDINARY_*`.
 
 - **Ảnh**: Cloudinary khi có `CLOUDINARY_*`; chưa có (dev) thì lưu `./uploads`, phục vụ ở `/uploads`. Production không có Cloudinary thì API upload trả lỗi, server vẫn chạy.
-- **Khách**: Zalo Mini App gửi `x-zalo-token` (access token), server xác minh qua Graph API bằng `ZALO_APP_SECRET`. Dev chưa có secret: header `x-dev-user`.
+- **Khách**: trang `web/` đăng nhập Zalo OAuth rồi gửi JWT `Authorization: Bearer`. Mini App cũ (ngoài repo) vẫn có thể gửi `x-zalo-token` (access token); server xác minh qua Graph API bằng `ZALO_APP_SECRET`. Dev chưa có secret: header `x-dev-user`.
 - **Webhook**: `POST /api/zalo/webhook`. Dán URL này (đủ domain) vào Webhook URL ở Open APIs. `ZALO_API_KEY` kiểm header `X-ZEvent-Signature`. Sự kiện `user.revoke.consent` xoá hồ sơ, lượt xem và gỡ tên, SĐT, địa chỉ, ảnh trên đơn.
 - **Admin**: tài khoản tạo từ `ADMIN_EMAIL`/`ADMIN_PASSWORD` lúc khởi động. Chủ shop đổi mật khẩu trong Cài đặt (`POST /api/auth/password`), mật khẩu đó được giữ qua các lần khởi động; chỉ khi đổi giá trị `ADMIN_PASSWORD` rồi khởi động lại thì mật khẩu mới bị đặt lại theo env.
 - **Cài đặt**: `markets` (Nhật, Hàn, Úc, Trung: mở/khoá + ngày bay, hạn nhận đơn). Nước bị khoá bị ẩn khỏi `/api/catalog` cùng hàng của nó và không đặt được. `freeShipFrom`: đơn có tạm tính từ mức này được miễn phí giao (đơn lưu `shipBase` + `freeShipFrom` lúc đặt).

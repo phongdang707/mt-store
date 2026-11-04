@@ -1,7 +1,0 @@
-{
-  "framework": "react-typescript",
-  "template": "blank",
-  "cssPreProcessor": "css",
-  "stateManagement": "none",
-  "includeTailwind": false
-}
