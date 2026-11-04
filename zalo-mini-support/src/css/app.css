@@ -120,3 +120,21 @@
   background: #f1f2f4;
   color: #767a7f;
 }
+
+/* Ảnh hoá đơn (PNG 900px, giống admin) thu vừa bề ngang màn hình. */
+.bill-img {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(150, 90, 100, 0.16);
+}
+
+.bill-wait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 900 / 1140;
+  background: linear-gradient(180deg, #fcf8f0 0%, #f8ebe4 65%, #f2d5d3 100%);
+}

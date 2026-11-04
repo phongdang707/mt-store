@@ -9,6 +9,13 @@ export function careMessage(store: string, name: string, code?: string) {
   return `Chào ${who}, ${shop} hỗ trợ${about}. Bạn cần mình giúp gì thêm không?`;
 }
 
+/** Lời nhắn kèm ảnh hoá đơn: nhân viên gửi tin này rồi đính ảnh vừa lưu trong thư viện. */
+export function invoiceMessage(store: string, name: string, code: string, total: string) {
+  const shop = store.trim() || "MT store";
+  const who = name.trim() || "bạn";
+  return `Chào ${who}, ${shop} gửi bạn hoá đơn đơn ${code}, tổng ${total}. Bạn xem ảnh hoá đơn bên dưới và quét mã QR để chuyển khoản giúp mình nhé.`;
+}
+
 /** Lời nhắn điền sẵn theo trạng thái đơn. Nhân viên vẫn sửa được trong Zalo trước khi gửi. */
 export function orderMessage(store: string, order: Pick<Order, "code" | "kind" | "status" | "name">) {
   const shop = store.trim() || "MT store";

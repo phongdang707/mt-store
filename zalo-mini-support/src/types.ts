@@ -1,18 +1,35 @@
 export type InvoiceStatus = "new" | "changed" | "sent";
 
+export interface Bank {
+  bank: string;
+  bin: string;
+  acc: string;
+  name: string;
+}
+
 export interface Invoice {
   code: string;
   name: string;
   avatar: string;
   phone: string;
+  addr: string;
+  items: { name: string; variantName: string; img: string; qty: number; price: number }[];
+  subtotal: number;
+  shippingFee: number;
+  shipBase?: number | null;
   total: number;
+  createdAt: string;
   invoiceStatus: InvoiceStatus;
   zaloUserId: string;
-  items: { name: string; variantName: string; qty: number }[];
 }
 
 export interface Desk {
   store: string;
+  tagline?: string;
+  /** Logo, mã QR và tài khoản ngân hàng của shop, để vẽ ảnh hoá đơn giống admin. */
+  logo?: string;
+  qr?: string;
+  bank?: Bank;
   invoices: Invoice[];
 }
 
