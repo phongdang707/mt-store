@@ -1,6 +1,6 @@
 /*
- * Ảnh hoá đơn PNG 900px, bản sao nguyên từ admin/src/invoice-image.ts (orderImage)
- * để ảnh support tải về giống hệt ảnh admin gửi khách. Sửa bên admin thì chép lại phần vẽ.
+ * Ảnh hoá đơn PNG 900px, cùng bố cục tờ bill admin gửi khách.
+ * Dòng khách là tên, dòng dưới là SĐT · địa chỉ.
  */
 import "@fontsource/be-vietnam-pro/500.css";
 import "@fontsource/be-vietnam-pro/600.css";
@@ -14,6 +14,7 @@ import { bankOf, qrDataURL, vietqr } from "./vietqr";
 /** Phần đơn mà ảnh hoá đơn cần (khớp Order của admin). */
 export interface InvoiceOrder {
   code: string;
+  name?: string;
   phone: string;
   addr: string;
   product?: string;
@@ -135,11 +136,11 @@ export async function orderImage(o: InvoiceOrder, D: Catalog): Promise<Blob | nu
   x.textAlign = "left";
   x.font = `700 28px ${F}`;
   x.fillStyle = "#3d3530";
-  x.fillText(o.phone || "", P, y + 40);
+  x.fillText((o.name || "Khách").slice(0, 28), P, y + 40);
   x.font = `500 20px ${F}`;
   x.fillStyle = "#7a6a66";
-  x.fillText(String(o.addr || "").slice(0, 46), P, y + 72);
-  y += 100;
+  x.fillText([o.phone, o.addr].filter(Boolean).join(" · ").slice(0, 42), P, y + 72);
+  y += 110;
   x.strokeStyle = "#d9c6c0";
   x.lineWidth = 2;
   x.beginPath();

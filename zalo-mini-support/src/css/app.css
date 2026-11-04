@@ -308,6 +308,16 @@ button.card {
 
 .bill em.due { color: var(--accent); }
 
+.bill-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  box-shadow: 0 6px 18px var(--shadow);
+}
+
 .product { font-weight: 600; }
 
 .photos { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
