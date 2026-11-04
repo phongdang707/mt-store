@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Avatar, Button, Header, List, Page, Search, Text, useSnackbar } from "zmp-ui";
+import { Avatar, Button, Header, Input, List, Page, Text, useSnackbar } from "zmp-ui";
 import { Gate } from "@/components/gate";
 import { Tabs } from "@/components/tabs";
 import { careMessage, openCareChat } from "@/services/chat";
@@ -75,7 +75,7 @@ export default function PeoplePage() {
       <div className="screen">
         <Gate>
           <Text size="small">Nhắn theo Zalo user id đã lưu khi khách đăng nhập. Không cần Official Account.</Text>
-          <Search placeholder="Tìm tên hoặc số điện thoại" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input.Search placeholder="Tìm tên hoặc số điện thoại" value={q} onChange={(e) => setQ(e.target.value)} />
           {people.length ? (
             <List>
               {people.map((person) => (

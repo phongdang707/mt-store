@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Avatar, Header, Icon, List, Page, Search, Text, useNavigate } from "zmp-ui";
+import { Avatar, Header, Icon, Input, List, Page, Text, useNavigate } from "zmp-ui";
 import { Gate } from "@/components/gate";
 import { Tabs } from "@/components/tabs";
 import { useDesk } from "@/state";
@@ -34,7 +34,7 @@ export default function QueuePage({ mode }: { mode: "todo" | "sent" }) {
       <div className="screen">
         <Gate>
           <Text size="small">Chọn đơn để mở chat Zalo với khách. Lời nhắn được điền sẵn, bạn gửi trong Zalo.</Text>
-          <Search placeholder="Tìm mã đơn, tên, số điện thoại" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Input.Search placeholder="Tìm mã đơn, tên, số điện thoại" value={q} onChange={(e) => setQ(e.target.value)} />
           {rows.length ? (
             <List>
               {rows.map((row) => (
