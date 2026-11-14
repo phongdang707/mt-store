@@ -4,15 +4,15 @@ import { setActor } from '../logs/request-log.js';
 import { CustomerSessionService } from './customer-session.service.js';
 import type { CustomerDocument } from './customer.schema.js';
 import { CustomersService } from './customers.service.js';
-import { FacebookService } from './facebook.service.js';
+import { GoogleService } from './google.service.js';
 
 export type CustomerRequest = Request & { customer: CustomerDocument };
 
-/** Web gửi JWT `Authorization: Bearer`. Dev không có App Secret: `x-dev-user`. */
+/** Web gửi JWT `Authorization: Bearer`. Dev không có Client Secret: `x-dev-user`. */
 @Injectable()
 export class CustomerGuard implements CanActivate {
   constructor(
-    private readonly facebook: FacebookService,
+    private readonly google: GoogleService,
     private readonly customers: CustomersService,
     private readonly sessions: CustomerSessionService,
   ) {}
@@ -27,7 +27,7 @@ export class CustomerGuard implements CanActivate {
       const customer = await this.customers.byId(id);
       if (!customer) throw new UnauthorizedException('Phiên đăng nhập đã hết hạn');
       req.customer = customer;
-    } else if (dev && this.facebook.devMode && /^[\w-]{6,64}$/.test(dev)) {
+    } else if (dev && this.google.devMode && /^[\w-]{6,64}$/.test(dev)) {
       const customer = await this.customers.upsert({ id: 'dev:' + dev });
       if (!customer) throw new UnauthorizedException('Cần đăng nhập');
       req.customer = customer;

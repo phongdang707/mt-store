@@ -4,18 +4,13 @@ import { Types, type Model } from 'mongoose';
 import { Customer, type CustomerRole } from './customer.schema.js';
 import { messengerOpen } from './messenger.js';
 
-export interface FacebookIdentity {
+export interface GoogleIdentity {
   id: string;
 }
 
-export interface FacebookToken {
-  access: string;
-  exp: Date;
-}
-
-/** Tên hiện trên shop: Facebook, rồi hồ sơ Zalo cũ, rồi tên đơn. */
-export function socialName(c: { facebookName?: string; zaloName?: string; name?: string }) {
-  return c.facebookName?.trim() || c.zaloName?.trim() || c.name?.trim() || '';
+/** Tên hiện trên shop: Google, rồi Facebook cũ, rồi Zalo cũ, rồi tên đơn. */
+export function socialName(c: { googleName?: string; facebookName?: string; zaloName?: string; name?: string }) {
+  return c.googleName?.trim() || c.facebookName?.trim() || c.zaloName?.trim() || c.name?.trim() || '';
 }
 
 /** Ảnh là URL http(s). `//` và `http` được đổi thành https. Chuỗi khác bỏ. */
@@ -36,37 +31,39 @@ export class CustomersService {
     return this.customers.findById(id).exec();
   }
 
-  /** Tạo khách theo facebookUserId nếu chưa có. */
-  upsert(u: FacebookIdentity) {
+  /** Tạo khách theo googleUserId nếu chưa có. */
+  upsert(u: GoogleIdentity) {
     return this.customers
-      .findOneAndUpdate({ facebookUserId: u.id }, { $setOnInsert: { facebookUserId: u.id } }, { new: true, upsert: true })
+      .findOneAndUpdate({ googleUserId: u.id }, { $setOnInsert: { googleUserId: u.id } }, { new: true, upsert: true })
       .exec();
   }
 
-  /** Tên hoặc ảnh Facebook đã lưu. */
-  profileOf(customer: { facebookName?: string; zaloName?: string; avatar?: string }) {
-    const name = customer.facebookName?.trim() || customer.zaloName?.trim() || '';
+  /** Tên hoặc ảnh đăng nhập đã lưu. Tên trên đơn không tính. */
+  profileOf(customer: { googleName?: string; facebookName?: string; zaloName?: string; avatar?: string }) {
+    const name = customer.googleName?.trim() || customer.facebookName?.trim() || customer.zaloName?.trim() || '';
     const avatar = customer.avatar?.trim() || '';
     return { hasData: !!(name || avatar), name, avatar };
   }
 
   /** Ghi tên, ảnh, email. Trường trống không xoá dữ liệu đang có. */
-  async syncProfile(id: unknown, info: { facebookName?: string; avatar?: string; email?: string }) {
+  async syncProfile(id: unknown, info: { googleName?: string; facebookName?: string; avatar?: string; email?: string }) {
+    const googleName = info.googleName?.trim();
     const facebookName = info.facebookName?.trim();
-    await this.remember(id, { name: facebookName, facebookName, avatar: info.avatar, email: info.email });
-    if (facebookName || avatarUrl(info.avatar)) {
+    const shown = googleName || facebookName;
+    await this.remember(id, { name: shown, googleName, facebookName, avatar: info.avatar, email: info.email });
+    if (shown || avatarUrl(info.avatar)) {
       await this.customers.updateOne({ _id: id }, { $set: { lastSeenAt: new Date() } }).exec();
     }
-    const customer = await this.customers.findById(id).select('facebookName zaloName name avatar').lean().exec();
+    const customer = await this.customers.findById(id).select('googleName facebookName zaloName name avatar').lean().exec();
     return this.profileOf(customer ?? {});
   }
 
-  /** Tên và ảnh đang hiện trên trang quản lý. Ưu tiên tên Facebook. */
+  /** Tên và ảnh đang hiện trên trang quản lý. Ưu tiên tên Google. */
   async profilesOf(ids: unknown[]) {
     const unique = [...new Set(ids.map((id) => String(id ?? '')).filter((id) => Types.ObjectId.isValid(id)))];
     const map = new Map<string, { name: string; avatar: string }>();
     if (!unique.length) return map;
-    const rows = await this.customers.find({ _id: { $in: unique } }).select('facebookName zaloName name avatar').lean().exec();
+    const rows = await this.customers.find({ _id: { $in: unique } }).select('googleName facebookName zaloName name avatar').lean().exec();
     for (const row of rows) {
       map.set(String(row._id), { name: socialName(row), avatar: row.avatar?.trim() || '' });
     }
@@ -74,12 +71,14 @@ export class CustomersService {
   }
 
   /** Lưu tên, ảnh, email, SĐT, địa chỉ. Trường trống không ghi đè lần trước. */
-  remember(id: unknown, info: { name?: string; facebookName?: string; avatar?: string; email?: string; phone?: string; addr?: string }) {
+  remember(id: unknown, info: { name?: string; googleName?: string; facebookName?: string; avatar?: string; email?: string; phone?: string; addr?: string }) {
     const set: Record<string, string> = {};
     for (const key of ['name', 'phone', 'addr'] as const) {
       const value = info[key]?.trim();
       if (value) set[key] = value;
     }
+    const googleName = info.googleName?.trim();
+    if (googleName) set.googleName = googleName.slice(0, 120);
     const facebookName = info.facebookName?.trim();
     if (facebookName) set.facebookName = facebookName.slice(0, 120);
     const email = info.email?.trim().toLowerCase();
@@ -119,7 +118,7 @@ export class CustomersService {
     if (!unique.length) return map;
     const rows = await this.customers
       .find({ _id: { $in: unique } })
-      .select('facebookUserId facebookName zaloName name avatar phone messengerPsid messengerLastAt')
+      .select('facebookUserId googleName facebookName zaloName name avatar phone messengerPsid messengerLastAt')
       .lean()
       .exec();
     for (const row of rows) {
@@ -165,16 +164,6 @@ export class CustomersService {
     if (!Types.ObjectId.isValid(key)) return false;
     const row = await this.customers.findById(key).select('blocked').lean().exec();
     return !!row?.blocked;
-  }
-
-  facebookSession(id: unknown) {
-    const key = String(id ?? '');
-    if (!Types.ObjectId.isValid(key)) return Promise.resolve(null);
-    return this.customers.findById(key).select('+facebookAccessToken +facebookAccessExp').lean().exec();
-  }
-
-  saveFacebookToken(id: unknown, token: FacebookToken) {
-    return this.customers.updateOne({ _id: id }, { $set: { facebookAccessToken: token.access, facebookAccessExp: token.exp } }).exec();
   }
 
   /** Id khách → đang bị chặn. Id lạ bỏ qua. */

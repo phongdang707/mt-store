@@ -6,9 +6,9 @@ import { SupportGuard } from './support.guard.js';
 import { AdminCustomersController, CustomersController } from './customers.controller.js';
 import { Customer, CustomerSchema } from './customer.schema.js';
 import { CustomersService } from './customers.service.js';
-import { FacebookAuthController } from './facebook-auth.controller.js';
-import { FacebookAuthService } from './facebook-auth.service.js';
-import { FacebookService } from './facebook.service.js';
+import { GoogleAuthController } from './google-auth.controller.js';
+import { GoogleAuthService } from './google-auth.service.js';
+import { GoogleService } from './google.service.js';
 import { LoginState, LoginStateSchema } from './login-state.schema.js';
 
 @Global()
@@ -19,8 +19,8 @@ import { LoginState, LoginStateSchema } from './login-state.schema.js';
       { name: LoginState.name, schema: LoginStateSchema },
     ]),
   ],
-  controllers: [CustomersController, AdminCustomersController, FacebookAuthController],
-  providers: [FacebookService, CustomersService, CustomerGuard, SupportGuard, CustomerSessionService, FacebookAuthService],
-  exports: [MongooseModule, FacebookService, CustomersService, CustomerGuard, SupportGuard, CustomerSessionService],
+  controllers: [CustomersController, AdminCustomersController, GoogleAuthController],
+  providers: [GoogleService, CustomersService, CustomerGuard, SupportGuard, CustomerSessionService, GoogleAuthService],
+  exports: [MongooseModule, GoogleService, CustomersService, CustomerGuard, SupportGuard, CustomerSessionService],
 })
 export class CustomersModule {}

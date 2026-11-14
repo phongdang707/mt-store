@@ -95,7 +95,7 @@ export function sourceOfPath(path: string): LogSource {
 
 export function sourceOfContext(context?: string): LogSource {
   if (context === 'ZaloWebhookService' || context === 'FacebookWebhookService') return 'webhook';
-  if (context === 'FacebookService' || context === 'FacebookAuthService' || context === 'MessengerService') return 'facebook';
+  if (context === 'MessengerService') return 'facebook';
   if (context === 'ZaloService' || context === 'ZaloAuthService') return 'zalo';
   return 'app';
 }

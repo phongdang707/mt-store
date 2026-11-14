@@ -59,7 +59,7 @@ async function beat() {
   ]);
   try {
     await api.visit({
-      facebookName: quick.p.name || undefined,
+      googleName: quick.p.name || undefined,
       avatar: quick.p.avatar || undefined,
       ...device,
       seconds,
@@ -72,7 +72,7 @@ async function beat() {
     const who = await ready;
     if (!who.name && !who.avatar) return;
     await api.visit({
-      facebookName: who.name || undefined,
+      googleName: who.name || undefined,
       avatar: who.avatar || undefined,
       ...device,
       seconds: 0,

@@ -4,7 +4,7 @@ import { LegalShell } from "@/components/legal-shell";
 
 export const metadata: Metadata = {
   title: "Chính sách quyền riêng tư – MT store",
-  description: "MT store thu thập gì khi bạn đăng nhập Facebook, đặt hàng xách tay, chuyển khoản và nhắn Messenger, cùng cách yêu cầu xóa dữ liệu.",
+  description: "MT store thu thập gì khi bạn đăng nhập Google, đặt hàng xách tay, chuyển khoản và nhắn Messenger, cùng cách yêu cầu xóa dữ liệu.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -25,25 +25,25 @@ export default function PrivacyPolicyPage() {
         <h2>Dữ liệu shop thu thập</h2>
         <p>Shop chỉ nhận những gì cần để mở cửa hàng, nhận đơn và liên hệ bạn.</p>
 
-        <h3>Đăng nhập Facebook</h3>
+        <h3>Đăng nhập Google</h3>
         <p>
-          Bạn đăng nhập bằng Facebook để vào shop. Hộp thoại Facebook xin quyền <strong>public_profile</strong>. Shop nhận và lưu mã người dùng Facebook, tên hiển thị và ảnh đại diện.
+          Bạn đăng nhập bằng Google để vào shop. Hộp thoại Google xin quyền <strong>openid</strong>, <strong>email</strong> và <strong>profile</strong>. Shop nhận và lưu mã người dùng Google, tên hiển thị, email và ảnh đại diện.
         </p>
         <ul>
-          <li>Shop không nhận mật khẩu Facebook.</li>
-          <li>Máy chủ lưu access token Facebook cấp (bản dài hạn, khoảng 60 ngày) để đọc lại tên và ảnh. Token này không gửi ra trình duyệt.</li>
-          <li>Trang không có đăng nhập Instagram và không lấy dữ liệu tài khoản Instagram.</li>
+          <li>Shop không nhận mật khẩu Google.</li>
+          <li>Shop không lưu access token Google. Tên, email và ảnh được ghi lúc bạn đăng nhập.</li>
+          <li>Email chỉ được lưu khi Google xác nhận email đó là của bạn.</li>
         </ul>
 
         <h3>Hồ sơ tạo từ trước</h3>
         <p>
-          Một số tài khoản tạo lúc shop còn cho đăng nhập Zalo vẫn còn mã người dùng Zalo và tên Zalo. Khách mới không đăng nhập bằng Zalo.
+          Một số tài khoản tạo lúc shop còn cho đăng nhập Facebook hoặc Zalo vẫn còn mã và tên của lần đăng nhập đó. Khách mới không đăng nhập bằng Facebook hay Zalo. Đơn của những hồ sơ cũ vẫn nằm trong shop.
         </p>
 
         <h3>Đơn hàng</h3>
         <p>Khi bạn gửi đơn, shop lưu:</p>
         <ul>
-          <li>tên và ảnh lấy từ Facebook;</li>
+          <li>tên và ảnh lấy từ Google, hoặc từ hồ sơ đăng nhập cũ nếu tài khoản tạo từ trước;</li>
           <li>số điện thoại bạn nhập ở ô “Số Zalo” — shop nhắn số này về hàng và thanh toán;</li>
           <li>địa chỉ nhận hàng;</li>
           <li>ghi chú, nếu bạn có để lại;</li>
@@ -80,7 +80,7 @@ export default function PrivacyPolicyPage() {
             <strong>localStorage:</strong> phiên đăng nhập, giỏ hàng, số điện thoại và địa chỉ nếu bạn chọn “Lưu thông tin cho lần sau”, nước đang xem, giao diện sáng hoặc tối, và thông báo lỗi đăng nhập.
           </li>
           <li>
-            <strong>sessionStorage:</strong> một dấu hiệu tạm để trang quay về từ Facebook không xử lý cùng một lần đăng nhập hai lần.
+            <strong>sessionStorage:</strong> một dấu hiệu tạm để trang quay về từ Google không xử lý cùng một lần đăng nhập hai lần.
           </li>
         </ul>
 
@@ -96,7 +96,10 @@ export default function PrivacyPolicyPage() {
         <h2>Chia sẻ với bên khác</h2>
         <ul>
           <li>
-            <strong>Meta (Facebook):</strong> đăng nhập, ảnh đại diện và tin nhắn Messenger. Phần dữ liệu đó cũng theo chính sách của Meta.
+            <strong>Google:</strong> đăng nhập. Google thấy rằng bạn dùng MT store. Phần đó theo chính sách của Google.
+          </li>
+          <li>
+            <strong>Meta (Facebook):</strong> tin nhắn Messenger nếu bạn nhắn Page của shop. Phần dữ liệu đó cũng theo chính sách của Meta.
           </li>
           <li>
             <strong>Nơi lưu ảnh:</strong> nếu shop bật Cloudinary, ảnh tìm hộ và ảnh hàng được lưu ở đó.
@@ -112,7 +115,7 @@ export default function PrivacyPolicyPage() {
         <ul>
           <li>Nhật ký vào trang (số lần và số giây mỗi ngày) được giữ 90 ngày.</li>
           <li>Hồ sơ, đơn và ảnh tìm hộ được giữ trong lúc shop còn cần để giao hàng, đối soát và xử lý khiếu nại.</li>
-          <li>Access token Facebook được giữ đến khi hết hạn hoặc khi hồ sơ bị xóa.</li>
+          <li>Shop không giữ access token Google.</li>
         </ul>
 
         <h2>Quyền của bạn</h2>
@@ -122,16 +125,16 @@ export default function PrivacyPolicyPage() {
           <li>sửa số điện thoại và địa chỉ ở lần đặt sau, hoặc nhắn shop để sửa thông tin đang lưu;</li>
           <li>đăng xuất để xóa phiên trên máy này;</li>
           <li>yêu cầu xóa dữ liệu theo mục bên dưới;</li>
-          <li>gỡ quyền của app trong phần cài đặt Facebook.</li>
+          <li>gỡ quyền của app trong phần tài khoản Google mà bạn đã dùng để đăng nhập.</li>
         </ul>
 
         <h2>Cách yêu cầu xóa dữ liệu</h2>
         <p>Bạn chọn một trong hai cách. Shop không yêu cầu bạn tạo thêm tài khoản để gửi yêu cầu.</p>
         <p>
-          <strong>Trên Facebook.</strong> Vào Cài đặt và quyền riêng tư → Trung tâm tài khoản → Ứng dụng và trang web → tìm MT store → Gỡ. Facebook gửi yêu cầu xóa tới shop. Shop xóa hồ sơ đăng nhập (mã Facebook, tên, ảnh, token) và lượt xem sản phẩm. Trên đơn đã tạo, shop gỡ tên, ảnh, số điện thoại, địa chỉ, ghi chú, mô tả món tìm hộ và ảnh bạn đã gửi. Mã đơn, danh sách món và số tiền được giữ lại để đối soát.
+          <strong>Trên Google.</strong> Vào tài khoản Google → Bảo mật → Các bên thứ ba có quyền truy cập vào tài khoản → tìm MT store → Gỡ quyền. Việc này ngừng đăng nhập bằng Google. Shop không nhận yêu cầu xóa tự động từ Google, nên bạn nhắn shop như mục dưới nếu muốn xóa dữ liệu.
         </p>
         <p>
-          <strong>Nhắn shop.</strong> Nhắn Page Facebook của MT store trên Messenger. Bạn ghi tên Facebook của mình và câu “yêu cầu xóa dữ liệu”. Shop xử lý theo cùng cách ở trên.
+          <strong>Nhắn shop.</strong> Nhắn Page Facebook của MT store trên Messenger, hoặc gửi email ở mục liên hệ. Bạn ghi tên Google của mình và câu “yêu cầu xóa dữ liệu”. Shop xóa hồ sơ đăng nhập (mã Google, tên, email, ảnh) và lượt xem sản phẩm. Trên đơn đã tạo, shop gỡ tên, ảnh, số điện thoại, địa chỉ, ghi chú, mô tả món tìm hộ và ảnh bạn đã gửi. Mã đơn, danh sách món và số tiền được giữ lại để đối soát.
         </p>
 
         <h2>Liên hệ</h2>

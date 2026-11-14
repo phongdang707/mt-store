@@ -4,7 +4,6 @@ import { AdminGuard } from '../auth/admin.guard.js';
 import { SyncProfileDto, UpdateCustomerDto } from './customer.dto.js';
 import { CustomerGuard, type CustomerRequest } from './customer.guard.js';
 import { CustomersService, socialName } from './customers.service.js';
-import { FacebookAuthService } from './facebook-auth.service.js';
 import { messengerLink } from './messenger.js';
 
 @Controller('me')
@@ -12,7 +11,6 @@ import { messengerLink } from './messenger.js';
 export class CustomersController {
   constructor(
     private readonly customers: CustomersService,
-    private readonly facebookAuth: FacebookAuthService,
     private readonly config: ConfigService,
   ) {}
 
@@ -38,15 +36,14 @@ export class CustomersController {
     return this.customers.profileOf(req.customer);
   }
 
-  /** Ghi tên và ảnh. Web thì server tự lấy từ token Facebook đã lưu. */
+  /** Ghi tên và ảnh đã có lúc đăng nhập. Trường trống thì giữ dữ liệu đang lưu. */
   @Post('profile')
-  async sync(@Req() req: CustomerRequest, @Body() dto: SyncProfileDto) {
-    let facebookName = dto.facebookName;
-    let avatar = dto.avatar;
-    const remote = await this.facebookAuth.storedProfile(req.customer._id);
-    if (remote.name) facebookName = remote.name;
-    if (remote.avatar) avatar = remote.avatar;
-    return this.customers.syncProfile(req.customer._id, { facebookName, avatar });
+  sync(@Req() req: CustomerRequest, @Body() dto: SyncProfileDto) {
+    return this.customers.syncProfile(req.customer._id, {
+      googleName: dto.googleName,
+      facebookName: dto.facebookName,
+      avatar: dto.avatar,
+    });
   }
 }
 

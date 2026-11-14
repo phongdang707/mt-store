@@ -79,7 +79,7 @@ async function saveProfile() {
   return saved;
 }
 
-/** Lúc mở trang đã có phiên: server lấy tên và ảnh từ token Facebook đã lưu. */
+/** Lúc mở trang đã có phiên: server trả tên và ảnh đã lưu lúc đăng nhập. */
 export function prepareProfile() {
   if (!customerToken()) return Promise.resolve();
   return saveProfile()
@@ -151,15 +151,15 @@ async function call<T>(method: string, path: string, body?: unknown, auth = true
   return data as T;
 }
 
-export async function beginFacebookLogin() {
-  const res = await call<{ url: string }>("GET", "/auth/facebook/start", undefined, false);
-  if (!res?.url) throw new ApiError("Chưa mở được đăng nhập Facebook", 500);
+export async function beginGoogleLogin() {
+  const res = await call<{ url: string }>("GET", "/auth/google/start", undefined, false);
+  if (!res?.url) throw new ApiError("Chưa mở được đăng nhập Google", 500);
   window.location.assign(res.url);
 }
 
 export async function finishLogin(code: string, state: string) {
-  const res = await call<{ token: string }>("POST", "/auth/facebook/exchange", { code, state }, false);
-  if (!res?.token) throw new ApiError("Đăng nhập Facebook chưa xong. Bạn thử lại nhé.", 401);
+  const res = await call<{ token: string }>("POST", "/auth/google/exchange", { code, state }, false);
+  if (!res?.token) throw new ApiError("Đăng nhập Google chưa xong. Bạn thử lại nhé.", 401);
   storage.set(TOKEN_KEY, res.token);
 }
 
@@ -170,7 +170,7 @@ export interface CartLineInput {
 }
 
 export interface VisitInput {
-  facebookName?: string;
+  googleName?: string;
   avatar?: string;
   platform: string;
   os: string;
@@ -199,7 +199,7 @@ export const api = {
   rememberProfile,
   prepareProfile,
   permitForOrder,
-  beginFacebookLogin,
+  beginGoogleLogin,
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
   events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
   catalog: () => call<Catalog>("GET", "/catalog"),

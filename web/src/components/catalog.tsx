@@ -58,7 +58,7 @@ export function Header() {
               </button>
             ) : (
               <button className="ordbtn loginbtn" type="button" onClick={startLogin}>
-                Đăng nhập bằng Facebook
+                Đăng nhập bằng Google
               </button>
             )}
             <button className="ordbtn desk-act" type="button" onClick={() => setOpen("orders")}>

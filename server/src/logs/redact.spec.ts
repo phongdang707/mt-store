@@ -42,7 +42,7 @@ describe('redact', () => {
     expect(sourceOfContext('FacebookWebhookService')).toBe('webhook');
     expect(sourceOfContext('ZaloService')).toBe('zalo');
     expect(sourceOfContext('ZaloAuthService')).toBe('zalo');
-    expect(sourceOfContext('FacebookAuthService')).toBe('facebook');
+    expect(sourceOfContext('GoogleAuthService')).toBe('app');
     expect(sourceOfContext('MessengerService')).toBe('facebook');
     expect(sourceOfContext('OrdersService')).toBe('app');
   });

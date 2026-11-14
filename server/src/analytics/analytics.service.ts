@@ -54,6 +54,7 @@ type DayStat = { date: string; visits: number; durationSec: number };
 type ActiveRow = {
   _id: Types.ObjectId;
   name?: string;
+  googleName?: string;
   facebookName?: string;
   zaloName?: string;
   avatar?: string;
@@ -122,9 +123,11 @@ export class AnalyticsService implements OnModuleInit {
       zaloVersion: text(dto.zaloVersion, 32),
     };
     const profile: Record<string, string | Date> = { lastSeenAt: now };
-    const facebookName = text(dto.facebookName || dto.zaloName || dto.name, 120);
+    const googleName = text(dto.googleName, 120);
+    const facebookName = googleName ? '' : text(dto.facebookName || dto.zaloName || dto.name, 120);
     const language = text(dto.language, 16);
     const avatar = avatarUrl(dto.avatar);
+    if (googleName) profile.googleName = googleName;
     if (facebookName) profile.facebookName = facebookName;
     if (language) profile.language = language;
     if (avatar) profile.avatar = avatar;
@@ -162,6 +165,7 @@ export class AnalyticsService implements OnModuleInit {
           {
             $project: {
               name: 1,
+              googleName: 1,
               facebookName: 1,
               zaloName: 1,
               avatar: 1,
@@ -256,9 +260,9 @@ export class AnalyticsService implements OnModuleInit {
       .find({
         lastSeenAt: span,
         ...(seenIds.length ? { _id: { $nin: seenIds } } : {}),
-        $or: [{ facebookName: { $nin: [null, ''] } }, { zaloName: { $nin: [null, ''] } }, { name: { $nin: [null, ''] } }, { avatar: { $nin: [null, ''] } }],
+        $or: [{ googleName: { $nin: [null, ''] } }, { facebookName: { $nin: [null, ''] } }, { zaloName: { $nin: [null, ''] } }, { name: { $nin: [null, ''] } }, { avatar: { $nin: [null, ''] } }],
       })
-      .select('name facebookName zaloName avatar phone platform model lastSeenAt blocked role')
+      .select('name googleName facebookName zaloName avatar phone platform model lastSeenAt blocked role')
       .sort({ lastSeenAt: -1 })
       .limit(200)
       .exec();
@@ -270,7 +274,7 @@ export class AnalyticsService implements OnModuleInit {
       $or: [{ blocked: true }, { role: 'support' as const }],
     };
     const [away, previews] = await Promise.all([
-      this.customers.find(awayFilter).select('name facebookName zaloName avatar phone platform model lastSeenAt blocked role').exec(),
+      this.customers.find(awayFilter).select('name googleName facebookName zaloName avatar phone platform model lastSeenAt blocked role').exec(),
       this.events.aggregate<{ _id: Types.ObjectId; products: { productId: string; views: number }[] }>([
         { $match: { at: span, type: 'view', customer: { $in: userIds } } },
         { $group: { _id: { customer: '$customer', productId: '$productId' }, views: { $sum: 1 } } },
@@ -322,6 +326,7 @@ export class AnalyticsService implements OnModuleInit {
           return {
             id: String(c._id),
             name: c.name || '',
+            googleName: c.googleName || '',
             facebookName: c.facebookName || '',
             zaloName: c.zaloName || '',
             avatar: c.avatar || '',
@@ -339,6 +344,7 @@ export class AnalyticsService implements OnModuleInit {
         ...named.map((c) => ({
           id: String(c._id),
           name: c.name || '',
+          googleName: c.googleName || '',
           facebookName: c.facebookName || '',
           zaloName: c.zaloName || '',
           avatar: c.avatar || '',
@@ -355,6 +361,7 @@ export class AnalyticsService implements OnModuleInit {
         ...away.map((c) => ({
           id: String(c._id),
           name: c.name || '',
+          googleName: c.googleName || '',
           facebookName: c.facebookName || '',
           zaloName: c.zaloName || '',
           avatar: c.avatar || '',
@@ -406,6 +413,7 @@ export class AnalyticsService implements OnModuleInit {
       user: {
         id: String(customer._id),
         name: customer.name,
+        googleName: customer.googleName,
         facebookName: customer.facebookName,
         zaloName: customer.zaloName,
         email: customer.email,

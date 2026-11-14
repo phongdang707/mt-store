@@ -4,7 +4,7 @@ import { LegalShell } from "@/components/legal-shell";
 
 export const metadata: Metadata = {
   title: "Điều khoản sử dụng – MT store",
-  description: "Điều khoản dùng trang MT store: đăng nhập Facebook, đặt hàng xách tay, chuyển khoản VietQR và nhờ shop tìm hộ.",
+  description: "Điều khoản dùng trang MT store: đăng nhập Google, đặt hàng xách tay, chuyển khoản VietQR và nhờ shop tìm hộ.",
 };
 
 export default function TermsOfServicePage() {
@@ -33,7 +33,7 @@ export default function TermsOfServicePage() {
 
         <h2>Tài khoản</h2>
         <p>
-          Bạn đăng nhập bằng Facebook của chính mình, với quyền public_profile. Trang không dùng đăng nhập Instagram. Bạn không dùng tài khoản của người khác và không chia sẻ phiên đăng nhập. Shop có thể tạm ngừng nhận đơn của một tài khoản, ví dụ khi trang đang bảo trì hoặc tài khoản bị chặn.
+          Bạn đăng nhập bằng Google của chính mình. Shop xin tên, email và ảnh. Bạn không dùng tài khoản của người khác và không chia sẻ phiên đăng nhập. Shop có thể tạm ngừng nhận đơn của một tài khoản, ví dụ khi trang đang bảo trì hoặc tài khoản bị chặn.
         </p>
 
         <h2>Đơn hàng</h2>
@@ -61,7 +61,7 @@ export default function TermsOfServicePage() {
 
         <h2>Giới hạn trách nhiệm</h2>
         <p>
-          Shop mô tả hàng theo thông tin đang có lúc đăng. Shop không chịu phần ngoài tầm kiểm soát của shop, như gián đoạn Facebook, lỗi mạng, hoặc ngân hàng từ chối giao dịch. Nếu shop không giao được phần bạn đã trả, shop hoàn số tiền đó hoặc đổi món hai bên đã thống nhất. Shop không bồi thường thêm các thiệt hại gián tiếp.
+          Shop mô tả hàng theo thông tin đang có lúc đăng. Shop không chịu phần ngoài tầm kiểm soát của shop, như gián đoạn Google hoặc Facebook, lỗi mạng, hoặc ngân hàng từ chối giao dịch. Nếu shop không giao được phần bạn đã trả, shop hoàn số tiền đó hoặc đổi món hai bên đã thống nhất. Shop không bồi thường thêm các thiệt hại gián tiếp.
         </p>
 
         <h2>Chấm dứt</h2>

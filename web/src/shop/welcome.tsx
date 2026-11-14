@@ -3,7 +3,7 @@
 import { Logo } from "@/components/catalog";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-/** Trang chào trước khi có phiên Facebook. Nền và nút lấy từ theme shop. */
+/** Trang chào trước khi có phiên Google. Nền và nút lấy từ theme shop. */
 export function Welcome({ waiting, onLogin, line }: { waiting?: boolean; onLogin?: () => void; line?: string }) {
   return (
     <div className="shop">
@@ -15,18 +15,18 @@ export function Welcome({ waiting, onLogin, line }: { waiting?: boolean; onLogin
         </div>
       </header>
       <main className="wrap gate-wrap">
-        <section className="gate" aria-label="Đăng nhập bằng Facebook">
+        <section className="gate" aria-label="Đăng nhập bằng Google">
           <Logo width="min(220px, 52vw)" />
           <h1>Chào bạn yêu</h1>
           {waiting ? (
             <p>{line || "Đang mở cửa shop cho bạn…"}</p>
           ) : (
             <>
-              <p>Đăng nhập Facebook một cái thôi, mình mở shop cho bạn xem đồ xinh và gửi đơn nha.</p>
+              <p>Đăng nhập Google một cái thôi, mình mở shop cho bạn xem đồ xinh và gửi đơn nha.</p>
               <button className="btn" type="button" onClick={onLogin}>
-                Đăng nhập bằng Facebook
+                Đăng nhập bằng Google
               </button>
-              <small>Không cần mật khẩu đâu. Facebook chỉ để shop nhận ra bạn thôi.</small>
+              <small>Không cần mật khẩu đâu. Google chỉ để shop nhận ra bạn thôi.</small>
             </>
           )}
         </section>

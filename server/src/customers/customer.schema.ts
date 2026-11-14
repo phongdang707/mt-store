@@ -17,16 +17,20 @@ export const ActivityDaySchema = SchemaFactory.createForClass(ActivityDay);
 export const CUSTOMER_ROLES = ['customer', 'support'] as const;
 export type CustomerRole = (typeof CUSTOMER_ROLES)[number];
 
-/** Khách mua hàng. Đăng nhập mới khóa bằng facebookUserId. zaloUserId chỉ còn trên hồ sơ cũ. */
+/** Khách mua hàng. Đăng nhập mới khóa bằng googleUserId. facebookUserId và zaloUserId chỉ còn trên hồ sơ cũ. */
 @Schema({ timestamps: true, toJSON })
 export class Customer {
   /** Hồ sơ tạo từ Zalo trước khi chuyển Facebook. Không ghi cho khách mới. */
   @Prop({ unique: true, sparse: true }) zaloUserId?: string;
-  /** Id ứng dụng Facebook. Khóa đăng nhập. */
+  /** Id ứng dụng Facebook. Khóa đăng nhập cũ. */
   @Prop({ unique: true, sparse: true }) facebookUserId?: string;
+  /** Id Google (`sub`). Khóa đăng nhập. */
+  @Prop({ unique: true, sparse: true }) googleUserId?: string;
   /** Tên trên đơn gần nhất. */
   @Prop({ default: '' }) name: string;
-  /** Tên Facebook lúc đăng nhập. */
+  /** Tên Google lúc đăng nhập. */
+  @Prop({ default: '' }) googleName: string;
+  /** Tên Facebook lúc đăng nhập. Hồ sơ cũ. */
   @Prop({ default: '' }) facebookName: string;
   /** Tên Zalo của hồ sơ cũ. */
   @Prop({ default: '' }) zaloName: string;

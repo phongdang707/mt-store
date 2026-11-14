@@ -6,8 +6,9 @@ export class UpdateCustomerDto {
   @IsOptional() @IsIn(CUSTOMER_ROLES) role?: CustomerRole;
 }
 
-/** Tên và ảnh Facebook. Trường trống thì server giữ dữ liệu đang có. */
+/** Tên và ảnh đăng nhập. Trường trống thì server giữ dữ liệu đang có. */
 export class SyncProfileDto {
+  @IsOptional() @IsString() @MaxLength(120) googleName?: string;
   @IsOptional() @IsString() @MaxLength(120) facebookName?: string;
   @IsOptional() @IsString() @MaxLength(2000) avatar?: string;
 }

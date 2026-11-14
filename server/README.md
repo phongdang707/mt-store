@@ -37,9 +37,9 @@ yarn start
 Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Ảnh production cần `CLOUDINARY_*`.
 
 - **Ảnh**: Cloudinary khi có `CLOUDINARY_*`; chưa có (dev) thì lưu `./uploads`, phục vụ ở `/uploads`. Production không có Cloudinary thì API upload trả lỗi, server vẫn chạy.
-- **Khách**: trang `web/` đăng nhập Facebook OAuth rồi gửi JWT `Authorization: Bearer`. Dev chưa có `FACEBOOK_APP_SECRET`: header `x-dev-user`. Hồ sơ Zalo cũ không đăng nhập được nữa; đơn của họ vẫn nằm trên document khách cũ.
+- **Khách**: trang `web/` đăng nhập Google OAuth rồi gửi JWT `Authorization: Bearer`. Dev chưa có `GOOGLE_CLIENT_SECRET`: header `x-dev-user`. Hồ sơ Facebook và Zalo cũ không đăng nhập được nữa; đơn của họ vẫn nằm trên document khách cũ.
 - **Webhook**: `GET/POST /api/facebook/webhook` cho Page (`messages`, `messaging_postbacks`, `messaging_referrals`). `FACEBOOK_WEBHOOK_VERIFY_TOKEN` trả `hub.challenge`. `X-Hub-Signature-256` kiểm bằng `FACEBOOK_APP_SECRET`. Khách mở `m.me/{PAGE}?ref={customerId}` thì server lưu PSID. `POST /api/facebook/deletion` là Data Deletion Callback: `signed_request` xoá hồ sơ, lượt xem và gỡ tên, SĐT, địa chỉ, ảnh trên đơn.
-- **Messenger**: nhân viên support (`role: support` trên hồ sơ Facebook) gọi `POST /api/support/messages`. Server gửi tin bằng Page token khi khách đã nhắn Page trong 24 giờ.
+- **Messenger**: nhân viên support (`role: support` trên hồ sơ khách) gọi `POST /api/support/messages`. Server gửi tin bằng Page token khi khách đã nhắn Page trong 24 giờ.
 - **Admin**: tài khoản tạo từ `ADMIN_EMAIL`/`ADMIN_PASSWORD` lúc khởi động. Chủ shop đổi mật khẩu trong Cài đặt (`POST /api/auth/password`), mật khẩu đó được giữ qua các lần khởi động; chỉ khi đổi giá trị `ADMIN_PASSWORD` rồi khởi động lại thì mật khẩu mới bị đặt lại theo env.
 - **Cài đặt**: `markets` (Nhật, Hàn, Úc, Trung: mở/khoá + ngày bay, hạn nhận đơn). Nước bị khoá bị ẩn khỏi `/api/catalog` cùng hàng của nó và không đặt được. `freeShipFrom`: đơn có tạm tính từ mức này được miễn phí giao (đơn lưu `shipBase` + `freeShipFrom` lúc đặt).
 - `seed/` được tách từ app gốc bằng `scripts/extract-artifact.py`.
@@ -51,12 +51,12 @@ Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, 
 | công khai | GET | `/catalog` | cài đặt shop + toàn bộ sản phẩm |
 | | GET/POST | `/facebook/webhook` | webhook Page, chữ ký `X-Hub-Signature-256` |
 | | POST | `/facebook/deletion` | Facebook yêu cầu xoá dữ liệu, trả `{ url, confirmation_code }` |
-| | GET | `/auth/facebook/start` | URL đăng nhập Facebook |
-| | POST | `/auth/facebook/exchange` | `{ code, state }` → JWT khách |
+| | GET | `/auth/google/start` | URL đăng nhập Google |
+| | POST | `/auth/google/exchange` | `{ code, state }` → JWT khách |
 | | GET | `/invoices/:token` | hoá đơn qua link chia sẻ |
 | khách | GET | `/me` | SĐT/địa chỉ lần trước và `careUrl` |
-| | GET | `/me/profile` | đã có tên hoặc ảnh Facebook chưa |
-| | POST | `/me/profile` | `{ facebookName?, avatar? }` ghi hồ sơ mới |
+| | GET | `/me/profile` | đã có tên hoặc ảnh đăng nhập chưa |
+| | POST | `/me/profile` | `{ googleName?, facebookName?, avatar? }` ghi hồ sơ mới |
 | | POST | `/me/visit` | hồ sơ, máy, số giây app đang hiện |
 | | POST | `/me/events` | `{ events: [{ type: view\|open\|cart, productId }] }` |
 | | POST | `/orders` | `{ phone, addr, name?, note?, items: [{ productId, variant?, qty }] }`, giá lấy từ DB |

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiError, api, beginFacebookLogin, clearLoginMessage, customerToken, deviceInfo, logout as endSession, onSessionLost, peekLoginMessage, type CartLineInput, type MeProfile } from "@/services/api";
+import { ApiError, api, beginGoogleLogin, clearLoginMessage, customerToken, deviceInfo, logout as endSession, onSessionLost, peekLoginMessage, type CartLineInput, type MeProfile } from "@/services/api";
 import { startPresence, track } from "@/services/track";
 import type { Catalog, CustomerInfo, Order, Product, Variant } from "@/types";
 import { shrink } from "@/utils/image";
@@ -197,7 +197,7 @@ function useStoreState() {
   }, []);
 
   useEffect(() => {
-    sessionStorage.removeItem("mt_facebook_callback");
+    sessionStorage.removeItem("mt_google_callback");
     const message = peekLoginMessage();
     if (message) setNotice(message);
     const clear = window.setTimeout(() => {
@@ -365,7 +365,7 @@ function useStoreState() {
       keepName(name);
       if (name || avatar) {
         await api
-          .visit({ facebookName: name || undefined, avatar: avatar || undefined, ...deviceInfo(), seconds: 0 })
+          .visit({ googleName: name || undefined, avatar: avatar || undefined, ...deviceInfo(), seconds: 0 })
           .catch(() => {});
       }
       const order = await api.createOrder({
@@ -476,7 +476,7 @@ function useStoreState() {
   };
 
   const startLogin = () => {
-    void beginFacebookLogin().catch((e: unknown) => toast(e instanceof Error ? e.message : "Chưa mở được đăng nhập Facebook"));
+    void beginGoogleLogin().catch((e: unknown) => toast(e instanceof Error ? e.message : "Chưa mở được đăng nhập Google"));
   };
   const logout = () => {
     endSession();
