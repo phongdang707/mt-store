@@ -393,6 +393,10 @@ export async function handle<T>(method: string, path: string, body?: unknown): P
     o.cancelReason = "";
     return R(save(o));
   }
+  if ((m = p.match(/^\/admin\/orders\/(\w+)\/messenger$/)) && method === "GET") {
+    find(m[1]);
+    return R({ url: "https://business.facebook.com/latest/inbox/all?asset_id=page&selected_item_id=t_1" });
+  }
   if ((m = p.match(/^\/admin\/orders\/(\w+)\/send$/))) {
     const o = find(m[1]);
     assertOpen(o);

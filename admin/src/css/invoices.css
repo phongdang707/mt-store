@@ -36,7 +36,7 @@
   .inv-spacer { display: none !important; }
   .inv-banner { width: 100%; }
   .inv-close { align-self: flex-end; }
-  .inv-send, .inv-send-btn { width: 100%; box-sizing: border-box; }
+  .inv-send, .inv-send-btn, .inv-chat { width: 100%; box-sizing: border-box; }
   /* Tên món chiếm gần hết hàng đầu; số lượng và thành tiền xuống hàng dưới, không bóp chữ từng ký tự. */
   .inv-row,
   .inv-row.inv-edit {

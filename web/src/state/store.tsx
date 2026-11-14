@@ -345,7 +345,7 @@ function useStoreState() {
       return `• [${c.p.country || "Nhật"}] ${c.p.name}${c.vr ? " – " + c.vr.name : ""} × ${n} = ${c.p.price ? fmtL(c.p.price * n) : "chờ báo giá"}`;
     });
     const i = info;
-    return `ĐƠN ĐẶT HÀNG – ${D.store}\n${i.name ? "Tên: " + i.name + "\n" : ""}${i.phone ? "SĐT: " + i.phone + "\n" : ""}${i.addr ? "Địa chỉ: " + i.addr + "\n" : ""}\n${lines.join("\n")}\n\nTạm tính: ${fmtL(cartTotal)}${i.note ? "\nGhi chú: " + i.note : ""}`;
+    return `ĐƠN ĐẶT HÀNG – ${D.store}\n${i.name ? "Tên: " + i.name + "\n" : ""}${i.phone ? "Zalo: " + i.phone + "\n" : ""}${i.addr ? "Địa chỉ: " + i.addr + "\n" : ""}\n${lines.join("\n")}\n\nTạm tính: ${fmtL(cartTotal)}${i.note ? "\nGhi chú: " + i.note : ""}`;
   };
 
   const finishOrder = async (load: () => Promise<{ name: string; avatar: string }>) => {
@@ -400,7 +400,7 @@ function useStoreState() {
     if (!customerToken()) return;
     const i = info;
     if (!i.phone.trim() || !(i.addr || "").trim()) {
-      toast("Bạn điền số điện thoại và địa chỉ nhé");
+      toast("Bạn điền số Zalo và địa chỉ nhé");
       return;
     }
     const items: CartLineInput[] = entries.map(([k, qty]) => {

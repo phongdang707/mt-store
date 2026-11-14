@@ -161,8 +161,9 @@ export function CartSheet() {
                 )
               ) : null}
               {D.orderNote ? <p className="pend">{D.orderNote}</p> : null}
-              <label htmlFor="o-phone">Số điện thoại</label>
-              <input className="f" id="o-phone" inputMode="tel" value={info.phone} onChange={(e) => setInfo("phone", e.target.value)} placeholder="Số điện thoại" />
+              <label htmlFor="o-phone">Số Zalo</label>
+              <input className="f" id="o-phone" inputMode="tel" value={info.phone} onChange={(e) => setInfo("phone", e.target.value)} placeholder="Số Zalo của bạn" />
+              <p className="pend">Shop nhắn số này để gửi thông tin sản phẩm và thanh toán.</p>
               <label htmlFor="o-addr">Địa chỉ nhận hàng</label>
               <input className="f" id="o-addr" value={info.addr || ""} onChange={(e) => setInfo("addr", e.target.value)} placeholder="Địa chỉ nhận hàng" />
               <label className="chk">
@@ -187,7 +188,7 @@ export function CartSheet() {
                 Xoá đơn
               </button>
             </div>
-            <p className="note">Sau khi xác nhận, {D.store} sẽ liên hệ và gửi thông tin thanh toán cho bạn.</p>
+            <p className="note">Sau khi xác nhận, {D.store} sẽ nhắn Zalo để gửi thông tin sản phẩm và thanh toán.</p>
           </div>
         ) : null}
       </aside>

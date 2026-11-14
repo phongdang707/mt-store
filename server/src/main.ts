@@ -19,7 +19,10 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
   const configured = config.get<string>('CORS_ORIGIN')?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
-  const local = config.get('NODE_ENV') === 'production' ? [] : ['http://localhost:3001', 'http://127.0.0.1:3001'];
+  const local =
+    config.get('NODE_ENV') === 'production'
+      ? []
+      : ['http://localhost:3001', 'http://127.0.0.1:3001', 'http://localhost:5174', 'http://127.0.0.1:5174'];
   const origins = [...new Set([...configured, ...local])];
   app.enableCors({ origin: origins.length ? origins : true });
   app.set('trust proxy', 1);

@@ -3,6 +3,7 @@ import { interval, map, merge, type Observable } from 'rxjs';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { AddItemDto, AdminListQuery, CancelOrderDto, SendInvoiceDto, UpdateItemDto, UpdateOrderDto } from './order.dto.js';
 import { EventsService } from './events.service.js';
+import { MessengerService } from './messenger.service.js';
 import { OrdersService } from './orders.service.js';
 
 @Controller('admin')
@@ -11,6 +12,7 @@ export class AdminOrdersController {
   constructor(
     private readonly orders: OrdersService,
     private readonly events: EventsService,
+    private readonly messenger: MessengerService,
   ) {}
 
   /** Sự kiện đơn mới/đổi, trang quản lý tải lại danh sách. Ping 25s để giữ kết nối. */
@@ -85,5 +87,10 @@ export class AdminOrdersController {
   @Post('orders/:code/send')
   send(@Param('code') code: string, @Body() dto: SendInvoiceDto) {
     return this.orders.send(code, dto);
+  }
+
+  @Get('orders/:code/messenger')
+  messengerChat(@Param('code') code: string) {
+    return this.messenger.inboxForOrder(code);
   }
 }

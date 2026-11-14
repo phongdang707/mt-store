@@ -115,6 +115,19 @@ export default function Invoices() {
     }
   };
 
+  const chat = async () => {
+    if (!cur || busy) return;
+    setBusy(true);
+    try {
+      const { url } = await api.messenger(cur.code);
+      window.open(url, "_blank", "noopener");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Chưa mở được cuộc chat");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const send = async (via: Exclude<InvoiceVia, "link">) => {
     if (!cur) return;
     setMenu(false);
@@ -215,6 +228,15 @@ export default function Invoices() {
                 <span className="only-mobile inv-close">
                   <CloseX label="Đóng hoá đơn" onClick={() => setSel(null)} />
                 </span>
+                <button
+                  type="button"
+                  className="inv-chat"
+                  disabled={busy}
+                  onClick={chat}
+                  style={sx("display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 1.5px solid #b3566f; background: #ffffff; color: #a3546a; border-radius: 999px; padding: 12px 18px; font-weight: 700; font-size: 15px")}
+                >
+                  Chat qua Facebook
+                </button>
                 <div ref={menuRef} className="inv-send" style={sx("position: relative")}>
                   <button
                     className="inv-send-btn"

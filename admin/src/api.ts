@@ -89,6 +89,7 @@ export const api = {
   updateItem: (code: string, idx: number, b: { qty?: number; price?: number }) => call<Order>("PATCH", `/admin/orders/${code}/items/${idx}`, b),
   removeItem: (code: string, idx: number) => call<Order>("DELETE", `/admin/orders/${code}/items/${idx}`),
   send: (code: string, via: InvoiceVia) => call<Order>("POST", `/admin/orders/${code}/send`, { via }),
+  messenger: (code: string) => call<{ url: string }>("GET", `/admin/orders/${encodeURIComponent(code)}/messenger`),
   products: () => call<Product[]>("GET", "/admin/products"),
   createProduct: (b: Partial<Product>) => call<Product>("POST", "/admin/products", b),
   updateProduct: (id: string, b: Partial<Product>) => call<Product>("PATCH", `/admin/products/${encodeURIComponent(id)}`, b),
