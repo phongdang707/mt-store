@@ -78,8 +78,8 @@ export default function TermsOfServicePage() {
         <p>
           Bạn nhắn Page Facebook của MT store trên Messenger khi cần hỏi về đơn, thanh toán hoặc điều khoản. Shop cũng dùng số điện thoại bạn để lại lúc đặt hàng.
         </p>
-        <p className="legal-ph">
-          Email hoặc link Page để điền vào đây: [THAY BẰNG EMAIL HOẶC LINK PAGE FACEBOOK CỦA MT STORE]
+        <p>
+          Email: <a href="mailto:phongdang707@gmail.com">phongdang707@gmail.com</a>
         </p>
 
         <h2>Ngôn ngữ</h2>

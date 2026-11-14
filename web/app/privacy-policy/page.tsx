@@ -138,8 +138,8 @@ export default function PrivacyPolicyPage() {
         <p>
           Để hỏi về dữ liệu, sửa thông tin hoặc yêu cầu xóa, bạn nhắn Page Facebook của MT store trên Messenger. Đó là kênh liên hệ của shop: hoá đơn và tin nhắn đơn hàng cũng đi qua Messenger, cùng số điện thoại bạn để lại khi đặt hàng.
         </p>
-        <p className="legal-ph">
-          Email hoặc link Page để điền vào đây: [THAY BẰNG EMAIL HOẶC LINK PAGE FACEBOOK CỦA MT STORE]
+        <p>
+          Email: <a href="mailto:phongdang707@gmail.com">phongdang707@gmail.com</a>
         </p>
 
         <p className="legal-links">
