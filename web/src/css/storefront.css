@@ -545,3 +545,18 @@ html body{height:auto;overflow:visible}
 .in-zalo .sh-h{justify-content:flex-start;gap:12px;padding-right:100px}
 .in-zalo .sh-h .x{order:-1;flex-shrink:0}
 .in-zalo .sh-h h2{letter-spacing:1.2px;font-size:17px;min-width:0}
+.legal-bar .bar-in{justify-content:space-between}
+.legal-home{font-family:'Quicksand',sans-serif;font-weight:700;color:var(--brand);text-decoration:none;font-size:18px;letter-spacing:.2px}
+.legal-wrap{max-width:760px;padding-top:28px;padding-bottom:64px}
+.legal{background:var(--card);border:1px solid var(--line);border-radius:28px;box-shadow:0 8px 22px var(--shadow);padding:32px 28px 28px}
+.legal h1{font-family:'Quicksand',sans-serif;font-weight:700;font-size:28px;color:var(--brand);letter-spacing:.2px}
+.legal-date{color:var(--muted);margin-top:8px;font-size:14px}
+.legal h2{font-family:'Quicksand',sans-serif;font-weight:700;font-size:18px;color:var(--brand);margin:26px 0 8px}
+.legal h3{font-size:15.5px;font-weight:700;color:var(--ink);margin:16px 0 6px}
+.legal p,.legal li{color:var(--ink);line-height:1.65}
+.legal p{margin-top:8px}
+.legal ul{margin:8px 0 0 1.15em;display:flex;flex-direction:column;gap:6px}
+.legal a{color:var(--accent);font-weight:700}
+.legal-ph{margin-top:12px;background:var(--chip);color:var(--brand);border-radius:14px;padding:12px 14px;font-weight:600}
+.legal-links{margin-top:28px;padding-top:16px;border-top:1px solid var(--line)}
+@media(max-width:520px){.legal{padding:24px 16px 20px;border-radius:22px}.legal h1{font-size:24px}}
