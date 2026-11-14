@@ -148,6 +148,7 @@ export interface AnalyticsProduct {
 export interface AnalyticsUser {
   id: string;
   name: string;
+  facebookName?: string;
   zaloName: string;
   avatar: string;
   phone: string;
@@ -177,7 +178,9 @@ export interface AnalyticsUserDetail {
   user: {
     id: string;
     name: string;
+    facebookName?: string;
     zaloName: string;
+    email?: string;
     avatar: string;
     phone: string;
     platform: string;
@@ -196,7 +199,7 @@ export interface AnalyticsUserDetail {
 }
 
 export type LogLevel = "error" | "warn" | "info";
-export type LogSource = "http" | "webhook" | "zalo" | "app";
+export type LogSource = "http" | "webhook" | "zalo" | "facebook" | "app";
 
 export interface AppLog {
   id: string;

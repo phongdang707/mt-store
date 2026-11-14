@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AnalyticsModule } from '../analytics/analytics.module.js';
-import { ZaloWebhookController } from './webhook.controller.js';
-import { ZaloWebhookService } from './webhook.service.js';
+import { FacebookWebhookController } from './webhook.controller.js';
+import { FacebookWebhookService } from './webhook.service.js';
 
 @Module({
   imports: [AnalyticsModule],
-  controllers: [ZaloWebhookController],
-  providers: [ZaloWebhookService],
+  controllers: [FacebookWebhookController],
+  providers: [FacebookWebhookService],
 })
-export class ZaloWebhookModule {}
+export class FacebookWebhookModule {}

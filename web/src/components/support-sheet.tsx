@@ -26,11 +26,6 @@ function download(file: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-function openZalo() {
-  toast("Mở trong Zalo để nhắn khách");
-  return false;
-}
-
 export function SupportSheet() {
   const { setOpen } = useStore();
   const [desk, setDesk] = useState<SupportDesk | null>(null);
@@ -130,10 +125,19 @@ export function SupportSheet() {
 
   const talk = async (o: SupportInvoice) => {
     if (busy) return;
-    if (!o.zaloUserId) return toast("Chưa có Zalo id của khách");
+    if (!o.messengerPsid) return toast("Khách chưa nhắn Page");
+    if (!o.messengerReady) return toast("Hết hạn 24 giờ, khách cần nhắn Page lại");
     setBusy(true);
-    openZalo();
-    setBusy(false);
+    try {
+      const who = o.name.trim() || "bạn";
+      const shop = desk?.store.trim() || "MT store";
+      await api.supportMessage(o.code, `Chào ${who}, ${shop} gửi bạn hoá đơn đơn ${o.code}. Bạn xem và nhắn Page nếu cần mình giúp thêm nhé.`);
+      toast("Đã gửi tin nhắn trên Messenger");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Chưa gửi được tin nhắn");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -158,13 +162,13 @@ export function SupportSheet() {
                 <span className={`oc-st ${cur.invoiceStatus === "sent" ? "ok" : ""}`}>{STATUS[cur.invoiceStatus]}</span>
               </p>
               {preview ? <img className="cs-bill" src={preview} alt={"Hoá đơn " + cur.code} /> : <div className="empty">Đang tạo hoá đơn…</div>}
-              {!cur.zaloUserId ? <p className="lock">Chưa có Zalo id của khách này.</p> : null}
+              {!cur.messengerPsid ? <p className="lock">Khách chưa nhắn Page.</p> : !cur.messengerReady ? <p className="lock">Hết hạn 24 giờ, khách cần nhắn Page lại.</p> : null}
             </div>
             <div className="sh-f cs-acts">
               <button className="btn" disabled={busy || !png} onClick={() => saveBill(cur)}>
                 Lưu hình
               </button>
-              <button className="btn ghost" disabled={busy || !cur.zaloUserId} onClick={() => talk(cur)}>
+              <button className="btn ghost" disabled={busy || !cur.messengerReady} onClick={() => talk(cur)}>
                 Nhắn tin
               </button>
             </div>

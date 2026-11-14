@@ -54,6 +54,7 @@ type DayStat = { date: string; visits: number; durationSec: number };
 type ActiveRow = {
   _id: Types.ObjectId;
   name?: string;
+  facebookName?: string;
   zaloName?: string;
   avatar?: string;
   phone?: string;
@@ -93,6 +94,11 @@ export class AnalyticsService implements OnModuleInit {
     const customers = db.collection('customers');
     const indexes = await customers.indexes();
     if (indexes.some((index) => index.name === 'zaloId_1')) await customers.dropIndex('zaloId_1');
+    const zaloUser = indexes.find((index) => index.name === 'zaloUserId_1');
+    if (zaloUser && zaloUser.sparse !== true) {
+      await customers.dropIndex('zaloUserId_1');
+      this.log.log('Đã bỏ unique index cũ của zaloUserId');
+    }
     if (await db.listCollections({ name: 'visits' }).hasNext()) {
       await db.collection('visits').drop();
       this.log.log('Đã xoá collection visits');
@@ -116,10 +122,10 @@ export class AnalyticsService implements OnModuleInit {
       zaloVersion: text(dto.zaloVersion, 32),
     };
     const profile: Record<string, string | Date> = { lastSeenAt: now };
-    const zaloName = text(dto.zaloName || dto.name, 120);
+    const facebookName = text(dto.facebookName || dto.zaloName || dto.name, 120);
     const language = text(dto.language, 16);
     const avatar = avatarUrl(dto.avatar);
-    if (zaloName) profile.zaloName = zaloName;
+    if (facebookName) profile.facebookName = facebookName;
     if (language) profile.language = language;
     if (avatar) profile.avatar = avatar;
     for (const key of ['platform', 'os', 'model', 'zaloVersion'] as const) {
@@ -156,6 +162,7 @@ export class AnalyticsService implements OnModuleInit {
           {
             $project: {
               name: 1,
+              facebookName: 1,
               zaloName: 1,
               avatar: 1,
               phone: 1,
@@ -249,9 +256,9 @@ export class AnalyticsService implements OnModuleInit {
       .find({
         lastSeenAt: span,
         ...(seenIds.length ? { _id: { $nin: seenIds } } : {}),
-        $or: [{ zaloName: { $nin: [null, ''] } }, { name: { $nin: [null, ''] } }, { avatar: { $nin: [null, ''] } }],
+        $or: [{ facebookName: { $nin: [null, ''] } }, { zaloName: { $nin: [null, ''] } }, { name: { $nin: [null, ''] } }, { avatar: { $nin: [null, ''] } }],
       })
-      .select('name zaloName avatar phone platform model lastSeenAt blocked role')
+      .select('name facebookName zaloName avatar phone platform model lastSeenAt blocked role')
       .sort({ lastSeenAt: -1 })
       .limit(200)
       .exec();
@@ -263,7 +270,7 @@ export class AnalyticsService implements OnModuleInit {
       $or: [{ blocked: true }, { role: 'support' as const }],
     };
     const [away, previews] = await Promise.all([
-      this.customers.find(awayFilter).select('name zaloName avatar phone platform model lastSeenAt blocked role').exec(),
+      this.customers.find(awayFilter).select('name facebookName zaloName avatar phone platform model lastSeenAt blocked role').exec(),
       this.events.aggregate<{ _id: Types.ObjectId; products: { productId: string; views: number }[] }>([
         { $match: { at: span, type: 'view', customer: { $in: userIds } } },
         { $group: { _id: { customer: '$customer', productId: '$productId' }, views: { $sum: 1 } } },
@@ -315,6 +322,7 @@ export class AnalyticsService implements OnModuleInit {
           return {
             id: String(c._id),
             name: c.name || '',
+            facebookName: c.facebookName || '',
             zaloName: c.zaloName || '',
             avatar: c.avatar || '',
             phone: c.phone || '',
@@ -331,6 +339,7 @@ export class AnalyticsService implements OnModuleInit {
         ...named.map((c) => ({
           id: String(c._id),
           name: c.name || '',
+          facebookName: c.facebookName || '',
           zaloName: c.zaloName || '',
           avatar: c.avatar || '',
           phone: c.phone || '',
@@ -346,6 +355,7 @@ export class AnalyticsService implements OnModuleInit {
         ...away.map((c) => ({
           id: String(c._id),
           name: c.name || '',
+          facebookName: c.facebookName || '',
           zaloName: c.zaloName || '',
           avatar: c.avatar || '',
           phone: c.phone || '',
@@ -396,7 +406,9 @@ export class AnalyticsService implements OnModuleInit {
       user: {
         id: String(customer._id),
         name: customer.name,
+        facebookName: customer.facebookName,
         zaloName: customer.zaloName,
+        email: customer.email,
         avatar: customer.avatar,
         phone: customer.phone,
         platform: customer.platform,
@@ -430,11 +442,11 @@ export class AnalyticsService implements OnModuleInit {
   }
 
   /**
-   * Khách rút đồng ý trên Zalo. Xoá hồ sơ và lượt xem.
+   * Khách yêu cầu xoá dữ liệu trên Facebook. Xoá hồ sơ và lượt xem.
    * Đơn giữ món và số tiền; gỡ tên, SĐT, địa chỉ, ghi chú và ảnh tìm hộ.
    */
-  async revokeZaloUser(zaloUserId: string) {
-    const customer = await this.customers.findOne({ zaloUserId }).select('_id').exec();
+  async revokeFacebookUser(facebookUserId: string) {
+    const customer = await this.customers.findOne({ facebookUserId }).select('_id').exec();
     if (!customer) return { found: false, photos: [] as string[] };
     const id = customer._id;
     const rows = await this.orders.find({ customer: id }).select('photos').lean().exec();

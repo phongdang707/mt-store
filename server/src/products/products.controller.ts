@@ -8,7 +8,7 @@ import { ProductsService } from './products.service.js';
 export class ProductsController {
   constructor(private readonly products: ProductsService) {}
 
-  /** Toàn bộ dữ liệu trang bán hàng. Cần phiên Zalo. */
+  /** Toàn bộ dữ liệu trang bán hàng. Cần phiên Facebook. */
   @Get('catalog')
   @UseGuards(CustomerGuard)
   catalog() {

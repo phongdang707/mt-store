@@ -1,88 +1,85 @@
-import { BadRequestException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { createHmac } from 'node:crypto';
+import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { AnalyticsService } from '../analytics/analytics.service.js';
+import type { CustomersService } from '../customers/customers.service.js';
 import { openRequest, requestLog } from '../logs/request-log.js';
 import type { StorageService } from '../storage/storage.service.js';
-import { zaloEventSignature } from './signature.js';
-import { ZaloWebhookService } from './webhook.service.js';
+import { FacebookWebhookService } from './webhook.service.js';
 
-const revoke = {
-  event: 'user.revoke.consent',
-  appId: '2646373759294038927',
-  userId: '4047671499938107249',
-  timestamp: 1670553442564,
-};
+const REF = '507f1f77bcf86cd799439011';
 
-const review = {
-  event: 'versions.review.done',
-  appId: '2646373759294038927',
-  versionId: 101,
-  status: 0,
-  description: '',
-  timestamp: 1670553442564,
-};
-
-function service(env: Record<string, string | undefined>, analytics: Partial<AnalyticsService>, storage: Partial<StorageService>) {
-  const config = { get: (key: string) => env[key] } as ConfigService;
-  return new ZaloWebhookService(config, analytics as AnalyticsService, storage as StorageService);
+function sign(raw: Buffer, secret: string) {
+  return 'sha256=' + createHmac('sha256', secret).update(raw).digest('hex');
 }
 
-describe('ZaloWebhookService', () => {
-  it('từ chối khi thiếu API key', async () => {
+function service(
+  env: Record<string, string | undefined>,
+  analytics: Partial<AnalyticsService>,
+  customers: Partial<CustomersService>,
+  storage: Partial<StorageService> = {},
+) {
+  const config = { get: (key: string) => env[key] } as ConfigService;
+  return new FacebookWebhookService(config, analytics as AnalyticsService, customers as CustomersService, storage as StorageService);
+}
+
+describe('FacebookWebhookService', () => {
+  it('trả challenge khi verify token đúng', () => {
+    const svc = service({ FACEBOOK_WEBHOOK_VERIFY_TOKEN: 'hook' }, {}, {});
+    expect(svc.verify('subscribe', 'hook', '12345')).toBe('12345');
+  });
+
+  it('từ chối verify token sai', () => {
+    const svc = service({ FACEBOOK_WEBHOOK_VERIFY_TOKEN: 'hook' }, {}, {});
+    expect(() => svc.verify('subscribe', 'nope', '12345')).toThrow(UnauthorizedException);
+  });
+
+  it('từ chối khi thiếu app secret', async () => {
     const svc = service({}, {}, {});
-    await expect(svc.receive(revoke, 'abc')).rejects.toBeInstanceOf(ServiceUnavailableException);
+    await expect(svc.receive(Buffer.from('{}'), 'sha256=aa', {})).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
-  it('từ chối chữ ký sai và không ghi sự kiện', async () => {
-    const svc = service({ ZALO_API_KEY: 'test-key' }, {}, {});
+  it('từ chối chữ ký sai', async () => {
+    const svc = service({ FACEBOOK_APP_SECRET: 'sekret' }, {}, {});
+    const raw = Buffer.from('{"object":"page"}');
+    await expect(svc.receive(raw, sign(raw, 'other'), {})).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('gắn PSID theo ref và cập nhật khi khách nhắn', async () => {
+    const customers = { bindMessenger: vi.fn(async () => true), touchMessenger: vi.fn(async () => undefined) };
+    const body = {
+      object: 'page',
+      entry: [
+        {
+          messaging: [
+            { sender: { id: 'psid-1' }, recipient: { id: 'page-1' }, referral: { ref: REF } },
+            { sender: { id: 'psid-2' }, recipient: { id: 'page-1' }, message: { text: 'xin chào' } },
+          ],
+        },
+      ],
+    };
+    const raw = Buffer.from(JSON.stringify(body));
+    const svc = service({ FACEBOOK_APP_SECRET: 'sekret', FACEBOOK_PAGE_ID: 'page-1' }, {}, customers);
     const state = openRequest(false);
-    await requestLog.run(state, async () => {
-      await expect(svc.receive(revoke, 'a'.repeat(64))).rejects.toBeInstanceOf(UnauthorizedException);
-    });
-    expect(state.message).toBeUndefined();
-    expect(state.meta).toBeUndefined();
+    const res = await requestLog.run(state, () => svc.receive(raw, sign(raw, 'sekret'), body));
+    expect(res).toEqual({ message: 'ok' });
+    expect(customers.bindMessenger).toHaveBeenCalledWith(REF, 'psid-1', false);
+    expect(customers.touchMessenger).toHaveBeenCalledWith('psid-2');
+    expect(state.message).toBe('Webhook Facebook: messages');
   });
 
-  it('từ chối appId khác Mini App đã cấu hình', async () => {
-    const svc = service({ ZALO_API_KEY: 'test-key', ZALO_APP_ID: 'other' }, {}, {});
-    const signature = zaloEventSignature(revoke, 'test-key');
-    await expect(svc.receive(revoke, signature)).rejects.toBeInstanceOf(UnauthorizedException);
-  });
-
-  it('xoá dữ liệu khi khách rút đồng ý', async () => {
-    const analytics = { revokeZaloUser: vi.fn(async () => ({ found: true, photos: ['http://localhost:3000/uploads/requests/a.jpg'] })) };
+  it('xoá dữ liệu khi signed_request hợp lệ', async () => {
+    const analytics = { revokeFacebookUser: vi.fn(async () => ({ found: true, photos: ['https://cdn.example/a.jpg'] })) };
     const storage = { remove: vi.fn(async () => undefined) };
-    const signature = zaloEventSignature(revoke, 'test-key');
-    const svc = service({ ZALO_API_KEY: 'test-key', ZALO_APP_ID: revoke.appId }, analytics, storage);
+    const payload = Buffer.from(JSON.stringify({ algorithm: 'HMAC-SHA256', user_id: '998877' })).toString('base64url');
+    const sig = createHmac('sha256', 'sekret').update(payload).digest('base64url');
+    const svc = service({ FACEBOOK_APP_SECRET: 'sekret' }, analytics, {}, storage);
     const state = openRequest(false);
-    const res = await requestLog.run(state, () => svc.receive(revoke, signature));
-    expect(res).toEqual({ message: 'ok' });
-    expect(analytics.revokeZaloUser).toHaveBeenCalledWith(revoke.userId);
-    expect(storage.remove).toHaveBeenCalledWith('http://localhost:3000/uploads/requests/a.jpg');
-    expect(state.message).toBe('Webhook Zalo: user.revoke.consent');
-    expect(state.meta).toEqual({ event: 'user.revoke.consent' });
-    const dumped = JSON.stringify({ message: state.message, meta: state.meta });
-    expect(dumped).not.toContain(signature);
-    expect(dumped).not.toContain(revoke.userId);
-  });
-
-  it('ghi nhận xét duyệt mà không xoá khách', async () => {
-    const analytics = { revokeZaloUser: vi.fn() };
-    const body = { ...review, description: 'ghi chú nội bộ không được lưu' };
-    const signature = zaloEventSignature(body, 'Your API Key');
-    const svc = service({ ZALO_API_KEY: 'Your API Key' }, analytics, {});
-    const state = openRequest(false);
-    const res = await requestLog.run(state, () => svc.receive(body, signature));
-    expect(res).toEqual({ message: 'ok' });
-    expect(analytics.revokeZaloUser).not.toHaveBeenCalled();
-    expect(JSON.stringify({ message: state.message, meta: state.meta })).not.toContain('ghi chú nội bộ');
-    expect(JSON.stringify({ message: state.message, meta: state.meta })).not.toContain(signature);
-    expect(state.message).toBe('Webhook Zalo: versions.review.done');
-    expect(state.meta).toEqual({ event: 'versions.review.done' });
-  });
-
-  it('từ chối body không phải object', async () => {
-    const svc = service({ ZALO_API_KEY: 'test-key' }, {}, {});
-    await expect(svc.receive([], 'abc')).rejects.toBeInstanceOf(BadRequestException);
+    const res = await requestLog.run(state, () => svc.deletion(`${sig}.${payload}`));
+    expect(res.confirmation_code).toMatch(/^[a-f0-9]{16}$/);
+    expect(analytics.revokeFacebookUser).toHaveBeenCalledWith('998877');
+    expect(storage.remove).toHaveBeenCalledWith('https://cdn.example/a.jpg');
+    expect(state.message).toBe('Webhook Facebook: data-deletion');
+    expect(JSON.stringify({ message: state.message, meta: state.meta })).not.toContain('998877');
   });
 });

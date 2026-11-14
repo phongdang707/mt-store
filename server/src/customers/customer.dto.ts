@@ -6,8 +6,8 @@ export class UpdateCustomerDto {
   @IsOptional() @IsIn(CUSTOMER_ROLES) role?: CustomerRole;
 }
 
-/** Tên và ảnh Zalo mới nhất, đọc trên máy khách sau khi đã có quyền. */
+/** Tên và ảnh Facebook. Trường trống thì server giữ dữ liệu đang có. */
 export class SyncProfileDto {
-  @IsOptional() @IsString() @MaxLength(120) zaloName?: string;
+  @IsOptional() @IsString() @MaxLength(120) facebookName?: string;
   @IsOptional() @IsString() @MaxLength(2000) avatar?: string;
 }

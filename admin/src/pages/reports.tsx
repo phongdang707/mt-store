@@ -14,7 +14,7 @@ const platformOf = (p: string) => PLATFORM[p] || p || "Không rõ";
 const pct = (n: number) => Math.round((n || 0) * 100) + "%";
 const dayLabel = (iso: string) => iso.slice(8, 10) + "/" + iso.slice(5, 7);
 const machine = (model: string, platform: string) => [model, platformOf(platform)].filter((s) => s && s !== "Không rõ").join(" · ") || "Chưa rõ máy";
-const labelOf = (u: { zaloName?: string; name?: string }) => u.zaloName || u.name || "Khách";
+const labelOf = (u: { facebookName?: string; zaloName?: string; name?: string }) => u.facebookName || u.zaloName || u.name || "Khách";
 
 const CARD = "background: #fffaf7; border: 1px solid #efd9d3; border-radius: 22px; box-shadow: 0 6px 18px rgba(150, 90, 100, 0.10)";
 const H2 = "margin: 0; font-family: Quicksand, sans-serif; font-weight: 700; font-size: 18px; color: #3d3530";
@@ -93,7 +93,7 @@ function Detail({ id, days, onClose, onDeleted, onBlocked, onSupport }: { id: st
                 <span style={sx(MUTED)}>{machine(u.model, u.platform)}{u.zaloVersion ? " · Zalo " + u.zaloVersion : ""}</span>
               </span>
             </div>
-            {u.zaloName && u.name && u.name !== u.zaloName ? <span style={sx(MUTED)}>Tên đặt hàng: {u.name}</span> : null}
+            {(u.facebookName || u.zaloName) && u.name && u.name !== (u.facebookName || u.zaloName) ? <span style={sx(MUTED)}>Tên đặt hàng: {u.name}</span> : null}
             <ContactPills phone={u.phone} />
             <SupportCustomer id={u.id} support={u.support} onChange={(support) => {
               setD((cur) => (cur ? { ...cur, user: { ...cur.user, support } } : cur));
@@ -195,7 +195,7 @@ export default function Reports() {
     const n = norm(q);
     if (!data) return [];
     if (!n) return data.users;
-    return data.users.filter((u) => norm(u.zaloName + " " + u.name + " " + u.phone + " " + u.model + " " + platformOf(u.platform)).includes(n));
+    return data.users.filter((u) => norm((u.facebookName || "") + " " + u.zaloName + " " + u.name + " " + u.phone + " " + u.model + " " + platformOf(u.platform)).includes(n));
   }, [data, q]);
 
   const s = data?.summary;

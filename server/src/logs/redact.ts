@@ -1,7 +1,7 @@
 import type { LogSource } from './log.schema.js';
 
-const SECRET_QUERY = new Set(['token', 'code', 'password', 'state', 'verifier', 'access_token', 'refresh_token', 'secret', 'signature', 'authorization']);
-const SECRET_META = new Set(['token', 'password', 'secret', 'signature', 'authorization', 'cookie', 'verifier', 'code', 'access_token', 'refresh_token']);
+const SECRET_QUERY = new Set(['token', 'code', 'password', 'state', 'verifier', 'access_token', 'refresh_token', 'secret', 'signature', 'authorization', 'hub.verify_token', 'signed_request']);
+const SECRET_META = new Set(['token', 'password', 'secret', 'signature', 'authorization', 'cookie', 'verifier', 'code', 'access_token', 'refresh_token', 'signed_request']);
 
 export const clip = (s: string, max: number) => (s.length > max ? s.slice(0, max) : s);
 
@@ -87,13 +87,15 @@ export function cleanNotes(notes?: string[]): string[] | undefined {
 
 export function sourceOfPath(path: string): LogSource {
   const p = path.split('?')[0];
-  if (p.includes('/zalo/webhook')) return 'webhook';
+  if (p.includes('/zalo/webhook') || p.includes('/facebook/webhook') || p.includes('/facebook/deletion')) return 'webhook';
+  if (p.includes('/auth/facebook') || p.includes('/facebook')) return 'facebook';
   if (p.includes('/auth/zalo') || p.includes('/zalo')) return 'zalo';
   return 'http';
 }
 
 export function sourceOfContext(context?: string): LogSource {
-  if (context === 'ZaloWebhookService') return 'webhook';
+  if (context === 'ZaloWebhookService' || context === 'FacebookWebhookService') return 'webhook';
+  if (context === 'FacebookService' || context === 'FacebookAuthService' || context === 'MessengerService') return 'facebook';
   if (context === 'ZaloService' || context === 'ZaloAuthService') return 'zalo';
   return 'app';
 }

@@ -1,7 +1,22 @@
 import type { Catalog, InvoiceStatus, Order, SupportDesk } from "@/types";
 import { storage } from "@/utils/storage";
 
-const BASE = String(process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000").replace(/\/+$/, "") + "/api";
+/** `0.0.0.0` là địa chỉ server bind, trình duyệt không gọi được. Thiếu scheme thì fetch thành URL tương đối. */
+function apiOrigin() {
+  const fallback = "http://localhost:3000";
+  let raw = String(process.env.NEXT_PUBLIC_API_URL || fallback).trim();
+  if (!raw) raw = fallback;
+  if (!/^https?:\/\//i.test(raw)) raw = `http://${raw}`;
+  try {
+    const url = new URL(raw);
+    if (url.hostname === "0.0.0.0") url.hostname = "localhost";
+    return url.origin;
+  } catch {
+    return fallback;
+  }
+}
+
+const BASE = apiOrigin() + "/api";
 const TOKEN_KEY = "mt_customer_token";
 const MSG_KEY = "mt_login_msg";
 
@@ -64,7 +79,7 @@ async function saveProfile() {
   return saved;
 }
 
-/** Lúc mở trang đã có phiên: server lấy tên và ảnh từ token Zalo đã lưu. */
+/** Lúc mở trang đã có phiên: server lấy tên và ảnh từ token Facebook đã lưu. */
 export function prepareProfile() {
   if (!customerToken()) return Promise.resolve();
   return saveProfile()
@@ -88,7 +103,7 @@ export function permitForOrder(): Promise<OrderPermit> {
     });
 }
 
-export function zaloProfile(_ask = false) {
+export function cachedProfile() {
   return Promise.resolve(profile ?? EMPTY_PROFILE);
 }
 
@@ -102,7 +117,7 @@ export function deviceInfo() {
   if (ios && /iPhone|iPad/.test(ua)) os = "iOS " + ios[1].replace(/_/g, ".");
   const build = ua.match(/;\s*([^;)]+?)\s+Build\//);
   const model = (build?.[1] || (/iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : "")).slice(0, 64);
-  return { platform: "web", os: os.slice(0, 64), model, zaloVersion: "", language: language.slice(0, 16) };
+  return { platform: "web", os: os.slice(0, 64), model, language: language.slice(0, 16) };
 }
 
 export class ApiError extends Error {
@@ -136,15 +151,15 @@ async function call<T>(method: string, path: string, body?: unknown, auth = true
   return data as T;
 }
 
-export async function beginZaloLogin() {
-  const res = await call<{ url: string }>("GET", "/auth/zalo/start", undefined, false);
-  if (!res?.url) throw new ApiError("Chưa mở được đăng nhập Zalo", 500);
+export async function beginFacebookLogin() {
+  const res = await call<{ url: string }>("GET", "/auth/facebook/start", undefined, false);
+  if (!res?.url) throw new ApiError("Chưa mở được đăng nhập Facebook", 500);
   window.location.assign(res.url);
 }
 
 export async function finishLogin(code: string, state: string) {
-  const res = await call<{ token: string }>("POST", "/auth/zalo/exchange", { code, state }, false);
-  if (!res?.token) throw new ApiError("Đăng nhập Zalo chưa xong. Bạn thử lại nhé.", 401);
+  const res = await call<{ token: string }>("POST", "/auth/facebook/exchange", { code, state }, false);
+  if (!res?.token) throw new ApiError("Đăng nhập Facebook chưa xong. Bạn thử lại nhé.", 401);
   storage.set(TOKEN_KEY, res.token);
 }
 
@@ -155,12 +170,11 @@ export interface CartLineInput {
 }
 
 export interface VisitInput {
-  zaloName?: string;
+  facebookName?: string;
   avatar?: string;
   platform: string;
   os: string;
   model: string;
-  zaloVersion: string;
   language: string;
   seconds: number;
 }
@@ -177,14 +191,15 @@ export interface MeProfile {
   phone: string;
   addr: string;
   role?: "customer" | "support";
+  careUrl?: string;
 }
 
 export const api = {
-  zaloProfile,
+  cachedProfile,
   rememberProfile,
   prepareProfile,
   permitForOrder,
-  beginZaloLogin,
+  beginFacebookLogin,
   visit: (b: VisitInput) => call<null>("POST", "/me/visit", b),
   events: (events: ProductEventInput[]) => call<null>("POST", "/me/events", { events }),
   catalog: () => call<Catalog>("GET", "/catalog"),
@@ -192,6 +207,7 @@ export const api = {
   mine: () => call<Order[]>("GET", "/orders/mine"),
   supportInvoices: () => call<SupportDesk>("GET", "/support/invoices"),
   supportSend: (code: string) => call<{ code: string; invoiceStatus: InvoiceStatus }>("POST", `/support/invoices/${encodeURIComponent(code)}/send`),
+  supportMessage: (code: string, text: string) => call<{ code: string; sent: boolean }>("POST", "/support/messages", { code, text }),
   createOrder: (b: { name?: string; avatar?: string; phone: string; addr: string; note?: string; items: CartLineInput[] }) =>
     call<Order>("POST", "/orders", b),
   createRequest: (b: { name?: string; avatar?: string; phone?: string; addr?: string; product: string; photos: string[] }) =>

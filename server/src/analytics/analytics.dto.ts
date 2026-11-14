@@ -3,7 +3,8 @@ import { ArrayMaxSize, IsArray, IsIn, IsInt, IsOptional, IsString, Matches, Max,
 import { EVENT_TYPES, type EventType } from './analytics.schema.js';
 
 export class VisitDto {
-  /** Tên hiển thị trên Zalo. `name` là client cũ, cùng một giá trị. */
+  /** Tên Facebook. `zaloName` và `name` là client cũ, cùng một giá trị. */
+  @IsOptional() @IsString() @MaxLength(120) facebookName?: string;
   @IsOptional() @IsString() @MaxLength(120) zaloName?: string;
   @IsOptional() @IsString() @MaxLength(120) name?: string;
   @IsOptional() @IsString() @MaxLength(2000) avatar?: string;

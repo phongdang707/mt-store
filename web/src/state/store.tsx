@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ApiError, api, beginZaloLogin, clearLoginMessage, customerToken, deviceInfo, logout as endSession, onSessionLost, peekLoginMessage, type CartLineInput, type MeProfile } from "@/services/api";
+import { ApiError, api, beginFacebookLogin, clearLoginMessage, customerToken, deviceInfo, logout as endSession, onSessionLost, peekLoginMessage, type CartLineInput, type MeProfile } from "@/services/api";
 import { startPresence, track } from "@/services/track";
 import type { Catalog, CustomerInfo, Order, Product, Variant } from "@/types";
 import { shrink } from "@/utils/image";
@@ -61,6 +61,7 @@ function useStoreState() {
   const [authed, setAuthed] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [notice, setNotice] = useState("");
+  const [careUrl, setCareUrl] = useState("");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("Tất cả");
   const [sort, setSort] = useState<Sort>("default");
@@ -177,6 +178,7 @@ function useStoreState() {
       .then((profile) => {
         if (stop) return;
         setSupport(profile.role === "support");
+        setCareUrl(profile.careUrl || "");
         bindAccount(profile);
         setAuthed(true);
         setSessionReady(true);
@@ -195,7 +197,7 @@ function useStoreState() {
   }, []);
 
   useEffect(() => {
-    sessionStorage.removeItem("mt_zalo_callback");
+    sessionStorage.removeItem("mt_facebook_callback");
     const message = peekLoginMessage();
     if (message) setNotice(message);
     const clear = window.setTimeout(() => {
@@ -209,6 +211,7 @@ function useStoreState() {
     return onSessionLost(() => {
       setAuthed(false);
       setSessionReady(true);
+      setCareUrl("");
       setD(null);
       userId.current = "";
       setSupport(false);
@@ -278,7 +281,7 @@ function useStoreState() {
   const placing = useRef(false);
   const draft = useRef<{ phone: string; addr: string; note: string; items: CartLineInput[] } | null>(null);
 
-  const keepZaloName = (name: string) => {
+  const keepName = (name: string) => {
     const nextName = name.trim();
     if (!nextName || infoRef.current.name === nextName) return;
     const next = { ...infoRef.current, name: nextName };
@@ -359,10 +362,10 @@ function useStoreState() {
       const who = await load();
       const name = who.name.trim();
       const avatar = who.avatar.trim();
-      keepZaloName(name);
+      keepName(name);
       if (name || avatar) {
         await api
-          .visit({ zaloName: name || undefined, avatar: avatar || undefined, ...deviceInfo(), seconds: 0 })
+          .visit({ facebookName: name || undefined, avatar: avatar || undefined, ...deviceInfo(), seconds: 0 })
           .catch(() => {});
       }
       const order = await api.createOrder({
@@ -443,10 +446,10 @@ function useStoreState() {
     try {
       const photos: string[] = [];
       for (const f of phFiles) photos.push((await api.upload(await shrink(f.file))).url);
-      const who = await api.zaloProfile(false);
+      const who = await api.cachedProfile();
       const name = who.name.trim();
       const avatar = who.avatar.trim();
-      keepZaloName(name);
+      keepName(name);
       const r = await api.createRequest({
         name: name || undefined,
         avatar: avatar || undefined,
@@ -466,18 +469,19 @@ function useStoreState() {
       if (e instanceof ApiError && e.status === 403) {
         setBlocked(true);
         setPhMsg(m);
-      } else setPhMsg(/too large|quá lớn|File too large/i.test(m) ? "Ảnh quá lớn, bạn chọn ảnh khác nhé." : `Chưa gửi được ảnh. Bạn thử lại hoặc gửi qua Zalo/Messenger cho ${D?.store} nhé.`);
+      } else setPhMsg(/too large|quá lớn|File too large/i.test(m) ? "Ảnh quá lớn, bạn chọn ảnh khác nhé." : `Chưa gửi được ảnh. Bạn thử lại hoặc nhắn Messenger cho ${D?.store} nhé.`);
     } finally {
       setPhSending(false);
     }
   };
 
   const startLogin = () => {
-    void beginZaloLogin().catch((e: unknown) => toast(e instanceof Error ? e.message : "Chưa mở được đăng nhập Zalo"));
+    void beginFacebookLogin().catch((e: unknown) => toast(e instanceof Error ? e.message : "Chưa mở được đăng nhập Facebook"));
   };
   const logout = () => {
     endSession();
     userId.current = "";
+    setCareUrl("");
     setAuthed(false);
     setSessionReady(true);
     setD(null);
@@ -501,7 +505,7 @@ function useStoreState() {
     showPaid, setShowPaid, MY, myReady, refreshMine,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
     overlay, setOverlay, blocked, support,
-    authed, sessionReady, notice, startLogin, logout,
+    authed, sessionReady, notice, careUrl, startLogin, logout,
   };
 }
 

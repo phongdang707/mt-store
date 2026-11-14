@@ -2,9 +2,23 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectModel } from '@nestjs/mongoose';
 import { Types, type Model } from 'mongoose';
 import { Customer, type CustomerRole } from './customer.schema.js';
-import type { ZaloTokens, ZaloUser } from './zalo.service.js';
+import { messengerOpen } from './messenger.js';
 
-/** Ảnh Zalo là URL http(s). `//` và `http` được đổi thành https. Chuỗi khác bỏ. */
+export interface FacebookIdentity {
+  id: string;
+}
+
+export interface FacebookToken {
+  access: string;
+  exp: Date;
+}
+
+/** Tên hiện trên shop: Facebook, rồi hồ sơ Zalo cũ, rồi tên đơn. */
+export function socialName(c: { facebookName?: string; zaloName?: string; name?: string }) {
+  return c.facebookName?.trim() || c.zaloName?.trim() || c.name?.trim() || '';
+}
+
+/** Ảnh là URL http(s). `//` và `http` được đổi thành https. Chuỗi khác bỏ. */
 export function avatarUrl(v: string | undefined) {
   let s = v?.trim() ?? '';
   if (s.length > 2000) s = s.slice(0, 2000);
@@ -22,52 +36,54 @@ export class CustomersService {
     return this.customers.findById(id).exec();
   }
 
-  /** Tạo khách theo zaloUserId nếu chưa có. Tên Zalo ghi ở `zaloName` khi mở app. */
-  upsert(u: ZaloUser) {
+  /** Tạo khách theo facebookUserId nếu chưa có. */
+  upsert(u: FacebookIdentity) {
     return this.customers
-      .findOneAndUpdate({ zaloUserId: u.id }, { $setOnInsert: { zaloUserId: u.id } }, { new: true, upsert: true })
+      .findOneAndUpdate({ facebookUserId: u.id }, { $setOnInsert: { facebookUserId: u.id } }, { new: true, upsert: true })
       .exec();
   }
 
-  /** Tên hoặc ảnh Zalo đã lưu thì không xin quyền nữa. */
-  profileOf(customer: { zaloName?: string; avatar?: string }) {
-    const name = customer.zaloName?.trim() || '';
+  /** Tên hoặc ảnh Facebook đã lưu. */
+  profileOf(customer: { facebookName?: string; zaloName?: string; avatar?: string }) {
+    const name = customer.facebookName?.trim() || customer.zaloName?.trim() || '';
     const avatar = customer.avatar?.trim() || '';
     return { hasData: !!(name || avatar), name, avatar };
   }
 
-  /** Ghi tên và ảnh mới. Trường trống không xoá dữ liệu đang có. */
-  async syncProfile(id: unknown, info: { zaloName?: string; avatar?: string }) {
-    const zaloName = info.zaloName?.trim();
-    await this.remember(id, { name: zaloName, zaloName, avatar: info.avatar });
-    if (zaloName || avatarUrl(info.avatar)) {
+  /** Ghi tên, ảnh, email. Trường trống không xoá dữ liệu đang có. */
+  async syncProfile(id: unknown, info: { facebookName?: string; avatar?: string; email?: string }) {
+    const facebookName = info.facebookName?.trim();
+    await this.remember(id, { name: facebookName, facebookName, avatar: info.avatar, email: info.email });
+    if (facebookName || avatarUrl(info.avatar)) {
       await this.customers.updateOne({ _id: id }, { $set: { lastSeenAt: new Date() } }).exec();
     }
-    const customer = await this.customers.findById(id).select('zaloName name avatar').lean().exec();
+    const customer = await this.customers.findById(id).select('facebookName zaloName name avatar').lean().exec();
     return this.profileOf(customer ?? {});
   }
 
-  /** Tên và ảnh đang hiện trên trang quản lý. Ưu tiên tên Zalo. */
+  /** Tên và ảnh đang hiện trên trang quản lý. Ưu tiên tên Facebook. */
   async profilesOf(ids: unknown[]) {
     const unique = [...new Set(ids.map((id) => String(id ?? '')).filter((id) => Types.ObjectId.isValid(id)))];
     const map = new Map<string, { name: string; avatar: string }>();
     if (!unique.length) return map;
-    const rows = await this.customers.find({ _id: { $in: unique } }).select('zaloName name avatar').lean().exec();
+    const rows = await this.customers.find({ _id: { $in: unique } }).select('facebookName zaloName name avatar').lean().exec();
     for (const row of rows) {
-      map.set(String(row._id), { name: row.zaloName?.trim() || row.name?.trim() || '', avatar: row.avatar?.trim() || '' });
+      map.set(String(row._id), { name: socialName(row), avatar: row.avatar?.trim() || '' });
     }
     return map;
   }
 
-  /** Lưu tên Zalo, ảnh, SĐT, địa chỉ khách vừa gửi. Trường trống không ghi đè lần trước. */
-  remember(id: unknown, info: { name?: string; zaloName?: string; avatar?: string; phone?: string; addr?: string }) {
+  /** Lưu tên, ảnh, email, SĐT, địa chỉ. Trường trống không ghi đè lần trước. */
+  remember(id: unknown, info: { name?: string; facebookName?: string; avatar?: string; email?: string; phone?: string; addr?: string }) {
     const set: Record<string, string> = {};
     for (const key of ['name', 'phone', 'addr'] as const) {
       const value = info[key]?.trim();
       if (value) set[key] = value;
     }
-    const zaloName = info.zaloName?.trim();
-    if (zaloName) set.zaloName = zaloName.slice(0, 120);
+    const facebookName = info.facebookName?.trim();
+    if (facebookName) set.facebookName = facebookName.slice(0, 120);
+    const email = info.email?.trim().toLowerCase();
+    if (email && email.includes('@') && email.length <= 200) set.email = email;
     const avatar = avatarUrl(info.avatar);
     if (avatar) set.avatar = avatar;
     if (!Object.keys(set).length) return Promise.resolve();
@@ -96,21 +112,52 @@ export class CustomersService {
     return { id: String(customer._id), blocked: !!customer.blocked, role: customer.role === 'support' ? 'support' : 'customer' };
   }
 
-  /** Tên, ảnh, SĐT và Zalo id để customer support mở đúng cuộc chat của hoá đơn. */
+  /** Tên, ảnh, SĐT và PSID để customer support nhắn Messenger. */
   async peopleOf(ids: unknown[]) {
     const unique = [...new Set(ids.map((id) => String(id ?? '')).filter((id) => Types.ObjectId.isValid(id)))];
-    const map = new Map<string, { zaloUserId: string; name: string; avatar: string; phone: string }>();
+    const map = new Map<string, { facebookUserId: string; messengerPsid: string; messengerReady: boolean; name: string; avatar: string; phone: string }>();
     if (!unique.length) return map;
-    const rows = await this.customers.find({ _id: { $in: unique } }).select('zaloUserId zaloName name avatar phone').lean().exec();
+    const rows = await this.customers
+      .find({ _id: { $in: unique } })
+      .select('facebookUserId facebookName zaloName name avatar phone messengerPsid messengerLastAt')
+      .lean()
+      .exec();
     for (const row of rows) {
+      const messengerPsid = row.messengerPsid?.trim() || '';
       map.set(String(row._id), {
-        zaloUserId: row.zaloUserId || '',
-        name: row.zaloName?.trim() || row.name?.trim() || '',
+        facebookUserId: row.facebookUserId || '',
+        messengerPsid,
+        messengerReady: messengerOpen(messengerPsid, row.messengerLastAt),
+        name: socialName(row),
         avatar: row.avatar?.trim() || '',
         phone: row.phone?.trim() || '',
       });
     }
     return map;
+  }
+
+  /** Gắn PSID khi khách mở m.me?ref=. `messaged` thì mở cửa sổ 24 giờ. */
+  async bindMessenger(customerId: string, psid: string, messaged: boolean) {
+    if (!Types.ObjectId.isValid(customerId) || !/^[\w-]{1,128}$/.test(psid)) return false;
+    const set: Record<string, unknown> = { messengerPsid: psid };
+    if (messaged) set.messengerLastAt = new Date();
+    const res = await this.customers.updateOne({ _id: customerId }, { $set: set }).exec();
+    return res.matchedCount > 0;
+  }
+
+  /** Khách nhắn Page khi đã có PSID, không kèm ref. */
+  async touchMessenger(psid: string) {
+    if (!/^[\w-]{1,128}$/.test(psid)) return;
+    await this.customers.updateOne({ messengerPsid: psid }, { $set: { messengerLastAt: new Date() } }).exec();
+  }
+
+  async messengerOf(id: unknown) {
+    const key = String(id ?? '');
+    if (!Types.ObjectId.isValid(key)) return null;
+    const row = await this.customers.findById(key).select('messengerPsid messengerLastAt').lean().exec();
+    if (!row) return null;
+    const psid = row.messengerPsid?.trim() || '';
+    return { psid, ready: messengerOpen(psid, row.messengerLastAt) };
   }
 
   async isBlocked(id: unknown) {
@@ -120,22 +167,14 @@ export class CustomersService {
     return !!row?.blocked;
   }
 
-  zaloSession(id: unknown) {
+  facebookSession(id: unknown) {
     const key = String(id ?? '');
     if (!Types.ObjectId.isValid(key)) return Promise.resolve(null);
-    return this.customers.findById(key).select('+zaloAccessToken +zaloAccessExp +zaloRefreshToken').lean().exec();
+    return this.customers.findById(key).select('+facebookAccessToken +facebookAccessExp').lean().exec();
   }
 
-  /** `expectedRefresh` chỉ ghi khi refresh token trong DB vẫn là bản vừa dùng. */
-  async saveZaloTokens(id: unknown, tokens: ZaloTokens, expectedRefresh?: string) {
-    const filter: Record<string, unknown> = { _id: id };
-    if (expectedRefresh !== undefined) filter.zaloRefreshToken = expectedRefresh;
-    const res = await this.customers
-      .updateOne(filter, {
-        $set: { zaloAccessToken: tokens.access, zaloRefreshToken: tokens.refresh, zaloAccessExp: tokens.exp },
-      })
-      .exec();
-    return res.matchedCount > 0;
+  saveFacebookToken(id: unknown, token: FacebookToken) {
+    return this.customers.updateOne({ _id: id }, { $set: { facebookAccessToken: token.access, facebookAccessExp: token.exp } }).exec();
   }
 
   /** Id khách → đang bị chặn. Id lạ bỏ qua. */

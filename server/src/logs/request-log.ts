@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomBytes } from 'node:crypto';
 import type { LogSource } from './log.schema.js';
 
-const SOURCE_RANK: Record<LogSource, number> = { http: 0, app: 1, zalo: 2, webhook: 3 };
+const SOURCE_RANK: Record<LogSource, number> = { http: 0, app: 1, zalo: 2, facebook: 2, webhook: 3 };
 
 export interface RequestFailure {
   status: number;

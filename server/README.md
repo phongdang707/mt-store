@@ -3,7 +3,7 @@
 NestJS 12 + MongoDB (Mongoose 9), ESM. Phục vụ trang bán hàng (`web/`, Next.js) và trang quản lý (`admin/`).
 
 ```bash
-cp .env.example .env      # điền MONGODB_URI, JWT_SECRET, ADMIN_EMAIL/ADMIN_PASSWORD, Cloudinary, Zalo
+cp .env.example .env      # điền MONGODB_URI, JWT_SECRET, ADMIN_EMAIL/ADMIN_PASSWORD, Cloudinary, Facebook
 npm install               # npm 10 lỗi "edgesOut" thì: npx npm@11 install
 npm run seed              # nạp 72 sản phẩm + cài đặt shop từ seed/ (chạy lại chỉ thêm món chưa có)
 npm run seed -- --reset   # xoá hết sản phẩm rồi nạp lại (vd sau khi thêm key Cloudinary)
@@ -37,8 +37,9 @@ yarn start
 Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Ảnh production cần `CLOUDINARY_*`.
 
 - **Ảnh**: Cloudinary khi có `CLOUDINARY_*`; chưa có (dev) thì lưu `./uploads`, phục vụ ở `/uploads`. Production không có Cloudinary thì API upload trả lỗi, server vẫn chạy.
-- **Khách**: trang `web/` đăng nhập Zalo OAuth rồi gửi JWT `Authorization: Bearer`. Mini App cũ (ngoài repo) vẫn có thể gửi `x-zalo-token` (access token); server xác minh qua Graph API bằng `ZALO_APP_SECRET`. Dev chưa có secret: header `x-dev-user`.
-- **Webhook**: `POST /api/zalo/webhook`. Dán URL này (đủ domain) vào Webhook URL ở Open APIs. `ZALO_API_KEY` kiểm header `X-ZEvent-Signature`. Sự kiện `user.revoke.consent` xoá hồ sơ, lượt xem và gỡ tên, SĐT, địa chỉ, ảnh trên đơn.
+- **Khách**: trang `web/` đăng nhập Facebook OAuth rồi gửi JWT `Authorization: Bearer`. Dev chưa có `FACEBOOK_APP_SECRET`: header `x-dev-user`. Hồ sơ Zalo cũ không đăng nhập được nữa; đơn của họ vẫn nằm trên document khách cũ.
+- **Webhook**: `GET/POST /api/facebook/webhook` cho Page (`messages`, `messaging_postbacks`, `messaging_referrals`). `FACEBOOK_WEBHOOK_VERIFY_TOKEN` trả `hub.challenge`. `X-Hub-Signature-256` kiểm bằng `FACEBOOK_APP_SECRET`. Khách mở `m.me/{PAGE}?ref={customerId}` thì server lưu PSID. `POST /api/facebook/deletion` là Data Deletion Callback: `signed_request` xoá hồ sơ, lượt xem và gỡ tên, SĐT, địa chỉ, ảnh trên đơn.
+- **Messenger**: nhân viên support (`role: support` trên hồ sơ Facebook) gọi `POST /api/support/messages`. Server gửi tin bằng Page token khi khách đã nhắn Page trong 24 giờ.
 - **Admin**: tài khoản tạo từ `ADMIN_EMAIL`/`ADMIN_PASSWORD` lúc khởi động. Chủ shop đổi mật khẩu trong Cài đặt (`POST /api/auth/password`), mật khẩu đó được giữ qua các lần khởi động; chỉ khi đổi giá trị `ADMIN_PASSWORD` rồi khởi động lại thì mật khẩu mới bị đặt lại theo env.
 - **Cài đặt**: `markets` (Nhật, Hàn, Úc, Trung: mở/khoá + ngày bay, hạn nhận đơn). Nước bị khoá bị ẩn khỏi `/api/catalog` cùng hàng của nó và không đặt được. `freeShipFrom`: đơn có tạm tính từ mức này được miễn phí giao (đơn lưu `shipBase` + `freeShipFrom` lúc đặt).
 - `seed/` được tách từ app gốc bằng `scripts/extract-artifact.py`.
@@ -48,17 +49,21 @@ Biến môi trường trên Render, không commit: `MONGODB_URI`, `JWT_SECRET`, 
 | | Method | Path | |
 |---|---|---|---|
 | công khai | GET | `/catalog` | cài đặt shop + toàn bộ sản phẩm |
-| | POST | `/zalo/webhook` | sự kiện Zalo Open API, chữ ký `X-ZEvent-Signature` |
+| | GET/POST | `/facebook/webhook` | webhook Page, chữ ký `X-Hub-Signature-256` |
+| | POST | `/facebook/deletion` | Facebook yêu cầu xoá dữ liệu, trả `{ url, confirmation_code }` |
+| | GET | `/auth/facebook/start` | URL đăng nhập Facebook |
+| | POST | `/auth/facebook/exchange` | `{ code, state }` → JWT khách |
 | | GET | `/invoices/:token` | hoá đơn qua link chia sẻ |
-| khách | GET | `/me` | SĐT/địa chỉ lần trước |
-| | GET | `/me/profile` | đã có tên hoặc ảnh Zalo chưa |
-| | POST | `/me/profile` | `{ zaloName?, avatar? }` ghi hồ sơ mới |
+| khách | GET | `/me` | SĐT/địa chỉ lần trước và `careUrl` |
+| | GET | `/me/profile` | đã có tên hoặc ảnh Facebook chưa |
+| | POST | `/me/profile` | `{ facebookName?, avatar? }` ghi hồ sơ mới |
 | | POST | `/me/visit` | hồ sơ, máy, số giây app đang hiện |
 | | POST | `/me/events` | `{ events: [{ type: view\|open\|cart, productId }] }` |
 | | POST | `/orders` | `{ phone, addr, name?, note?, items: [{ productId, variant?, qty }] }`, giá lấy từ DB |
 | | POST | `/uploads` → `/requests` | ảnh tìm hộ → `{ product, photos[] }` |
 | | GET | `/orders/mine` | 30 đơn gần nhất |
 | | POST | `/orders/:code/paid` | "Tôi đã chuyển khoản" |
+| support | POST | `/support/messages` | `{ code, text }` gửi tin Page, cần PSID và cửa sổ 24 giờ |
 | admin | POST | `/auth/login`, GET `/auth/me` | JWT Bearer |
 | | GET | `/admin/badges`, `/admin/orders?kind&month&status&q`, `/admin/orders/months` | |
 | | POST | `/admin/orders/:code/confirm` · `/unconfirm` | |

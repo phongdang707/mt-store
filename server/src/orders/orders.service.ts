@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { monthRange, norm } from '../common/json.js';
 import type { CustomerDocument } from '../customers/customer.schema.js';
-import { avatarUrl, CustomersService } from '../customers/customers.service.js';
+import { avatarUrl, CustomersService, socialName } from '../customers/customers.service.js';
 import { ProductsService } from '../products/products.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import type { AddItemDto, AdminListQuery, CartItemDto, CreateOrderDto, CreateRequestDto, SendInvoiceDto, UpdateItemDto, UpdateOrderDto } from './order.dto.js';
@@ -30,24 +30,24 @@ export class OrdersService {
     const { markets } = await this.settings.get();
     const closed = items.find((i) => markets.some((m) => m.key === i.country && !m.open));
     if (closed) throw new BadRequestException(`Hàng ${closed.country} đang tạm khoá đặt, bạn bỏ ${closed.name} khỏi giỏ nhé`);
-    const zaloName = dto.name?.trim() || c.zaloName;
+    const facebookName = dto.name?.trim() || socialName(c);
     const doc = await this.insert('order', c, {
-      name: zaloName || c.name,
+      name: facebookName || c.name,
       avatar: avatarUrl(dto.avatar) || c.avatar,
       phone: dto.phone.trim(),
       addr: dto.addr.trim(),
       note: dto.note?.trim() ?? '',
       items,
     });
-    await this.customers.remember(c._id, { name: doc.name, zaloName, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
+    await this.customers.remember(c._id, { name: doc.name, facebookName, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
     return doc;
   }
 
   async createRequest(c: CustomerDocument, dto: CreateRequestDto, allowedPhoto: (url: string) => boolean) {
     if (!dto.photos.every(allowedPhoto)) throw new BadRequestException('Ảnh không hợp lệ');
-    const zaloName = dto.name?.trim() || c.zaloName;
+    const facebookName = dto.name?.trim() || socialName(c);
     const doc = await this.insert('request', c, {
-      name: zaloName || c.name,
+      name: facebookName || c.name,
       avatar: avatarUrl(dto.avatar) || c.avatar,
       phone: dto.phone?.trim() || c.phone,
       addr: dto.addr?.trim() || c.addr,
@@ -55,7 +55,7 @@ export class OrdersService {
       product: dto.product.trim(),
       photos: dto.photos,
     });
-    await this.customers.remember(c._id, { name: doc.name, zaloName, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
+    await this.customers.remember(c._id, { name: doc.name, facebookName, avatar: doc.avatar, phone: doc.phone, addr: doc.addr });
     return doc;
   }
 
@@ -248,11 +248,11 @@ export class OrdersService {
     return { store: s.store, orders: list.map((o) => this.supportRow(o, people.get(String(o.customer)))) };
   }
 
-  /** Ghi đã gửi bản hoá đơn hiện tại qua Zalo. Không trả token. */
+  /** Ghi đã gửi bản hoá đơn hiện tại qua Messenger. Không trả token. */
   async supportSend(code: string) {
     const o = await this.byCode(code);
     if (o.kind !== 'order' || o.status !== 'confirmed') throw new BadRequestException('Chỉ gửi hoá đơn của đơn đã xác nhận');
-    o.invoice.sends.push({ version: o.invoice.version, via: 'zalo', at: new Date() });
+    o.invoice.sends.push({ version: o.invoice.version, via: 'messenger', at: new Date() });
     recompute(o);
     await o.save();
     this.events.emit({ type: 'order', code: o.code, kind: o.kind, action: 'updated' });
@@ -272,7 +272,7 @@ export class OrdersService {
   }
 
   /** Một đơn cho customer support. Tên, ảnh lấy từ hồ sơ khách; không có token, lý do huỷ. */
-  private supportRow(o: OrderDocument, person?: { zaloUserId: string; name: string; avatar: string; phone: string }) {
+  private supportRow(o: OrderDocument, person?: { messengerPsid: string; messengerReady: boolean; name: string; avatar: string; phone: string }) {
     return {
       code: o.code,
       kind: o.kind,
@@ -298,7 +298,8 @@ export class OrdersService {
       total: o.total,
       createdAt: o.createdAt.toISOString(),
       invoiceStatus: o.status === 'confirmed' ? invoiceStatus(o) : null,
-      zaloUserId: person?.zaloUserId || '',
+      messengerPsid: person?.messengerPsid || '',
+      messengerReady: !!person?.messengerReady,
     };
   }
 

@@ -71,7 +71,7 @@ function levelOf(status: number): LogLevel {
 }
 
 function chosenSource(state: RequestLogState, path: string): LogSource {
-  if (state.source === 'webhook' || state.source === 'zalo') return state.source;
+  if (state.source === 'webhook' || state.source === 'zalo' || state.source === 'facebook') return state.source;
   return sourceOfPath(path);
 }
 

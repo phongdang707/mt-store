@@ -11,15 +11,17 @@ import { openRequest, requestLog } from './logs/request-log.js';
 import { LOCAL_UPLOAD_DIR } from './storage/storage.service.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
   const logs = app.get(LogsService);
   app.useLogger(new PersistLogger(logs));
   const config = app.get(ConfigService);
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }));
-  const origins = config.get<string>('CORS_ORIGIN')?.split(',').map((s) => s.trim()).filter(Boolean);
-  app.enableCors({ origin: origins?.length ? origins : true });
+  const configured = config.get<string>('CORS_ORIGIN')?.split(',').map((s) => s.trim()).filter(Boolean) ?? [];
+  const local = config.get('NODE_ENV') === 'production' ? [] : ['http://localhost:3001', 'http://127.0.0.1:3001'];
+  const origins = [...new Set([...configured, ...local])];
+  app.enableCors({ origin: origins.length ? origins : true });
   app.set('trust proxy', 1);
   app.use((req: Request, res: Response, next: NextFunction) => {
     const path = req.originalUrl || req.url || '';

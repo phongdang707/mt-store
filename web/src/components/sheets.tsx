@@ -201,9 +201,9 @@ const codeOf = (o: Order) => o.code;
 const atOf = (o: Order) => new Date(o.createdAt);
 
 export function OrdersSheet() {
-  const { D, MY, myReady, showPaid, setShowPaid, setOverlay } = useStore();
+  const { D, MY, myReady, showPaid, setShowPaid, setOverlay, careUrl } = useStore();
   if (!D) return null;
-  const ZALO = String(D.zalo || "").replace(/[^0-9]/g, "");
+  const care = careUrl.trim();
   const os = [...MY].sort((a, b) => +atOf(b) - +atOf(a));
   const open = (o: Order) => o.items.length && setOverlay({ type: "bill", o });
   const card = (o: Order) => {
@@ -266,13 +266,13 @@ export function OrdersSheet() {
           {os.length ? (
             <>
               <p className="lock">
-                🔒 Đơn đã gửi không thể chỉnh sửa. Muốn thay đổi, bạn nhắn Zalo cho {D.store}
-                {ZALO ? (
+                🔒 Đơn đã gửi không thể chỉnh sửa. Muốn thay đổi, bạn nhắn Messenger cho {D.store}
+                {care ? (
                   <>
                     {" "}
                     (
-                    <a href={`https://zalo.me/${ZALO}`} target="_blank" rel="noopener">
-                      {ZALO}
+                    <a href={care} target="_blank" rel="noopener">
+                      mở cuộc trò chuyện
                     </a>
                     )
                   </>
@@ -308,14 +308,14 @@ export function OrdersSheet() {
             </>
           ) : (
             <div className="empty">
-              {myReady ? "Bạn chưa gửi đơn nào. Đơn bạn gửi sẽ hiện ở đây." : `Máy này chưa xem được đơn. Bạn liên hệ ${D.store} qua Zalo hoặc Messenger nhé.`}
+              {myReady ? "Bạn chưa gửi đơn nào. Đơn bạn gửi sẽ hiện ở đây." : `Máy này chưa xem được đơn. Bạn liên hệ ${D.store} qua Messenger nhé.`}
             </div>
           )}
         </div>
-        {ZALO ? (
+        {care ? (
           <div className="sh-f">
-            <a className="btn zbtn" href={`https://zalo.me/${ZALO}`} target="_blank" rel="noopener">
-              Nhắn Zalo để thay đổi đơn
+            <a className="btn zbtn" href={care} target="_blank" rel="noopener">
+              Nhắn Messenger để thay đổi đơn
             </a>
           </div>
         ) : null}

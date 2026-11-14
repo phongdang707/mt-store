@@ -33,11 +33,17 @@ describe('redact', () => {
 
   it('nhận nguồn theo path và context', () => {
     expect(sourceOfPath('/api/zalo/webhook')).toBe('webhook');
+    expect(sourceOfPath('/api/facebook/webhook')).toBe('webhook');
+    expect(sourceOfPath('/api/facebook/deletion')).toBe('webhook');
     expect(sourceOfPath('/api/auth/zalo/exchange?code=1')).toBe('zalo');
+    expect(sourceOfPath('/api/auth/facebook/exchange?code=1')).toBe('facebook');
     expect(sourceOfPath('/api/orders')).toBe('http');
     expect(sourceOfContext('ZaloWebhookService')).toBe('webhook');
+    expect(sourceOfContext('FacebookWebhookService')).toBe('webhook');
     expect(sourceOfContext('ZaloService')).toBe('zalo');
     expect(sourceOfContext('ZaloAuthService')).toBe('zalo');
+    expect(sourceOfContext('FacebookAuthService')).toBe('facebook');
+    expect(sourceOfContext('MessengerService')).toBe('facebook');
     expect(sourceOfContext('OrdersService')).toBe('app');
   });
 

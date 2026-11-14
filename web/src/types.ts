@@ -112,7 +112,8 @@ export interface SupportInvoice {
   total: number;
   createdAt: string;
   invoiceStatus: InvoiceStatus;
-  zaloUserId: string;
+  messengerPsid: string;
+  messengerReady: boolean;
 }
 
 export interface SupportDesk {

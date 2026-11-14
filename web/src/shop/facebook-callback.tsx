@@ -6,7 +6,7 @@ import { failLogin, finishLogin } from "@/services/api";
 import { Welcome } from "@/shop/welcome";
 
 /** Đổi oauth code một lần. Strict Mode gọi effect hai lần, nên khóa theo code. */
-export default function ZaloCallback() {
+export default function FacebookCallback() {
   const params = useSearchParams();
   const router = useRouter();
   const [hint, setHint] = useState("Đang mở cửa shop cho bạn…");
@@ -16,21 +16,21 @@ export default function ZaloCallback() {
     const code = params.get("code");
     const state = params.get("state");
     const mark = error ? "err" : code && state ? `ok:${code}` : "bad";
-    if (sessionStorage.getItem("mt_zalo_callback") === mark) return;
-    sessionStorage.setItem("mt_zalo_callback", mark);
+    if (sessionStorage.getItem("mt_facebook_callback") === mark) return;
+    sessionStorage.setItem("mt_facebook_callback", mark);
     if (error || !code || !state) {
-      failLogin("Bạn chưa đồng ý đăng nhập Zalo.");
+      failLogin("Bạn chưa đồng ý đăng nhập Facebook.");
       router.replace("/");
       return;
     }
     finishLogin(code, state)
       .then(() => {
-        sessionStorage.removeItem("mt_zalo_callback");
+        sessionStorage.removeItem("mt_facebook_callback");
         router.replace("/");
       })
       .catch((e: unknown) => {
-        sessionStorage.removeItem("mt_zalo_callback");
-        const message = e instanceof Error ? e.message : "Đăng nhập Zalo chưa xong. Bạn thử lại nhé.";
+        sessionStorage.removeItem("mt_facebook_callback");
+        const message = e instanceof Error ? e.message : "Đăng nhập Facebook chưa xong. Bạn thử lại nhé.";
         setHint(message);
         failLogin(message);
         router.replace("/");

@@ -17,15 +17,25 @@ export const ActivityDaySchema = SchemaFactory.createForClass(ActivityDay);
 export const CUSTOMER_ROLES = ['customer', 'support'] as const;
 export type CustomerRole = (typeof CUSTOMER_ROLES)[number];
 
-/** Khách mua hàng, nhận diện bằng zaloUserId của Zalo Mini App. */
+/** Khách mua hàng. Đăng nhập mới khóa bằng facebookUserId. zaloUserId chỉ còn trên hồ sơ cũ. */
 @Schema({ timestamps: true, toJSON })
 export class Customer {
-  @Prop({ required: true, unique: true }) zaloUserId: string;
-  /** Tên trên đơn gần nhất. Form không có ô tên, nên đây là tên Zalo lúc gửi. */
+  /** Hồ sơ tạo từ Zalo trước khi chuyển Facebook. Không ghi cho khách mới. */
+  @Prop({ unique: true, sparse: true }) zaloUserId?: string;
+  /** Id ứng dụng Facebook. Khóa đăng nhập. */
+  @Prop({ unique: true, sparse: true }) facebookUserId?: string;
+  /** Tên trên đơn gần nhất. */
   @Prop({ default: '' }) name: string;
-  /** Tên hiển thị trên Zalo, từ `getUserInfo` lúc mở app. */
+  /** Tên Facebook lúc đăng nhập. */
+  @Prop({ default: '' }) facebookName: string;
+  /** Tên Zalo của hồ sơ cũ. */
   @Prop({ default: '' }) zaloName: string;
+  @Prop({ default: '' }) email: string;
   @Prop({ default: '' }) avatar: string;
+  /** Page-scoped id, có sau khi khách mở m.me kèm ref. */
+  @Prop({ default: '' }) messengerPsid: string;
+  /** Lần khách nhắn Page gần nhất. Cửa sổ gửi tin là 24 giờ kể từ mốc này. */
+  @Prop() messengerLastAt?: Date;
   @Prop({ default: '' }) phone: string;
   @Prop({ default: '' }) addr: string;
   /** ios, android hoặc web. Cập nhật mỗi lần mở app. */
@@ -42,15 +52,13 @@ export class Customer {
   /** Lượt vào và số giây, giữ 90 ngày. */
   @Prop({ type: [ActivityDaySchema], default: [] }) activity: ActivityDay[];
   @Prop({ default: 0, min: 0 }) visitCount: number;
-  /** Admin chặn: khách không đặt hàng, gửi tìm hộ, hay gọi API mini app. */
+  /** Admin chặn: khách không đặt hàng, gửi tìm hộ, hay gọi API shop. */
   @Prop({ default: false }) blocked: boolean;
-  /** `support`: mở Mini App thì thấy mục chăm sóc khách hàng. */
+  /** `support`: trang web hiện mục chăm sóc khách hàng. */
   @Prop({ type: String, enum: CUSTOMER_ROLES, default: 'customer' }) role: CustomerRole;
-  /** Access token OAuth web. Không trả ra API. */
-  @Prop({ select: false, default: '' }) zaloAccessToken: string;
-  @Prop({ select: false }) zaloAccessExp?: Date;
-  /** Refresh token dùng một lần. Lưu bản mới sau mỗi lần làm mới. */
-  @Prop({ select: false, default: '' }) zaloRefreshToken: string;
+  /** Access token Graph, bản dài hạn. Không trả ra API. */
+  @Prop({ select: false, default: '' }) facebookAccessToken: string;
+  @Prop({ select: false }) facebookAccessExp?: Date;
   @Prop() blockedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -65,6 +73,8 @@ CustomerSchema.set('toJSON', {
     const out = ret as unknown as Record<string, unknown>;
     out.id = String(out._id);
     delete out._id;
+    delete out.facebookAccessToken;
+    delete out.facebookAccessExp;
     delete out.zaloAccessToken;
     delete out.zaloRefreshToken;
     delete out.zaloAccessExp;

@@ -3,7 +3,7 @@ import mongoose, { type HydratedDocument } from 'mongoose';
 
 export const LOG_LEVELS = ['error', 'warn', 'info'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
-export const LOG_SOURCES = ['http', 'webhook', 'zalo', 'app'] as const;
+export const LOG_SOURCES = ['http', 'webhook', 'zalo', 'facebook', 'app'] as const;
 export type LogSource = (typeof LOG_SOURCES)[number];
 
 /** Nhật ký kỹ thuật. TTL xoá sau 15 ngày. */

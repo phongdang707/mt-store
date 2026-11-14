@@ -1,31 +1,34 @@
 import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AdminGuard } from '../auth/admin.guard.js';
 import { SyncProfileDto, UpdateCustomerDto } from './customer.dto.js';
 import { CustomerGuard, type CustomerRequest } from './customer.guard.js';
-import { CustomersService } from './customers.service.js';
-import { ZaloAuthService } from './zalo-auth.service.js';
-import { ZaloService } from './zalo.service.js';
+import { CustomersService, socialName } from './customers.service.js';
+import { FacebookAuthService } from './facebook-auth.service.js';
+import { messengerLink } from './messenger.js';
 
 @Controller('me')
 @UseGuards(CustomerGuard)
 export class CustomersController {
   constructor(
     private readonly customers: CustomersService,
-    private readonly zalo: ZaloService,
-    private readonly zaloAuth: ZaloAuthService,
+    private readonly facebookAuth: FacebookAuthService,
+    private readonly config: ConfigService,
   ) {}
 
-  /** Id khách để tách giỏ trên máy, cùng SĐT/địa chỉ của đúng người đó. */
+  /** Id khách để tách giỏ trên máy, cùng SĐT/địa chỉ và link Messenger của đúng người đó. */
   @Get()
   me(@Req() req: CustomerRequest) {
     const c = req.customer;
+    const id = String(c._id);
     return {
-      id: String(c._id),
-      name: c.zaloName || c.name,
+      id,
+      name: socialName(c),
       avatar: c.avatar,
       phone: c.phone,
       addr: c.addr,
       role: c.role === 'support' ? 'support' : 'customer',
+      careUrl: messengerLink(this.config.get<string>('FACEBOOK_PAGE_USERNAME'), id),
     };
   }
 
@@ -35,23 +38,15 @@ export class CustomersController {
     return this.customers.profileOf(req.customer);
   }
 
-  /** Ghi tên và ảnh. Token Zalo thì server tự lấy từ Graph, không phụ thuộc lệnh lỗi trên máy khách. */
+  /** Ghi tên và ảnh. Web thì server tự lấy từ token Facebook đã lưu. */
   @Post('profile')
   async sync(@Req() req: CustomerRequest, @Body() dto: SyncProfileDto) {
-    let zaloName = dto.zaloName;
+    let facebookName = dto.facebookName;
     let avatar = dto.avatar;
-    const token = req.header('x-zalo-token');
-    const bearer = req.header('authorization')?.toLowerCase().startsWith('bearer ');
-    if (token) {
-      const remote = await this.zalo.profile(token);
-      if (remote.name) zaloName = remote.name;
-      if (remote.avatar) avatar = remote.avatar;
-    } else if (bearer) {
-      const remote = await this.zaloAuth.storedProfile(req.customer._id);
-      if (remote.name) zaloName = remote.name;
-      if (remote.avatar) avatar = remote.avatar;
-    }
-    return this.customers.syncProfile(req.customer._id, { zaloName, avatar });
+    const remote = await this.facebookAuth.storedProfile(req.customer._id);
+    if (remote.name) facebookName = remote.name;
+    if (remote.avatar) avatar = remote.avatar;
+    return this.customers.syncProfile(req.customer._id, { facebookName, avatar });
   }
 }
 

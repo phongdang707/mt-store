@@ -1,4 +1,4 @@
-import { ApiError, api, deviceInfo, zaloProfile, type ProductEventInput } from "@/services/api";
+import { ApiError, api, deviceInfo, cachedProfile, type ProductEventInput } from "@/services/api";
 
 type Kind = ProductEventInput["type"];
 
@@ -52,14 +52,14 @@ function pause(ms: number) {
 async function beat() {
   const seconds = takeSeconds();
   const device = deviceInfo();
-  const ready = zaloProfile(false);
+  const ready = cachedProfile();
   const quick = await Promise.race([
     ready.then((p) => ({ settled: true as const, p })),
     pause(1500).then(() => ({ settled: false as const, p: { name: "", avatar: "" } })),
   ]);
   try {
     await api.visit({
-      zaloName: quick.p.name || undefined,
+      facebookName: quick.p.name || undefined,
       avatar: quick.p.avatar || undefined,
       ...device,
       seconds,
@@ -72,7 +72,7 @@ async function beat() {
     const who = await ready;
     if (!who.name && !who.avatar) return;
     await api.visit({
-      zaloName: who.name || undefined,
+      facebookName: who.name || undefined,
       avatar: who.avatar || undefined,
       ...device,
       seconds: 0,

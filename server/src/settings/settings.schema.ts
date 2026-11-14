@@ -53,7 +53,7 @@ export class Settings {
   @Prop({ type: Bank, default: () => ({}) }) bank: Bank;
   /** Ảnh QR tĩnh của shop (dự phòng khi không tạo được VietQR). */
   @Prop({ default: '' }) qr: string;
-  /** Số Zalo của shop, khách bấm để nhắn. */
+  /** Số liên hệ cũ của shop. Trang bán hàng nhắn qua Messenger. */
   @Prop({ default: '' }) zalo: string;
   @Prop({ default: '' }) messenger: string;
   /** Phí giao hàng cộng vào mỗi đơn có giá. 0 = không thu, ẩn dòng phí giao. */
@@ -63,7 +63,7 @@ export class Settings {
   /** Ghi chú cho khách khi đặt hàng (hiện ở giỏ hàng). */
   @Prop({ default: '' }) orderNote: string;
   @Prop({ type: SchemaFactory.createForClass(Prefs), default: () => ({}) }) prefs: Prefs;
-  /** Link trang bán hàng (Zalo Mini App) cho nút "Xem trang bán hàng". */
+  /** Link trang bán hàng cho nút "Xem trang bán hàng". */
   @Prop({ default: '' }) storefrontUrl: string;
 }
 

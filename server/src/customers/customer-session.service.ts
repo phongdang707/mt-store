@@ -8,7 +8,7 @@ const AUDIENCE = 'customer';
 export class CustomerSessionService {
   constructor(private readonly jwt: JwtService) {}
 
-  /** Phiên cửa hàng, độc lập với access token Zalo (khoảng 1 giờ). */
+  /** Phiên cửa hàng, độc lập với access token Facebook. */
   sign(customerId: string) {
     return this.jwt.signAsync({ sub: customerId }, { audience: AUDIENCE, expiresIn: '30d' });
   }

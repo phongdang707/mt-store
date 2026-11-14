@@ -11,14 +11,14 @@ const CARD = "background: #fffaf7; border: 1px solid #efd9d3; border-radius: 22p
 const MUTED = "font-size: 13px; color: #7d6862";
 const LINK = MUTED + "; border: 0; background: transparent; padding: 0; font-weight: 700; color: #8f4459";
 const LEVEL: Record<LogLevel, string> = { error: "Lỗi", warn: "Cảnh báo", info: "Thông tin" };
-const SOURCE: Record<LogSource, string> = { http: "HTTP", webhook: "Webhook", zalo: "Zalo", app: "App" };
+const SOURCE: Record<LogSource, string> = { http: "HTTP", webhook: "Webhook", zalo: "Zalo", facebook: "Facebook", app: "App" };
 const CHIP: Record<LogLevel, string> = {
   error: "background: #f8d6d8; color: #8d2430",
   warn: "background: #fdecc8; color: #7a4f00",
   info: "background: #f6e1dc; color: #8f4459",
 };
 const LEVELS: ["", ...LogLevel[]] = ["", "error", "warn", "info"];
-const SOURCES: ["", ...LogSource[]] = ["", "http", "webhook", "zalo", "app"];
+const SOURCES: ["", ...LogSource[]] = ["", "http", "webhook", "zalo", "facebook", "app"];
 const VIEWS = [
   ["lines", "Dòng"],
   ["report", "Báo lỗi"],
