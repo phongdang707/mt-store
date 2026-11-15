@@ -11,7 +11,7 @@ import { Welcome } from "@/shop/welcome";
 import { useStore } from "@/state/store";
 
 export default function HomePage() {
-  const { D, loadError, loadCatalog, open, setOpen, overlay, blocked, sessionReady, authed, notice, startLogin } = useStore();
+  const { D, loadError, loadCatalog, open, setOpen, overlay, blocked, sessionReady, authed, loginBusy, notice, startLogin } = useStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function HomePage() {
     return (
       <>
         {notice ? <div className="toast">{notice}</div> : null}
-        <Welcome waiting={!sessionReady} onLogin={startLogin} />
+        <Welcome waiting={!sessionReady || loginBusy} onLogin={startLogin} line={loginBusy ? "Đang chuyển sang Google…" : undefined} />
       </>
     );
   }

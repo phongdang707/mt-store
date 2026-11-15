@@ -98,7 +98,12 @@ button:active:not(:disabled),.chip:active,.ctab:active,a.add:active{opacity:.72}
 .gate svg{width:min(220px,52vw);height:auto}
 .gate h1{font-family:'Quicksand',sans-serif;font-weight:700;font-size:28px;color:var(--brand);margin-top:18px;letter-spacing:.3px}
 .gate p{color:var(--ink);margin-top:10px;line-height:1.55;font-size:15px}
+.gate-wait{display:flex;flex-direction:column;align-items:center;gap:14px}
+.gate-spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:gatespin .7s linear infinite}
+@keyframes gatespin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.gate-spin{animation:none}}
 .gate .btn{margin-top:22px}
+.ordbtn:disabled{opacity:.55}
 .gate small{display:block;margin-top:12px;color:var(--muted);font-size:13px;line-height:1.5}
 .hold{min-height:70vh;min-height:70dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 12px 80px}
 .hold-ic{width:72px;height:72px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--accent);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 22px var(--shadow);margin-bottom:18px}
