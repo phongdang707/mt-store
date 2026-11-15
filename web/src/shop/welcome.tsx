@@ -19,7 +19,10 @@ export function Welcome({ waiting, onLogin, line }: { waiting?: boolean; onLogin
           <Logo width="min(220px, 52vw)" />
           <h1>Chào bạn yêu</h1>
           {waiting ? (
-            <p>{line || "Đang mở cửa shop cho bạn…"}</p>
+            <p className="gate-wait" role="status">
+              <span className="gate-spin" aria-hidden="true" />
+              {line || "Đang mở cửa shop cho bạn…"}
+            </p>
           ) : (
             <>
               <p>Đăng nhập Google một cái thôi, mình mở shop cho bạn xem đồ xinh và gửi đơn nha.</p>

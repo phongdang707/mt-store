@@ -60,6 +60,8 @@ function useStoreState() {
   const [country, setCountryState] = useState("Nhật");
   const [authed, setAuthed] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [loginBusy, setLoginBusy] = useState(false);
+  const loginLock = useRef(false);
   const [notice, setNotice] = useState("");
   const [careUrl, setCareUrl] = useState("");
   const [q, setQ] = useState("");
@@ -476,7 +478,14 @@ function useStoreState() {
   };
 
   const startLogin = () => {
-    void beginGoogleLogin().catch((e: unknown) => toast(e instanceof Error ? e.message : "Chưa mở được đăng nhập Google"));
+    if (loginLock.current) return;
+    loginLock.current = true;
+    setLoginBusy(true);
+    void beginGoogleLogin().catch((e: unknown) => {
+      loginLock.current = false;
+      setLoginBusy(false);
+      toast(e instanceof Error ? e.message : "Chưa mở được đăng nhập Google");
+    });
   };
   const logout = () => {
     endSession();
@@ -505,7 +514,7 @@ function useStoreState() {
     showPaid, setShowPaid, MY, myReady, refreshMine,
     phFiles, addPhotos, removePhoto, phName, setPhName, phSending, phMsg, sendPhoto,
     overlay, setOverlay, blocked, support,
-    authed, sessionReady, notice, careUrl, startLogin, logout,
+    authed, sessionReady, loginBusy, notice, careUrl, startLogin, logout,
   };
 }
 

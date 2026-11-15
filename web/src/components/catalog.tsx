@@ -40,7 +40,7 @@ const SupportIcon = () => (
 );
 
 export function Header() {
-  const { D, MY, setOpen, support, authed, startLogin, logout } = useStore();
+  const { D, MY, setOpen, support, authed, startLogin, loginBusy, logout } = useStore();
   const n = MY.filter((o) => o.status === "pending").length;
   return (
     <>
@@ -57,8 +57,8 @@ export function Header() {
                 <span className="logout-tx">Đăng xuất</span>
               </button>
             ) : (
-              <button className="ordbtn loginbtn" type="button" onClick={startLogin}>
-                Đăng nhập bằng Google
+              <button className="ordbtn loginbtn" type="button" disabled={loginBusy} aria-busy={loginBusy} onClick={startLogin}>
+                {loginBusy ? "Đang chuyển…" : "Đăng nhập bằng Google"}
               </button>
             )}
             <button className="ordbtn desk-act" type="button" onClick={() => setOpen("orders")}>
